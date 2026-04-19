@@ -1,0 +1,10 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import PlayerDetailWrapper from '../../components/wrappers/PlayerDetailWrapper';
+
+const { id } = Astro.params;
+---
+
+<Layout showNav={false}>
+  <PlayerDetailWrapper id={id} client:only="react" />
+</Layout>

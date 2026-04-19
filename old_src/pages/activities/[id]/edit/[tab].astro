@@ -1,0 +1,14 @@
+---
+import Layout from '../../../../layouts/Layout.astro';
+import ActivityFormWrapper from '../../../../components/wrappers/ActivityFormWrapper';
+
+const { id, tab } = Astro.params;
+const validTabs = ['info', 'asistencia', 'equipos', 'juegos', 'deportes', 'invitados', 'goles', 'extras'];
+if (!validTabs.includes(tab)) {
+  return new Response('Tab not found', { status: 404 });
+}
+---
+
+<Layout showNav={false}>
+  <ActivityFormWrapper mode="edit" id={id} initialTab={tab} client:only="react" />
+</Layout>

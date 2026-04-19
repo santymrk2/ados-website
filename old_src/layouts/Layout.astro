@@ -1,0 +1,39 @@
+---
+import { ClientRouter } from "astro:transitions";
+import { AuthGate } from "../components/auth/AuthGate";
+import "../styles/global.css";
+
+interface Props {
+  showNav?: boolean;
+}
+
+const { showNav = true } = Astro.props;
+---
+
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+    />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta
+      name="apple-mobile-web-app-status-bar-style"
+      content="black-translucent"
+    />
+    <meta name="theme-color" content="#4342FF" />
+    <link rel="icon" type="image/png" href="/logo.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta property="og:image" content="/logo.png" />
+    <title>Activados</title>
+    <ClientRouter />
+  </head>
+  <body class="pb-safe">
+    <AuthGate client:only="react" showNav={showNav}>
+      <slot />
+    </AuthGate>
+  </body>
+</html>

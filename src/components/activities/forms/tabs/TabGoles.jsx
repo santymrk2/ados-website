@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import { toast } from "../../../../hooks/use-toast";
 import { Button } from "../../../ui/button";
 import { Label, Empty } from "../../../ui/Common";
-import { Combobox, ComboboxInput, ComboboxContent, ComboboxList, ComboboxItem } from "../../../ui/combobox";
+import { Combobox, ComboboxInput, ComboboxContent, ComboboxList, ComboboxItem, ComboboxValue } from "../../../ui/combobox";
 import {
   Select,
   SelectContent,
@@ -28,6 +28,13 @@ export function TabGoles({ act, A, Q, db, locked = false }) {
         label: `${p.nombre} ${p.apellido}`,
       }));
   }, [db.participants, act.asistentes, act.socials]);
+
+  // Función para obtener el label a partir del value (ID)
+  const getParticipantLabel = (id) => {
+    if (!id) return "";
+    const p = db.participants.find((p) => p.id === id);
+    return p ? `${p.nombre} ${p.apellido}` : "";
+  };
 
   const add = () => {
     const ng = { id: generateTempId(), pid: null, tipo: "f", cant: 1 };
@@ -78,9 +85,13 @@ export function TabGoles({ act, A, Q, db, locked = false }) {
                   value={g.pid?.toString() || ""}
                   onValueChange={(val) => upd(g.id, "pid", val ? Number(val) : null)}
                   items={availablePlayers}
+                  itemToStringLabel={(item) => item?.label || getParticipantLabel(Number(item?.value))}
                   disabled={locked}
                 >
                   <ComboboxInput placeholder="Seleccionar jugador..." showTrigger={true} />
+                  <ComboboxValue>
+                    {({ value }) => getParticipantLabel(Number(value)) || "Seleccionar jugador..."}
+                  </ComboboxValue>
                   <ComboboxContent>
                     <ComboboxList>
                       {(item) => (

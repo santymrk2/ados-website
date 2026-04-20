@@ -183,7 +183,7 @@ export default function ActivityPage({
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => router.back()}
+              onClick={() => router.push("/activities")}
               className="bg-white/20 text-white hover:bg-white/30"
             >
               <ChevronLeft className="w-5 h-5" />

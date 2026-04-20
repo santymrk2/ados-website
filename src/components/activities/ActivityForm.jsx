@@ -100,7 +100,7 @@ export function ActivityFormModal({
 
   const A = (k, v) => setAct((a) => ({ ...a, [k]: v }));
 
-  const Q = async (type, data, k, v) => {
+  const Q = async (type, data, k, v, onSuccess) => {
     // Generar clave única para trackear esta operación
     const opId = data.juegoId || data.id || data.participantId || data.pid || '';
     const opKey = `${type}:${opId}`;
@@ -108,12 +108,29 @@ export function ActivityFormModal({
     // Marcar para que el auto-save no dispare un POST redundante
     skipNextAutoSave.current = true;
     setSavingOps((prev) => new Set([...prev, opKey]));
-    setAct((a) => ({ ...a, [k]: v }));
+    
+    // Actualizar estado local inmediatamente
+    if (typeof v === 'function') {
+      setAct(v);
+    } else {
+      setAct((a) => ({ ...a, [k]: v }));
+    }
 
     if (act.id) {
       try {
         const skipRefresh = type === "game_pos" || type === "game_add" || type === "game_delete";
         const result = await onQuickUpdate(act.id, type, data, skipRefresh);
+        
+        // No mostrar toast de "configuración" cuando es lock/unlock - TabInfo ya lo maneja
+        if (type === "config" && (data.k === "locked")) {
+          return result;
+        }
+        
+        // Ejecutar callback de éxito si existe (el componente maneja su propio toast)
+        if (onSuccess) {
+          onSuccess(result);
+          return result;
+        }
         
         // Mensaje descriptivo según el tipo de cambio
         const actionMessages = {

@@ -35,18 +35,18 @@ const Toaster = ({ ...props }: ToasterProps) => {
           "--normal-text": "var(--popover-foreground)",
           "--normal-border": "var(--border)",
           "--border-radius": "var(--radius)",
-          "--success-bg": "var(--primary)",
-          "--success-text": "var(--primary-foreground)",
-          "--success-border": "var(--primary)",
-          "--error-bg": "var(--secondary)",
-          "--error-text": "var(--secondary-foreground)",
-          "--error-border": "var(--secondary)",
+          "--success-bg": "var(--secondary)",
+          "--success-text": "var(--secondary-foreground)",
+          "--success-border": "var(--secondary)",
+          "--error-bg": "oklch(0.6 0.25 25)", // rojo de la familia del secondary
+          "--error-text": "white",
+          "--error-border": "oklch(0.6 0.25 25)",
           "--warning-bg": "var(--secondary)",
           "--warning-text": "var(--secondary-foreground)",
           "--warning-border": "var(--secondary)",
-          "--info-bg": "var(--primary)",
-          "--info-text": "var(--primary-foreground)",
-          "--info-border": "var(--primary)",
+          "--info-bg": "var(--secondary)",
+          "--info-text": "var(--secondary-foreground)",
+          "--info-border": "var(--secondary)",
         } as React.CSSProperties
       }
       toastOptions={{

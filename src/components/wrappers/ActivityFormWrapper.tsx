@@ -61,7 +61,14 @@ export default function ActivityFormWrapper({ mode = "new", id, initialTab = "in
     <ActivityFormModal
       db={db}
       initial={activity}
-      onClose={() => router.back()}
+      onClose={() => {
+        // Si es modo edit, ir al view; si es modo new, ir al listado
+        if (mode === "edit" && id) {
+          router.push(`/activities/${id}/view/info`);
+        } else {
+          router.push("/activities");
+        }
+      }}
       onSave={saveActivity}
       onQuickUpdate={quickUpdate}
       onSaveParticipant={saveParticipant}

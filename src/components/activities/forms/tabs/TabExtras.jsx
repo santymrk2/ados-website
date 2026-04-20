@@ -9,7 +9,7 @@ import { Input } from "../../../ui/input";
 import { Label, Modal, Empty } from "../../../ui/Common";
 import { Avatar } from "../../../ui/Avatar";
 import { cn } from "@/lib/utils";
-import { Combobox, ComboboxInput, ComboboxContent, ComboboxList, ComboboxItem } from "../../../ui/combobox";
+import { Combobox, ComboboxInput, ComboboxContent, ComboboxList, ComboboxItem, ComboboxValue } from "../../../ui/combobox";
 import {
   Select,
   SelectContent,
@@ -208,6 +208,13 @@ function ExtraAddModal({ view, db, act, onClose, onAdd }) {
       }));
   }, [db.participants, act.asistentes, act.socials]);
 
+  // Función para obtener el label a partir del value (ID)
+  const getParticipantLabel = (id) => {
+    if (!id) return "";
+    const p = db.participants.find((p) => p.id === id);
+    return p ? `${p.nombre} ${p.apellido}` : "";
+  };
+
   return (
     <Modal
       title={`${view === "ind" ? "Sanción/Premio Individual" : "Puntos por Equipo"}`}
@@ -229,8 +236,12 @@ function ExtraAddModal({ view, db, act, onClose, onAdd }) {
                   }
                 }}
                 items={availablePlayers}
+                itemToStringLabel={(item) => item?.label || getParticipantLabel(Number(item?.value))}
               >
                 <ComboboxInput placeholder="Seleccionar jugador..." showTrigger={true} />
+                <ComboboxValue>
+                  {({ value }) => getParticipantLabel(Number(value)) || "Seleccionar jugador..."}
+                </ComboboxValue>
                 <ComboboxContent>
                   <ComboboxList>
                     {(item) => (

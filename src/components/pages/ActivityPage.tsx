@@ -16,6 +16,7 @@ import { Empty } from "@/components/ui/Common";
 import { Button } from "@/components/ui/button";
 import { cn, formatDate } from "@/lib/utils";
 import { useApp } from "@/hooks/useApp";
+import { useAuth } from "@/hooks/useAuth";
 import { FloatingNav } from "@/components/ui/FloatingNav";
 import { TabEquipos } from "@/components/activities/views/tabs/TabEquipos";
 import { TabGoleadores } from "@/components/activities/views/tabs/TabGoleadores";
@@ -30,6 +31,7 @@ interface ActivityPageProps {
 export default function ActivityPage({ id, initialTab = "equipos" }: ActivityPageProps) {
   const router = useRouter();
   const { db, isLoading } = useApp();
+  const { isAdmin } = useAuth();
   const { activities, participants } = db;
 
   // ALL hooks must be declared first - no early returns!
@@ -155,6 +157,17 @@ export default function ActivityPage({ id, initialTab = "equipos" }: ActivityPag
               <div className="text-sm opacity-70">
                 {formatDate(act.fecha)} · {act.asistentes?.length || 0} presentes
               </div>
+              {isAdmin() && (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => {
+                    router.push(`/activities/${id}/edit/info`);
+                  }}
+                >
+                  Editar
+                </Button>
+              )}
             </div>
           </div>
         </div>

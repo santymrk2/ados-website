@@ -1,12 +1,14 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useStore } from "@nanostores/react";
 import { Pencil, Trash2, Users, Gamepad2, Award, Trophy, Moon } from "lucide-react";
 import { TEAMS, TEAM_COLORS, getTeamBg } from "@/lib/constants";
 import { PageHeader, Empty } from "../ui/Common";
 import { Chip } from "../ui/Badges";
 import { Button } from "../ui/button";
 import { formatDate } from "@/lib/utils";
+import { $role } from "@/store/appStore";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -20,6 +22,9 @@ import {
 import { Input } from "../ui/input";
 
 export function ActivitiesList({ db, onView, onNew, onEdit, onDelete }) {
+  // Check role
+  const role = useStore($role);
+  const isAdmin = role === 'admin';
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [actAEliminar, setActAEliminar] = useState(null);
   const [confirmText, setConfirmText] = useState("");
@@ -54,10 +59,12 @@ export function ActivitiesList({ db, onView, onNew, onEdit, onDelete }) {
         sub={`${db.activities.length} registradas`}
       />
       <div className="p-4">
+        {isAdmin && (
         <Button onClick={onNew} className="w-full mb-4" size="lg">
           <Moon className="w-5 h-5" />
           Nueva Actividad
         </Button>
+        )}
         {sorted.length === 0 ? (
           <Empty text="No hay actividades todavía" />
         ) : (
@@ -77,6 +84,7 @@ export function ActivitiesList({ db, onView, onNew, onEdit, onDelete }) {
                       {formatDate(a.fecha)}
                     </div>
                   </div>
+                  {isAdmin && (
                   <div className="flex gap-2">
                     <Button
                       variant="outline"
@@ -96,6 +104,7 @@ export function ActivitiesList({ db, onView, onNew, onEdit, onDelete }) {
                       <Trash2 className="w-4 h-4" />
                     </Button>
                   </div>
+                  )}
                 </div>
                 <div className="p-3 flex gap-2 border-t border-surface-dark flex-wrap">
                   <Chip icon={Users} val={a.asistentes.length} label="asist." />

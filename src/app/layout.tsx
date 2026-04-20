@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "@/app/globals.css";
-import { BottomNav } from "@/components/ui/BottomNav";
+import { AuthGate } from "@/components/auth/AuthGate";
 
 export const metadata: Metadata = {
   title: "Activados",
@@ -31,14 +31,13 @@ export const viewport: Viewport = {
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
     <html lang="es">
       <body className="pb-safe">
-        {children}
-        <BottomNav />
+        <AuthGate>{children}</AuthGate>
       </body>
     </html>
   );

@@ -40,8 +40,8 @@ const Toaster = ({ ...props }: ToasterProps) => {
         classNames: {
           toast: "cn-toast",
         },
-        swipeDirection: "right",
       }}
+      swipeDirections={["right", "left"]}
       {...props}
     />
   )

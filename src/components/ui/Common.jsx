@@ -23,7 +23,7 @@ export function Modal({ title, onClose, children, isLoading = false }) {
     <Dialog open={true} onOpenChange={(open) => !open && handleClose()}>
       <DialogContent
         showCloseButton={false}
-        className="max-w-2xl md:max-w-4xl lg:max-w-5xl xl:max-w-6xl p-0 border-0 max-h-[90vh]"
+        className="w-[90vw] max-w-sm sm:max-w-md md:max-w-2xl lg:max-w-4xl xl:max-w-5xl p-0 border-0 max-h-[90vh]"
       >
         <DialogHeader className="p-4 border-b border-surface-dark bg-white sticky top-0">
           <div className="flex items-center w-full justify-between">

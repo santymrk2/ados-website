@@ -301,7 +301,7 @@ export function ActivityFormModal({
       </div>
 
       <div className="flex-1 overflow-y-auto bg-background">
-        <Tabs value={tab} onValueChange={setTab} className="w-full max-w-5xl mx-auto">
+        <Tabs value={tab} onValueChange={setTab} className="w-full max-w-5xl mx-auto mt-4 md:mt-6">
           <TabsContent value="info" className="outline-none">
             <div className="p-4 md:p-6 lg:p-8">
               <TabInfo act={act} A={A} Q={Q} locked={!!act.locked} savingOps={savingOps} />

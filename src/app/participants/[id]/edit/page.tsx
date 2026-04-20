@@ -1,5 +1,8 @@
 import ParticipantFormWrapper from "@/components/wrappers/ParticipantFormWrapper";
 
-export default function Page({ params }: { params: { id: string } }) {
-  return <ParticipantFormWrapper mode="edit" id={params.id} />;
+export const dynamic = 'force-dynamic';
+
+export default async function Page({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  return <ParticipantFormWrapper mode="edit" id={id} />;
 }

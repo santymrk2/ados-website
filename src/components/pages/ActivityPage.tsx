@@ -10,11 +10,10 @@ import {
   Trophy,
   CheckSquare,
 } from "lucide-react";
-import { TEAMS, TEAM_COLORS, getTeamBg, PTS } from "@/lib/constants";
+import { TEAMS } from "@/lib/constants";
 import { actPts, actGoles, calcDayTeamPts } from "@/lib/calc";
 import { Empty } from "@/components/ui/Common";
 import { Button } from "@/components/ui/button";
-import { PodiumBadge } from "@/components/ui/Badges";
 import { cn, formatDate } from "@/lib/utils";
 import { useApp } from "@/hooks/useApp";
 import { FloatingNav } from "@/components/ui/FloatingNav";
@@ -30,81 +29,58 @@ interface ActivityPageProps {
 
 export default function ActivityPage({ id, initialTab = "equipos" }: ActivityPageProps) {
   const router = useRouter();
-  const { db } = useApp();
+  const { db, isLoading } = useApp();
   const { activities, participants } = db;
 
-  const act = useMemo(
-    () => activities.find((a) => a.id === Number(id)),
-    [activities, id],
-  );
-
-  if (!act) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-text-muted">Actividad no encontrada</p>
-          <Button
-            variant="link"
-            onClick={() => router.push("/activities")}
-          >
-            Volver a actividades
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
-  const activeTeams = useMemo(
-    () => TEAMS.slice(0, act.cantEquipos || 4),
-    [act.cantEquipos],
-  );
-  const dayPts = useMemo(
-    () => calcDayTeamPts(act, participants || []),
-    [act, participants],
-  );
-  const teamRank = activeTeams
-    .map((t) => ({ team: t, pts: dayPts[t] || 0 }))
-    .sort((a, b) => b.pts - a.pts);
-  const maxTeamPts = Math.max(...teamRank.map((t) => t.pts), 1);
-
-  const playerRank = useMemo(
-    () =>
-      (act.asistentes || [])
-        .map((pid) => {
-          const p = (participants || []).find((x) => x.id === pid);
-          if (!p) return null;
-          return {
-            ...p,
-            pts: actPts(pid, act, participants || []),
-            goles: actGoles(pid, act),
-          };
-        })
-        .filter(Boolean)
-        .sort((a, b) => b.pts - a.pts),
-    [act, participants],
-  );
-
+  // ALL hooks must be declared first - no early returns!
   const [tab, setTab] = useState(() => {
     if (typeof window !== "undefined") {
       const hash = window.location.hash.replace("#", "");
-      if (
-        ["equipos", "asistencia", "goleadores", "juegos", "ranking"].includes(
-          hash,
-        )
-      ) {
+      if (["equipos", "asistencia", "goleadores", "juegos", "ranking"].includes(hash)) {
         return hash;
       }
     }
     return initialTab;
   });
 
-  const handleTabChange = (val: string) => {
-    setTab(val);
-    if (typeof window !== "undefined") {
-      window.history.replaceState(null, "", `#${val}`);
-    }
-  };
   const [showScorers, setShowScorers] = useState(false);
+
+  // Then all useMemo
+  const act = useMemo(
+    () => activities.find((a) => a.id === Number(id)),
+    [activities, id],
+  );
+
+  const activeTeams = useMemo(
+    () => act ? TEAMS.slice(0, act.cantEquipos || 4) : [],
+    [act?.cantEquipos],
+  );
+
+  const dayPts = useMemo(
+    () => act ? calcDayTeamPts(act, participants || []) : {},
+    [act, participants],
+  );
+
+  const teamRank = useMemo(
+    () => activeTeams.map((t) => ({ team: t, pts: dayPts[t] || 0 })).sort((a, b) => b.pts - a.pts),
+    [activeTeams, dayPts],
+  );
+
+  const maxTeamPts = useMemo(
+    () => teamRank.length > 0 ? Math.max(...teamRank.map((t) => t.pts), 1) : 1,
+    [teamRank],
+  );
+
+  const playerRank = useMemo(
+    () => act && act.asistentes
+      ? act.asistentes.map((pid: number) => {
+        const p = (participants || []).find((x) => x.id === pid);
+        if (!p) return null;
+        return { ...p, pts: actPts(pid, act, participants || []), goles: actGoles(pid, act) };
+      }).filter(Boolean).sort((a: any, b: any) => b.pts - a.pts)
+      : [],
+    [act, participants],
+  );
 
   const TABS = [
     { value: "equipos", label: "Equipos", icon: LayoutGrid },
@@ -114,24 +90,53 @@ export default function ActivityPage({ id, initialTab = "equipos" }: ActivityPag
     { value: "ranking", label: "Ranking", icon: Trophy },
   ];
 
+  const handleTabChange = (val: string) => {
+    setTab(val);
+    if (typeof window !== "undefined") {
+      window.history.replaceState(null, "", `#${val}`);
+    }
+  };
+
   const scorersByDeporte = useMemo(() => {
+    if (!act?.asistentes) return { f: [], h: [], b: [] };
     const res: Record<string, any[]> = { f: [], h: [], b: [] };
     act.asistentes.forEach((pid: number) => {
       const p = participants.find((x) => x.id === pid);
       if (!p) return;
       (["f", "h", "b"] as const).forEach((tipo) => {
-        const cant = (act.goles || [])
-          .filter((g: any) => g.pid === pid && g.tipo === tipo)
-          .reduce((s: number, g: any) => s + g.cant, 0);
-        if (cant > 0) {
-          res[tipo].push({ ...p, goles: cant, tipo });
-        }
+        const cant = (act.goles || []).filter((g: any) => g.pid === pid && g.tipo === tipo).reduce((s: number, g: any) => s + g.cant, 0);
+        if (cant > 0) res[tipo].push({ ...p, goles: cant, tipo });
       });
     });
     Object.keys(res).forEach((k: string) => res[k as keyof typeof res].sort((a: any, b: any) => b.goles - a.goles));
     return res;
   }, [act, participants]);
 
+  // NOW render based on state - all hooks already called
+  if (isLoading || !db || !db.activities) {
+    return (
+      <div className="min-h-screen bg-primary flex items-center justify-center">
+        <div className="text-white text-center">
+          <p className="opacity-70">Cargando...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!act) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-text-muted">Actividad no encontrada</p>
+          <Button variant="link" onClick={() => router.push("/activities")}>
+            Volver a actividades
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // Main render
   return (
     <div className="min-h-screen bg-primary flex flex-col">
       <div className="pt-safe">
@@ -146,11 +151,9 @@ export default function ActivityPage({ id, initialTab = "equipos" }: ActivityPag
               <ChevronLeft className="w-5 h-5" />
             </Button>
             <div className="flex-1">
-              <div className="font-black text-lg">
-                {act.titulo || "Actividad"}
-              </div>
+              <div className="font-black text-lg">{act.titulo || "Actividad"}</div>
               <div className="text-sm opacity-70">
-                {formatDate(act.fecha)} · {act.asistentes.length} presentes
+                {formatDate(act.fecha)} · {act.asistentes?.length || 0} presentes
               </div>
             </div>
           </div>
@@ -159,30 +162,13 @@ export default function ActivityPage({ id, initialTab = "equipos" }: ActivityPag
 
       <div className="bg-primary px-4 pt-4 flex-1">
         {tab === "equipos" && (
-          <TabEquipos
-            act={act}
-            db={db}
-            teamRank={teamRank}
-            maxTeamPts={maxTeamPts}
-            playerRank={playerRank}
-          />
+          <TabEquipos act={act} db={db} teamRank={teamRank} maxTeamPts={maxTeamPts} playerRank={playerRank} />
         )}
-
         {tab === "asistencia" && <TabAsistencia act={act} db={db} />}
-
         {tab === "goleadores" && (
-          <TabGoleadores
-            act={act}
-            showScorers={showScorers}
-            setShowScorers={setShowScorers}
-            scorersByDeporte={scorersByDeporte}
-          />
+          <TabGoleadores act={act} showScorers={showScorers} setShowScorers={setShowScorers} scorersByDeporte={scorersByDeporte} />
         )}
-
-        {tab === "juegos" && (
-          <JuegosMixtosView act={act} juegos={act.juegos || []} />
-        )}
-
+        {tab === "juegos" && <JuegosMixtosView act={act} juegos={act.juegos || []} />}
         {tab === "ranking" && <TabRanking playerRank={playerRank} act={act} />}
       </div>
 
@@ -192,75 +178,39 @@ export default function ActivityPage({ id, initialTab = "equipos" }: ActivityPag
 }
 
 function JuegosMixtosView({ act, juegos }: { act: any; juegos: any[] }) {
-  if ((juegos || []).length === 0) {
-    return <Empty className="text-accent" text="Sin juegos registrados" />;
-  }
+  if (!juegos?.length) return <Empty className="text-accent" text="Sin juegos registrados" />;
 
   return (
     <div className="flex flex-col gap-4">
       <div className="font-bold text-sm text-text-muted mb-2 flex items-center gap-2">
         <Gamepad2 className="w-4 h-4" /> Juegos Mixtos
       </div>
-      {juegos.map((j: any, gi: number) => {
+      {juegos.map((j: any) => {
         const posToTeams: Record<string, string[]> = {};
         Object.entries(j.pos || {}).forEach(([pos, equipos]) => {
           if (!posToTeams[pos]) posToTeams[pos] = [];
-          if (Array.isArray(equipos)) {
-            posToTeams[pos].push(...equipos);
-          }
+          if (Array.isArray(equipos)) posToTeams[pos].push(...equipos);
         });
-
-        const usedPositions = Object.keys(posToTeams)
-          .map(Number)
-          .sort((a, b) => a - b);
+        const usedPositions = Object.keys(posToTeams).map(Number).sort((a, b) => a - b);
 
         return (
-          <div
-            key={j.id}
-            className="bg-white rounded-xl border border-surface-dark overflow-hidden"
-          >
-            <div className="p-3 border-b border-surface-dark font-bold">
-              {j.nombre || `Juego ${gi + 1}`}
-            </div>
-            {usedPositions.length === 0 ? (
-              <div className="p-3 text-xs text-text-muted text-center opacity-60">
-                Sin posiciones registradas
-              </div>
-            ) : (
-              <div className="flex flex-col gap-1 p-2">
-                {usedPositions.map((pos) => {
-                  const teams = posToTeams[pos];
-                  return (
-                    <div
-                      key={pos}
-                      className={cn(
-                        "flex items-center gap-2 px-2 py-1.5 rounded-lg",
-                        pos === 1 ? "bg-surface-dark" : "bg-background",
-                      )}
-                    >
-                      <PodiumBadge pos={pos} className="w-5 h-5 text-[10px]" />
-                      <div className="flex gap-1.5 flex-wrap flex-1">
-                        {teams.map((t: string) => (
-                          <span
-                            key={t}
-                            className="font-black text-sm px-2 py-0.5 rounded-lg"
-                            style={{
-                              color: TEAM_COLORS[t],
-                              backgroundColor: getTeamBg(t),
-                            }}
-                          >
-                            {t}
-                          </span>
-                        ))}
-                      </div>
-                      <span className="text-xs text-text-muted font-bold flex-shrink-0">
-                        +{PTS.rec[pos] || 0} pts
-                      </span>
+          <div key={j.id} className="bg-white rounded-xl border border-surface-dark overflow-hidden">
+            <div className="p-3 border-b border-surface-dark font-bold">{j.nombre || `Juego`}</div>
+            <div className="flex flex-col gap-1 p-2">
+              {usedPositions.map((pos) => {
+                const teams = posToTeams[pos];
+                return (
+                  <div key={pos} className={`flex items-center gap-2 px-2 py-1.5 rounded-lg ${pos === 1 ? "bg-surface-dark" : "bg-background"}`}>
+                    <div className="text-xs font-bold w-4">{pos}</div>
+                    <div className="flex gap-1.5 flex-wrap flex-1">
+                      {teams.map((t: string) => (
+                        <span key={t} className="font-black text-sm px-2 py-0.5 rounded-lg bg-gray-100">{t}</span>
+                      ))}
                     </div>
-                  );
-                })}
-              </div>
-            )}
+                  </div>
+                );
+              })}
+            </div>
           </div>
         );
       })}

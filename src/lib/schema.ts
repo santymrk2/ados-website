@@ -24,6 +24,7 @@ export const activities = pgTable("activities", {
   titulo: text("titulo"),
   cantEquipos: integer("cant_equipos").notNull().default(4),
   locked: boolean("locked").default(false),
+  version: integer("version").notNull().default(1),
 });
 
 export const activityParticipants = pgTable("activity_participants", {

@@ -36,6 +36,10 @@ export async function saveActivity(activity: any, isNewProvided?: boolean) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ data: activity, isNew }),
   });
+  if (res.status === 409) {
+    const errorData = await res.json();
+    throw new Error(`VERSION_CONFLICT:${errorData.currentVersion}`);
+  }
   if (!res.ok) throw new Error('Failed to save activity');
   const result = await res.json();
   return isNew ? result.id : activity.id;

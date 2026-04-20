@@ -23,7 +23,7 @@ export function Modal({ title, onClose, children, isLoading = false }) {
     <Dialog open={true} onOpenChange={(open) => !open && handleClose()}>
       <DialogContent
         showCloseButton={false}
-        className="max-w-md p-0 border-0"
+        className="max-w-2xl md:max-w-4xl lg:max-w-5xl xl:max-w-6xl p-0 border-0 max-h-[90vh]"
       >
         <DialogHeader className="p-4 border-b border-surface-dark bg-white sticky top-0">
           <div className="flex items-center w-full justify-between">
@@ -54,7 +54,7 @@ export function Modal({ title, onClose, children, isLoading = false }) {
             </Button>
           </div>
         </DialogHeader>
-        <div className="p-5">{children}</div>
+        <div className="p-3 md:p-5 overflow-y-auto max-h-[calc(90vh-70px)]">{children}</div>
       </DialogContent>
     </Dialog>
   );

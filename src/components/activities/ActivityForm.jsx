@@ -138,6 +138,12 @@ export function ActivityFormModal({
       } catch (e) {
         setSaveStatus("error");
         toast.error("Error al guardar: " + e.message);
+        if (e.message.startsWith('VERSION_CONFLICT:')) {
+          const serverVersion = e.message.split(':')[1];
+          toast.error(`⚠️ Alguien más modificó esta actividad (v${serverVersion}). Recargá la página y volvé a intentar.`);
+        } else {
+          toast.error("Error al guardar: " + e.message);
+        }
       }
     },
     [db.nextAid, onSave],

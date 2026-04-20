@@ -66,6 +66,7 @@ export async function GET(request: NextRequest) {
 
       return {
         id: a.id,
+        version: a.version,
         fecha: a.fecha,
         titulo: a.titulo || "",
         cantEquipos: a.cantEquipos || 4,
@@ -144,10 +145,28 @@ export async function POST(request: NextRequest) {
           titulo: data.titulo || "",
           cantEquipos: data.cantEquipos || 4,
           locked: !!data.locked,
+          version: 1,
         })
         .returning({ id: schema.activities.id });
       currentActId = result[0].id;
     } else {
+      // Validar versión para optimistic locking
+      const currentAct = await db.select()
+        .from(schema.activities)
+        .where(eq(schema.activities.id, currentActId));
+      const dbVersion = currentAct[0]?.version || 1;
+      const clientVersion = data.version || 1;
+
+      if (clientVersion !== dbVersion) {
+        return new Response(JSON.stringify({
+          error: "Versión desactualizada",
+          currentVersion: dbVersion,
+        }), {
+          status: 409,
+          headers: { "Content-Type": "application/json" }
+        });
+      }
+
       await db.transaction(async (tx) => {
         await tx
           .update(schema.activities)
@@ -156,6 +175,7 @@ export async function POST(request: NextRequest) {
             titulo: data.titulo || "",
             cantEquipos: data.cantEquipos || 4,
             locked: !!data.locked,
+            version: dbVersion + 1,
           })
           .where(eq(schema.activities.id, currentActId));
 

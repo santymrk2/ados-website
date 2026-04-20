@@ -1,302 +1,222 @@
-"use client";
+"use client"
 
-import * as React from "react";
+import * as React from "react"
 import {
-  ChevronLeft,
-  ChevronRight,
-  Calendar as CalendarIcon,
-} from "lucide-react";
+  DayPicker,
+  getDefaultClassNames,
+  type DayButton,
+  type Locale,
+} from "react-day-picker"
 
-import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-
-const parseLocalDate = (dateStr: string) => {
-  if (!dateStr) return new Date();
-  const [year, month, day] = dateStr.split("-").map(Number);
-  return new Date(year, month - 1, day);
-};
-
-const formatDateString = (date: Date) => {
-  if (isNaN(date.getTime())) return "";
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-};
+import { cn } from "@/lib/utils"
+import { Button, buttonVariants } from "@/components/ui/button"
+import { ChevronLeftIcon, ChevronRightIcon, ChevronDownIcon } from "lucide-react"
 
 function Calendar({
-  mode = "single",
-  selected,
-  onSelect,
-  disabled,
-  defaultMonth,
-  captionLayout = "buttons",
-}: {
-  mode?: "single";
-  selected?: string | Date;
-  onSelect?: (date: string | Date | undefined) => void;
-  disabled?: (date: Date) => boolean;
-  defaultMonth?: Date;
-  captionLayout?: "buttons" | "dropdown";
+  className,
+  classNames,
+  showOutsideDays = true,
+  captionLayout = "label",
+  buttonVariant = "ghost",
+  locale,
+  formatters,
+  components,
+  ...props
+}: React.ComponentProps<typeof DayPicker> & {
+  buttonVariant?: React.ComponentProps<typeof Button>["variant"]
 }) {
-  const [currentMonth, setCurrentMonth] = React.useState(() => {
-    if (defaultMonth) return defaultMonth;
-    if (selected) {
-      const d = selected instanceof Date ? selected : parseLocalDate(selected);
-      if (!isNaN(d.getTime())) return d;
-    }
-    return new Date();
-  });
-
-  const getDaysInMonth = (date: Date) => {
-    const year = date.getFullYear();
-    const month = date.getMonth();
-    const firstDay = new Date(year, month, 1);
-    const lastDay = new Date(year, month + 1, 0);
-    const daysInMonth = lastDay.getDate();
-    const startingDay = firstDay.getDay();
-
-    const days: (Date | null)[] = [];
-
-    for (let i = 0; i < startingDay; i++) {
-      days.push(null);
-    }
-
-    for (let i = 1; i <= daysInMonth; i++) {
-      days.push(new Date(year, month, i));
-    }
-
-    return days;
-  };
-
-  const days = getDaysInMonth(currentMonth);
-  const monthNames = [
-    "Enero",
-    "Febrero",
-    "Marzo",
-    "Abril",
-    "Mayo",
-    "Junio",
-    "Julio",
-    "Agosto",
-    "Septiembre",
-    "Octubre",
-    "Noviembre",
-    "Diciembre",
-  ];
-  const dayNames = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
-
-
-  const isSelected = (date: Date) => {
-    if (!selected) return false;
-    const selectedDate =
-      selected instanceof Date ? selected : parseLocalDate(selected);
-    return formatDateString(date) === formatDateString(selectedDate);
-  };
-
-  const isDisabled = (date: Date) => {
-    if (!disabled) return false;
-    return disabled(date);
-  };
-
-  const handleSelect = (date: Date) => {
-    const dateStr = formatDateString(date);
-    onSelect?.(dateStr);
-  };
-
-  const prevMonth = () => {
-    setCurrentMonth(
-      new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1),
-    );
-  };
-
-  const nextMonth = () => {
-    setCurrentMonth(
-      new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1),
-    );
-  };
-
-  const handleMonthChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const month = parseInt(e.target.value);
-    setCurrentMonth(new Date(currentMonth.getFullYear(), month, 1));
-  };
-
-  const handleYearChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const year = parseInt(e.target.value);
-    setCurrentMonth(new Date(year, currentMonth.getMonth(), 1));
-  };
-
-  const years = Array.from(
-    { length: 50 },
-    (_, i) => new Date().getFullYear() - 25 + i,
-  );
+  const defaultClassNames = getDefaultClassNames()
 
   return (
-    <div data-slot="calendar" className="p-3">
-      <div className="flex items-center justify-between mb-3">
-        {captionLayout === "dropdown" ? (
-          <div className="flex gap-1 flex-1">
-            <select
-              value={currentMonth.getMonth()}
-              onChange={handleMonthChange}
-              className="text-sm font-medium bg-transparent border-none outline-none cursor-pointer"
-            >
-              {monthNames.map((month, idx) => (
-                <option key={month} value={idx}>
-                  {month}
-                </option>
-              ))}
-            </select>
-            <select
-              value={currentMonth.getFullYear()}
-              onChange={handleYearChange}
-              className="text-sm font-medium bg-transparent border-none outline-none cursor-pointer"
-            >
-              {years.map((year) => (
-                <option key={year} value={year}>
-                  {year}
-                </option>
-              ))}
-            </select>
-          </div>
-        ) : (
-          <>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8"
-              onClick={prevMonth}
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <div className="font-bold text-sm">
-              {monthNames[currentMonth.getMonth()]} {currentMonth.getFullYear()}
-            </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8"
-              onClick={nextMonth}
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </>
-        )}
-      </div>
-
-      <div className="grid grid-cols-7 gap-1 mb-1">
-        {dayNames.map((day) => (
-          <div
-            key={day}
-            className="text-center text-xs font-medium text-muted-foreground py-1"
-          >
-            {day}
-          </div>
-        ))}
-      </div>
-
-      <div className="grid grid-cols-7 gap-1">
-        {days.map((date, index) => {
-          if (!date) {
-            return <div key={`empty-${index}`} className="h-9" />;
+    <DayPicker
+      showOutsideDays={showOutsideDays}
+      className={cn(
+        "group/calendar bg-background p-3 [--cell-radius:var(--radius-4xl)] [--cell-size:--spacing(8)] in-data-[slot=card-content]:bg-transparent in-data-[slot=popover-content]:bg-transparent",
+        String.raw`rtl:**:[.rdp-button\_next>svg]:rotate-180`,
+        String.raw`rtl:**:[.rdp-button\_previous>svg]:rotate-180`,
+        className
+      )}
+      captionLayout={captionLayout}
+      locale={locale}
+      formatters={{
+        formatMonthDropdown: (date) =>
+          date.toLocaleString(locale?.code, { month: "short" }),
+        ...formatters,
+      }}
+      classNames={{
+        root: cn("w-fit", defaultClassNames.root),
+        months: cn(
+          "relative flex flex-col gap-4 md:flex-row",
+          defaultClassNames.months
+        ),
+        month: cn("flex w-full flex-col gap-4", defaultClassNames.month),
+        nav: cn(
+          "absolute inset-x-0 top-0 flex w-full items-center justify-between gap-1",
+          defaultClassNames.nav
+        ),
+        button_previous: cn(
+          buttonVariants({ variant: buttonVariant }),
+          "size-(--cell-size) p-0 select-none aria-disabled:opacity-50",
+          defaultClassNames.button_previous
+        ),
+        button_next: cn(
+          buttonVariants({ variant: buttonVariant }),
+          "size-(--cell-size) p-0 select-none aria-disabled:opacity-50",
+          defaultClassNames.button_next
+        ),
+        month_caption: cn(
+          "flex h-(--cell-size) w-full items-center justify-center px-(--cell-size)",
+          defaultClassNames.month_caption
+        ),
+        dropdowns: cn(
+          "flex h-(--cell-size) w-full items-center justify-center gap-1.5 text-sm font-medium",
+          defaultClassNames.dropdowns
+        ),
+        dropdown_root: cn(
+          "relative rounded-(--cell-radius)",
+          defaultClassNames.dropdown_root
+        ),
+        dropdown: cn(
+          "absolute inset-0 bg-popover opacity-0",
+          defaultClassNames.dropdown
+        ),
+        caption_label: cn(
+          "font-medium select-none",
+          captionLayout === "label"
+            ? "text-sm"
+            : "flex items-center gap-1 rounded-(--cell-radius) text-sm [&>svg]:size-3.5 [&>svg]:text-muted-foreground",
+          defaultClassNames.caption_label
+        ),
+        table: "w-full border-collapse",
+        weekdays: cn("flex", defaultClassNames.weekdays),
+        weekday: cn(
+          "flex-1 rounded-(--cell-radius) text-[0.8rem] font-normal text-muted-foreground select-none",
+          defaultClassNames.weekday
+        ),
+        week: cn("mt-2 flex w-full", defaultClassNames.week),
+        week_number_header: cn(
+          "w-(--cell-size) select-none",
+          defaultClassNames.week_number_header
+        ),
+        week_number: cn(
+          "text-[0.8rem] text-muted-foreground select-none",
+          defaultClassNames.week_number
+        ),
+        day: cn(
+          "group/day relative aspect-square h-full w-full rounded-(--cell-radius) p-0 text-center select-none [&:last-child[data-selected=true]_button]:rounded-r-(--cell-radius)",
+          props.showWeekNumber
+            ? "[&:nth-child(2)[data-selected=true]_button]:rounded-l-(--cell-radius)"
+            : "[&:first-child[data-selected=true]_button]:rounded-l-(--cell-radius)",
+          defaultClassNames.day
+        ),
+        range_start: cn(
+          "relative isolate z-0 rounded-l-(--cell-radius) bg-muted after:absolute after:inset-y-0 after:right-0 after:w-4 after:bg-muted",
+          defaultClassNames.range_start
+        ),
+        range_middle: cn("rounded-none", defaultClassNames.range_middle),
+        range_end: cn(
+          "relative isolate z-0 rounded-r-(--cell-radius) bg-muted after:absolute after:inset-y-0 after:left-0 after:w-4 after:bg-muted",
+          defaultClassNames.range_end
+        ),
+        today: cn(
+          "rounded-(--cell-radius) bg-muted text-foreground data-[selected=true]:rounded-none",
+          defaultClassNames.today
+        ),
+        outside: cn(
+          "text-muted-foreground aria-selected:text-muted-foreground",
+          defaultClassNames.outside
+        ),
+        disabled: cn(
+          "text-muted-foreground opacity-50",
+          defaultClassNames.disabled
+        ),
+        hidden: cn("invisible", defaultClassNames.hidden),
+        ...classNames,
+      }}
+      components={{
+        Root: ({ className, rootRef, ...props }) => {
+          return (
+            <div
+              data-slot="calendar"
+              ref={rootRef}
+              className={cn(className)}
+              {...props}
+            />
+          )
+        },
+        Chevron: ({ className, orientation, ...props }) => {
+          if (orientation === "left") {
+            return (
+              <ChevronLeftIcon className={cn("size-4", className)} {...props} />
+            )
           }
 
-          const selectedDate = isSelected(date);
-          const disabledDate = isDisabled(date);
+          if (orientation === "right") {
+            return (
+              <ChevronRightIcon className={cn("size-4", className)} {...props} />
+            )
+          }
 
           return (
-            <button
-              key={index}
-              type="button"
-              disabled={disabledDate}
-              onClick={() => handleSelect(date)}
-              className={cn(
-                "h-9 w-9 rounded-lg text-sm font-medium transition-colors",
-                selectedDate && "bg-primary text-primary-foreground",
-                !selectedDate && !disabledDate && "hover:bg-accent",
-                disabledDate && "opacity-50 cursor-not-allowed",
-              )}
-            >
-              {date.getDate()}
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
+            <ChevronDownIcon className={cn("size-4", className)} {...props} />
+          )
+        },
+        DayButton: ({ ...props }) => (
+          <CalendarDayButton locale={locale} {...props} />
+        ),
+        WeekNumber: ({ children, ...props }) => {
+          return (
+            <td {...props}>
+              <div className="flex size-(--cell-size) items-center justify-center text-center">
+                {children}
+              </div>
+            </td>
+          )
+        },
+        ...components,
+      }}
+      {...props}
+    />
+  )
 }
 
-function DatePicker({
-  value,
-  onChange,
-  placeholder = "Seleccionar fecha",
+function CalendarDayButton({
   className,
-  disabled = false,
-}: {
-  value?: string;
-  onChange?: (date: string) => void;
-  placeholder?: string;
-  className?: string;
-  disabled?: boolean;
-}) {
-  const [open, setOpen] = React.useState(false);
+  day,
+  modifiers,
+  locale,
+  ...props
+}: React.ComponentProps<typeof DayButton> & { locale?: Partial<Locale> }) {
+  const defaultClassNames = getDefaultClassNames()
 
-  const formatDisplayDate = (dateStr?: string) => {
-    if (!dateStr) return "";
-    const d = parseLocalDate(dateStr);
-    if (isNaN(d.getTime())) return "";
-    return d.toLocaleDateString("es-AR");
-  };
-
-  const handleSelect = (date: string | Date | undefined) => {
-    if (date) {
-      const dateStr = typeof date === "string" ? date : formatDateString(date);
-      onChange?.(dateStr);
-      setOpen(false);
-    } else {
-      onChange?.("");
-      setOpen(false);
-    }
-  };
-
+  const ref = React.useRef<HTMLButtonElement>(null)
+  React.useEffect(() => {
+    if (modifiers.focused) ref.current?.focus()
+  }, [modifiers.focused])
 
   return (
-    <div className={className}>
-      <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger asChild>
-          <Button
-            variant="outline"
-            disabled={disabled}
-            className={cn(
-              "w-full justify-start font-normal",
-              !value && "text-muted-foreground",
-              disabled && "cursor-not-allowed opacity-50",
-            )}
-          >
-            <CalendarIcon className="mr-2 h-4 w-4" />
-            {value ? formatDisplayDate(value) : placeholder}
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent
-          side="top"
-          className="w-auto overflow-hidden p-0 z-[10051]"
-          align="start"
-        >
-          <Calendar
-            mode="single"
-            selected={value}
-            onSelect={handleSelect}
-            captionLayout="dropdown"
-          />
-        </PopoverContent>
-      </Popover>
-    </div>
-  );
+    <Button
+      ref={ref}
+      variant="ghost"
+      size="icon"
+      data-day={day.date.toLocaleDateString(locale?.code)}
+      data-selected-single={
+        modifiers.selected &&
+        !modifiers.range_start &&
+        !modifiers.range_end &&
+        !modifiers.range_middle
+      }
+      data-range-start={modifiers.range_start}
+      data-range-end={modifiers.range_end}
+      data-range-middle={modifiers.range_middle}
+      className={cn(
+        "relative isolate z-10 flex aspect-square size-auto w-full min-w-(--cell-size) flex-col gap-1 border-0 leading-none font-normal group-data-[focused=true]/day:relative group-data-[focused=true]/day:z-10 group-data-[focused=true]/day:border-ring group-data-[focused=true]/day:ring-[3px] group-data-[focused=true]/day:ring-ring/50 data-[range-end=true]:rounded-(--cell-radius) data-[range-end=true]:rounded-r-(--cell-radius) data-[range-end=true]:bg-primary data-[range-end=true]:text-primary-foreground data-[range-middle=true]:rounded-none data-[range-middle=true]:bg-muted data-[range-middle=true]:text-foreground data-[range-start=true]:rounded-(--cell-radius) data-[range-start=true]:rounded-l-(--cell-radius) data-[range-start=true]:bg-primary data-[range-start=true]:text-primary-foreground data-[selected-single=true]:bg-primary data-[selected-single=true]:text-primary-foreground dark:hover:text-foreground [&>span]:text-xs [&>span]:opacity-70",
+        defaultClassNames.day,
+        className
+      )}
+      {...props}
+    />
+  )
 }
 
-export { Calendar, DatePicker };
+export { Calendar, CalendarDayButton }

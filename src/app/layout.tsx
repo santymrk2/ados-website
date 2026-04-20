@@ -16,7 +16,7 @@ export const metadata: Metadata = {
     title: "Activados",
   },
   icons: {
-    icon: "/favicon.ico",
+    icon: "/logo.png",
     apple: "/apple-touch-icon.png",
   },
   openGraph: {

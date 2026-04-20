@@ -1,6 +1,10 @@
 import type { Metadata, Viewport } from "next";
 import "@/app/globals.css";
 import { AuthGate } from "@/components/auth/AuthGate";
+import { Inter } from "next/font/google";
+import { cn } from "@/lib/utils";
+
+const inter = Inter({subsets:['latin'],variable:'--font-sans'});
 
 export const metadata: Metadata = {
   title: "Activados",
@@ -35,7 +39,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="es">
+    <html lang="es" className={cn("font-sans", inter.variable)}>
       <body className="pb-safe">
         <AuthGate>{children}</AuthGate>
       </body>

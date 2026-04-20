@@ -5,7 +5,7 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-export function formatDate(d: string | Date | undefined | null): string {
+export function formatDate(d: string | Date | null | undefined): string {
   if (!d) return '';
   if (d instanceof Date) {
     const y = d.getFullYear();
@@ -18,7 +18,7 @@ export function formatDate(d: string | Date | undefined | null): string {
   return `${day} ${['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'][parseInt(m) - 1]} ${y}`;
 }
 
-export function isToday(d: string | Date | undefined | null): boolean {
+export function isToday(d: string | Date | null | undefined): boolean {
   if (!d) return false;
   if (d instanceof Date) {
     const y = d.getFullYear();
@@ -42,7 +42,7 @@ export function getTodayDateString(): string {
   return `${y}-${m}-${d}`;
 }
 
-export function parseLocalDate(dateStr: string): Date | null {
+export function parseLocalDate(dateStr: string | null | undefined): Date | null {
   if (!dateStr) return null;
   const [year, month, day] = dateStr.split('-').map(Number);
   return new Date(year, month - 1, day);

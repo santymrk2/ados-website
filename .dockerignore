@@ -37,14 +37,8 @@ next-env.d.ts
 .idea
 .vscode
 
-# old_src (no needed in container)
+# old_src
 old_src
-
-# Docker
-Dockerfile
-Dockerfile.*
-docker-compose*
-.dockerignore
 
 # Docs
 README.md

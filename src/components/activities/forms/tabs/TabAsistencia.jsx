@@ -31,7 +31,7 @@ import {
   DialogContent,
 } from "../../../ui/dialog";
 import { DatePicker } from "../../../ui/calendar";
-import { Combobox } from "../../../ui/combobox";
+import { Combobox, ComboboxInput, ComboboxContent, ComboboxList, ComboboxItem } from "../../../ui/combobox";
 import { Checkbox } from "../../../ui/checkbox";
 import { Check } from "lucide-react";
 import {
@@ -205,15 +205,25 @@ function NewPlayerModal({ act, db, onClose, onSave, A, Q }) {
             <Label className="mb-1">¿Quién lo invitó?</Label>
             <Combobox
               value={newPlayer.invitadorId}
-              onChange={(id) =>
+              onValueChange={(id) =>
                 setNewPlayer((p) => ({ ...p, invitadorId: id }))
               }
               items={availableInvitados.map((p) => ({
                 value: p.id.toString(),
                 label: `${p.nombre} ${p.apellido}`,
               }))}
-              placeholder="Seleccionar invitador..."
-            />
+            >
+              <ComboboxInput placeholder="Seleccionar invitador..." showTrigger={true} />
+              <ComboboxContent>
+                <ComboboxList>
+                  {(item) => (
+                    <ComboboxItem key={item.value} value={item.value}>
+                      {item.label}
+                    </ComboboxItem>
+                  )}
+                </ComboboxList>
+              </ComboboxContent>
+            </Combobox>
           </div>
 
           <Button

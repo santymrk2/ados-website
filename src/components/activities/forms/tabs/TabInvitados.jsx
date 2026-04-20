@@ -1,28 +1,92 @@
 import { toast } from "../../../../hooks/use-toast";
 import { Modal, Label, Empty } from "../../../ui/Common";
 import { Button } from "../../../ui/button";
-import { Combobox } from "../../../ui/combobox";
+import { Combobox, ComboboxInput, ComboboxContent, ComboboxList, ComboboxItem } from "../../../ui/combobox";
 
-export function TabInvitados({ act, A, db, onSaveParticipant, locked = false }) {
-  const add = () => {
+export function TabInvitados({ act, A, Q, db, onSaveParticipant, locked = false }) {
+  const add = async () => {
+    // Crear invitación vacía temporalmente en UI
+    const tempId = Math.random();
     A("invitaciones", [
       ...(act.invitaciones || []),
-      { id: Math.random(), invitador: null, invitado_id: null },
+      { id: tempId, invitador: null, invitado_id: null },
     ]);
     toast.success("Invitación agregada");
   };
-  const del = (id) => {
-    A(
-      "invitaciones",
-      (act.invitaciones || []).filter((i) => i.id !== id),
-    );
-    toast.success("Invitación eliminada");
+
+  const del = async (id) => {
+    // Si es un ID temporal (negativo), solo borrar del estado local
+    if (id < 0) {
+      A(
+        "invitaciones",
+        (act.invitaciones || []).filter((i) => i.id !== id),
+      );
+      toast.success("Invitación eliminada");
+      return;
+    }
+
+    // Si es un ID real, hacer operación atómica
+    try {
+      await Q("invitacion_delete", { id });
+      A(
+        "invitaciones",
+        (act.invitaciones || []).filter((i) => i.id !== id),
+      );
+      toast.success("Invitación eliminada");
+    } catch (e) {
+      toast.error("Error al eliminar invitación: " + e.message);
+    }
   };
-  const upd = (id, k, v) =>
+
+  const upd = async (id, k, v) => {
+    const inv = (act.invitaciones || []).find((i) => i.id === id);
+    if (!inv) return;
+
+    // Si es ID temporal y estamos actualizando el invitado, crear en DB
+    if (id < 0 && k === "invitado_id" && v) {
+      try {
+        const result = await Q("invitacion_add", {
+          invitador: inv.invitador,
+          invitado_id: v,
+        });
+        // Reemplazar el temporal por el real
+        A(
+          "invitaciones",
+          (act.invitaciones || []).map((i) =>
+            i.id === id ? { ...i, id: result.id, [k]: v } : i
+          ),
+        );
+        toast.success("Invitación guardada");
+      } catch (e) {
+        toast.error("Error al guardar invitación: " + e.message);
+      }
+      return;
+    }
+
+    // Si ya existe en DB, actualizar atómicamente
+    if (id > 0) {
+      try {
+        await Q("invitacion_update", {
+          id,
+          invitador: k === "invitador" ? v : inv.invitador,
+          invitado_id: k === "invitado_id" ? v : inv.invitado_id,
+        });
+        A(
+          "invitaciones",
+          (act.invitaciones || []).map((i) => (i.id === id ? { ...i, [k]: v } : i)),
+        );
+      } catch (e) {
+        toast.error("Error al actualizar invitación: " + e.message);
+      }
+      return;
+    }
+
+    // Solo actualizar estado local para IDs temporales sinDB aún
     A(
       "invitaciones",
       (act.invitaciones || []).map((i) => (i.id === id ? { ...i, [k]: v } : i)),
     );
+  };
 
   return (
     <div>
@@ -66,10 +130,20 @@ export function TabInvitados({ act, A, db, onSaveParticipant, locked = false }) 
                   label: `${p.nombre} ${p.apellido}`,
                 }))}
               value={inv.invitador?.toString() || ""}
-              onChange={(val) => upd(inv.id, "invitador", val ? Number(val) : null)}
+              onValueChange={(val) => upd(inv.id, "invitador", val ? Number(val) : null)}
               disabled={locked}
-              placeholder="— Seleccionar —"
-            />
+            >
+              <ComboboxInput placeholder="— Seleccionar —" showTrigger={true} />
+              <ComboboxContent>
+                <ComboboxList>
+                  {(item) => (
+                    <ComboboxItem key={item.value} value={item.value}>
+                      {item.label}
+                    </ComboboxItem>
+                  )}
+                </ComboboxList>
+              </ComboboxContent>
+            </Combobox>
             <Label>Invitado</Label>
             <Combobox
               items={db.participants.map((p) => ({
@@ -77,10 +151,20 @@ export function TabInvitados({ act, A, db, onSaveParticipant, locked = false }) 
                 label: `${p.nombre} ${p.apellido}`,
               }))}
               value={inv.invitado_id?.toString() || ""}
-              onChange={(val) => upd(inv.id, "invitado_id", val ? Number(val) : null)}
+              onValueChange={(val) => upd(inv.id, "invitado_id", val ? Number(val) : null)}
               disabled={locked}
-              placeholder="— Seleccionar —"
-            />
+            >
+              <ComboboxInput placeholder="— Seleccionar —" showTrigger={true} />
+              <ComboboxContent>
+                <ComboboxList>
+                  {(item) => (
+                    <ComboboxItem key={item.value} value={item.value}>
+                      {item.label}
+                    </ComboboxItem>
+                  )}
+                </ComboboxList>
+              </ComboboxContent>
+            </Combobox>
           </div>
         ))}
         {(act.invitaciones || []).length === 0 && (

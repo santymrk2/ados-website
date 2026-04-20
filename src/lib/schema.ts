@@ -115,9 +115,9 @@ export const invitaciones = pgTable("invitaciones", {
   invitadorId: integer("invitador_id").references(() => participants.id, {
     onDelete: "cascade",
   }),
-  invitadoId: integer("invitado_id")
-    .notNull()
-    .references(() => participants.id, { onDelete: "cascade" }),
+  invitadoId: integer("invitado_id").references(() => participants.id, {
+    onDelete: "cascade",
+  }),
 });
 
 export const pushSubscriptions = pgTable("push_subscriptions", {

@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import { toast } from "../../../../hooks/use-toast";
 import { Button } from "../../../ui/button";
 import { Label, Empty } from "../../../ui/Common";
-import { Combobox } from "../../../ui/combobox";
+import { Combobox, ComboboxInput, ComboboxContent, ComboboxList, ComboboxItem } from "../../../ui/combobox";
 import {
   Select,
   SelectContent,
@@ -76,11 +76,21 @@ export function TabGoles({ act, A, Q, db, locked = false }) {
               <div className="flex-1">
                 <Combobox
                   value={g.pid?.toString() || ""}
-                  onChange={(val) => upd(g.id, "pid", val ? Number(val) : null)}
+                  onValueChange={(val) => upd(g.id, "pid", val ? Number(val) : null)}
                   items={availablePlayers}
-                  placeholder="Seleccionar jugador..."
                   disabled={locked}
-                />
+                >
+                  <ComboboxInput placeholder="Seleccionar jugador..." showTrigger={true} />
+                  <ComboboxContent>
+                    <ComboboxList>
+                      {(item) => (
+                        <ComboboxItem key={item.value} value={item.value}>
+                          {item.label}
+                        </ComboboxItem>
+                      )}
+                    </ComboboxList>
+                  </ComboboxContent>
+                </Combobox>
               </div>
               <div className="w-28">
                 <Select

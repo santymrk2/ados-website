@@ -615,6 +615,49 @@ export async function PATCH(request: NextRequest) {
         await db.delete(schema.partidos).where(eq(schema.partidos.id, data.id));
         break;
       }
+      // === INVITACIONES (operaciones atómicas) ===
+      case "invitacion_add": {
+        const { invitador, invitado_id } = data;
+        // Validar que tenga invitado_id
+        if (!invitado_id) {
+          throw new Error("La invitación debe tener un invitado seleccionado");
+        }
+        const result = await db
+          .insert(schema.invitaciones)
+          .values({
+            activityId,
+            invitadorId: invitador || null,
+            invitadoId: Number(invitado_id),
+          })
+          .returning({ id: schema.invitaciones.id });
+        return NextResponse.json(
+          { success: true, id: result[0].id },
+          { status: 200 },
+        );
+      }
+      case "invitacion_update": {
+        const { id, invitador, invitado_id } = data;
+        if (!id) throw new Error("ID de invitación requerido");
+        if (!invitado_id) {
+          throw new Error("La invitación debe tener un invitado seleccionado");
+        }
+        await db
+          .update(schema.invitaciones)
+          .set({
+            invitadorId: invitador ? Number(invitador) : null,
+            invitadoId: Number(invitado_id),
+          })
+          .where(eq(schema.invitaciones.id, id));
+        break;
+      }
+      case "invitacion_delete": {
+        const { id } = data;
+        if (!id) throw new Error("ID de invitación requerido");
+        await db
+          .delete(schema.invitaciones)
+          .where(eq(schema.invitaciones.id, id));
+        break;
+      }
       default:
         throw new Error("Invalid update type");
     }

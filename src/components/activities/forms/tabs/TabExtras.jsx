@@ -9,7 +9,7 @@ import { Input } from "../../../ui/input";
 import { Label, Modal, Empty } from "../../../ui/Common";
 import { Avatar } from "../../../ui/Avatar";
 import { cn } from "@/lib/utils";
-import { Combobox } from "../../../ui/combobox";
+import { Combobox, ComboboxInput, ComboboxContent, ComboboxList, ComboboxItem } from "../../../ui/combobox";
 import {
   Select,
   SelectContent,
@@ -21,23 +21,51 @@ import {
 let tempIdCounter = 0;
 const generateTempId = () => -1 - tempIdCounter++;
 
-export function TabExtras({ act, A, db, locked = false }) {
+export function TabExtras({ act, A, Q, db, locked = false }) {
   const [view, setView] = useState("ind"); // 'ind' or 'team'
   const [showAdd, setShowAdd] = useState(false);
 
-  const updE = (id, k, v) => {
-    const newExtras = (act.extras || []).map((e) =>
-      e.id === id ? { ...e, [k]: v } : e,
-    );
-    // Aunque sea cambio local, marcar como modificado (será guardado en doSave)
-    A("extras", newExtras);
+  const updE = async (id, k, v) => {
+    const extras = act.extras || [];
+    const item = extras.find((e) => e.id === id);
+    if (!item) return;
+    
+    // Si tiene ID real, actualizar atómicamente
+    if (id > 0) {
+      try {
+        await Q("extra_update", { 
+          id, 
+          puntos: k === "puntos" ? v : item.puntos,
+          motivo: k === "motivo" ? v : item.motivo,
+        }, "extras", extras.map(e => e.id === id ? { ...e, [k]: v } : e));
+      } catch (e) {
+        toast.error("Error al actualizar: " + e.message);
+      }
+    } else {
+      // Solo actualizar estado local para IDs temporales
+      A("extras", extras.map((e) => (e.id === id ? { ...e, [k]: v } : e)));
+    }
   };
 
-  const updD = (id, k, v) => {
-    const newDescuentos = (act.descuentos || []).map((d) =>
-      d.id === id ? { ...d, [k]: v } : d,
-    );
-    A("descuentos", newDescuentos);
+  const updD = async (id, k, v) => {
+    const descuentos = act.descuentos || [];
+    const item = descuentos.find((d) => d.id === id);
+    if (!item) return;
+    
+    if (id > 0) {
+      try {
+        await Q("extra_update", { 
+          id, 
+          tipo: "descuento",
+          puntos: k === "puntos" ? v : item.puntos,
+          motivo: k === "motivo" ? v : item.motivo,
+        }, "descuentos", descuentos.map(d => d.id === id ? { ...d, [k]: v } : d));
+      } catch (e) {
+        toast.error("Error al actualizar: " + e.message);
+      }
+    } else {
+      A("descuentos", descuentos.map((d) => (d.id === id ? { ...d, [k]: v } : d)));
+    }
   };
 
   const filteredE = (act.extras || []).filter((x) =>
@@ -47,15 +75,18 @@ export function TabExtras({ act, A, db, locked = false }) {
     view === "team" ? !!x.team : !x.team,
   );
 
-  const onAdd = (type, target, pts, motivo) => {
+  const onAdd = async (type, target, pts, motivo) => {
     const listKey = type === "extra" ? "extras" : "descuentos";
+    const tempId = generateTempId();
     const newItem = {
-      id: generateTempId(),
+      id: tempId,
       puntos: pts,
       motivo: motivo,
       pid: view === "ind" ? target.id : undefined,
       team: view === "team" ? target : undefined,
     };
+    
+    // Agregar al estado local inmediatamente
     A(listKey, [...(act[listKey] || []), newItem]);
     setShowAdd(false);
     toast.success(`${type === "extra" ? "Puntos extra" : "Sanción"} aplicada`);
@@ -189,7 +220,7 @@ function ExtraAddModal({ view, db, act, onClose, onAdd }) {
             <div className="mb-3">
               <Combobox
                 value={selected?.id?.toString() || ""}
-                onChange={(val) => {
+                onValueChange={(val) => {
                   if (val) {
                     const p = db.participants.find((p) => p.id === Number(val));
                     setSelected(p);
@@ -198,8 +229,18 @@ function ExtraAddModal({ view, db, act, onClose, onAdd }) {
                   }
                 }}
                 items={availablePlayers}
-                placeholder="Seleccionar jugador..."
-              />
+              >
+                <ComboboxInput placeholder="Seleccionar jugador..." showTrigger={true} />
+                <ComboboxContent>
+                  <ComboboxList>
+                    {(item) => (
+                      <ComboboxItem key={item.value} value={item.value}>
+                        {item.label}
+                      </ComboboxItem>
+                    )}
+                  </ComboboxList>
+                </ComboboxContent>
+              </Combobox>
             </div>
           </div>
         ) : (

@@ -249,7 +249,7 @@ export function TabEquipos({ act, A, Q, db, locked = false }) {
 
                 {selectedTeamData.women.length === 0 &&
                   selectedTeamData.men.length === 0 && (
-                    <div className="text-accent text-center text-text-muted text-sm py-4">
+                    <div className="text-center text-text-muted text-sm py-4">
                       Sin jugadores en este equipo
                     </div>
                   )}

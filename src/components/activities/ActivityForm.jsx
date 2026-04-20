@@ -287,6 +287,7 @@ export function ActivityFormModal({
             <TabInvitados
               act={act}
               A={A}
+              Q={Q}
               db={db}
               onSaveParticipant={onSaveParticipant}
               locked={!!act.locked}

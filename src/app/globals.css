@@ -29,19 +29,14 @@
     --popover: oklch(1 0 0);
     --popover-foreground: oklch(0.145 0 0);
 
-    /* EL NUEVO PROTAGONISTA */
-    /* Primario: Violeta/Azul */
-    --primary: oklch(0.205 0 0);
+    --primary: oklch(0.535 0.288 266.6);
     --primary-foreground: oklch(
         0.985 0 0
-    ); /* Texto blanco para que resalte en el violeta */
+    );
 
-    /* EL NUEVO SECUNDARIO */
-    /* Secundario: Verde Lima */
-    --secondary: oklch(0.97 0 0);
+    --secondary: oklch(0.885 0.246 128.5);
     --secondary-foreground: oklch(
-        0.205 0 0
-    ); /* Texto oscuro para que se lea en el verde */
+        0.145 0 0
 
     /* Hovers y menús (Accent): Fondo verde lima super claro con texto verde oscuro */
     --accent: oklch(0.97 0 0);

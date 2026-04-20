@@ -5,24 +5,25 @@ import { Toaster as Sonner, type ToasterProps } from "sonner"
 import { CircleCheckIcon, InfoIcon, TriangleAlertIcon, OctagonXIcon, Loader2Icon } from "lucide-react"
 
 const Toaster = ({ ...props }: ToasterProps) => {
-  const { theme = "system" } = useTheme()
+  // const { theme = "system" } = useTheme()
 
   return (
     <Sonner
-      theme={theme as ToasterProps["theme"]}
+      theme="light"
       className="toaster group"
+      richColors
       icons={{
         success: (
-          <CircleCheckIcon className="size-4 text-primary" />
+          <CircleCheckIcon className="size-4" />
         ),
         info: (
-          <InfoIcon className="size-4 text-secondary" />
+          <InfoIcon className="size-4" />
         ),
         warning: (
-          <TriangleAlertIcon className="size-4 text-secondary" />
+          <TriangleAlertIcon className="size-4" />
         ),
         error: (
-          <OctagonXIcon className="size-4 text-primary" />
+          <OctagonXIcon className="size-4" />
         ),
         loading: (
           <Loader2Icon className="size-4 animate-spin" />
@@ -34,6 +35,18 @@ const Toaster = ({ ...props }: ToasterProps) => {
           "--normal-text": "var(--popover-foreground)",
           "--normal-border": "var(--border)",
           "--border-radius": "var(--radius)",
+          "--success-bg": "var(--primary)",
+          "--success-text": "var(--primary-foreground)",
+          "--success-border": "var(--primary)",
+          "--error-bg": "var(--secondary)",
+          "--error-text": "var(--secondary-foreground)",
+          "--error-border": "var(--secondary)",
+          "--warning-bg": "var(--secondary)",
+          "--warning-text": "var(--secondary-foreground)",
+          "--warning-border": "var(--secondary)",
+          "--info-bg": "var(--primary)",
+          "--info-text": "var(--primary-foreground)",
+          "--info-border": "var(--primary)",
         } as React.CSSProperties
       }
       toastOptions={{

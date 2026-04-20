@@ -301,15 +301,14 @@ export function ActivityFormModal({
       </div>
 
       <div className="flex-1 overflow-y-auto bg-background">
-        <Tabs value={tab} onValueChange={setTab} className="w-full">
-          <div className="p-4">
-            <TabsContent value="info" asChild>
-            <div>
+        <Tabs value={tab} onValueChange={setTab} className="w-full max-w-5xl mx-auto">
+          <TabsContent value="info" className="outline-none">
+            <div className="p-4 md:p-6 lg:p-8">
               <TabInfo act={act} A={A} Q={Q} locked={!!act.locked} savingOps={savingOps} />
             </div>
           </TabsContent>
 
-          <TabsContent value="asistencia" asChild>
+          <TabsContent value="asistencia" className="outline-none">
             <TabAsistencia
               act={act}
               A={A}
@@ -321,15 +320,15 @@ export function ActivityFormModal({
             />
           </TabsContent>
 
-          <TabsContent value="equipos" asChild>
+          <TabsContent value="equipos" className="outline-none">
             <TabEquipos act={act} A={A} Q={Q} db={db} locked={!!act.locked} savingOps={savingOps} />
           </TabsContent>
 
-          <TabsContent value="juegos" asChild>
+          <TabsContent value="juegos" className="outline-none">
             <TabJuegos act={act} A={A} Q={Q} locked={!!act.locked} savingOps={savingOps} />
           </TabsContent>
 
-          <TabsContent value="invitados" asChild>
+          <TabsContent value="invitados" className="outline-none">
             <TabInvitados
               act={act}
               A={A}
@@ -340,14 +339,13 @@ export function ActivityFormModal({
             />
           </TabsContent>
 
-          <TabsContent value="goles" asChild>
+          <TabsContent value="goles" className="outline-none">
             <TabGoles act={act} A={A} Q={Q} db={db} locked={!!act.locked} savingOps={savingOps} />
           </TabsContent>
 
-          <TabsContent value="extras" asChild>
+          <TabsContent value="extras" className="outline-none">
             <TabExtras act={act} A={A} db={db} locked={!!act.locked} />
           </TabsContent>
-          </div>
         </Tabs>
       </div>
 

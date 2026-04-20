@@ -240,7 +240,7 @@ export function TabEquipos({ act, db, teamRank, maxTeamPts, playerRank }) {
               variant="ghost"
               size="sm"
               onClick={() => setSelectedTeam(null)}
-              className="text-xs text-accent hover:text-text-muted"
+              className="text-xs text-accent hover:text-muted"
             >
               Cerrar
             </Button>

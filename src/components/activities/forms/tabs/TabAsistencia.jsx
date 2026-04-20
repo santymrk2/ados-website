@@ -375,7 +375,7 @@ export function TabAsistencia({ act, A, Q, db, onSaveParticipant, locked = false
           return (
             <div
               key={p.id}
-              className="rounded-lg border bg-white border-surface-dark"
+              className={`rounded-lg border bg-white ${here ? 'border-primary shadow-md shadow-primary/20' : 'border-surface-dark'}`}
             >
               <div className="flex items-center p-3 gap-3">
                 <Checkbox

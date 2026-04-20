@@ -30,7 +30,10 @@ interface ActivityPageProps {
 
 const VALID_TABS = ["equipos", "asistencia", "goleadores", "juegos", "ranking"];
 
-export default function ActivityPage({ id, initialTab = "equipos" }: ActivityPageProps) {
+export default function ActivityPage({
+  id,
+  initialTab = "equipos",
+}: ActivityPageProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { db, isLoading } = useApp();
@@ -43,7 +46,7 @@ export default function ActivityPage({ id, initialTab = "equipos" }: ActivityPag
   // Validate tab
   const currentTab = VALID_TABS.includes(tab) ? tab : "equipos";
 
-  const [showScorers, setShowScorers] = useState(false);
+  const [showScorers, setShowScorers] = useState(true);
 
   const act = useMemo(
     () => activities.find((a) => a.id === Number(id)),
@@ -51,42 +54,79 @@ export default function ActivityPage({ id, initialTab = "equipos" }: ActivityPag
   );
 
   const activeTeams = useMemo(
-    () => act ? TEAMS.slice(0, act.cantEquipos || 4) : [],
+    () => (act ? TEAMS.slice(0, act.cantEquipos || 4) : []),
     [act?.cantEquipos],
   );
 
   const dayPts = useMemo(
-    () => act ? calcDayTeamPts(act, participants || []) : {},
+    () => (act ? calcDayTeamPts(act, participants || []) : {}),
     [act, participants],
   );
 
   const teamRank = useMemo(
-    () => activeTeams.map((t) => ({ team: t, pts: dayPts[t] || 0 })).sort((a, b) => b.pts - a.pts),
+    () =>
+      activeTeams
+        .map((t) => ({ team: t, pts: dayPts[t] || 0 }))
+        .sort((a, b) => b.pts - a.pts),
     [activeTeams, dayPts],
   );
 
   const maxTeamPts = useMemo(
-    () => teamRank.length > 0 ? Math.max(...teamRank.map((t) => t.pts), 1) : 1,
+    () =>
+      teamRank.length > 0 ? Math.max(...teamRank.map((t) => t.pts), 1) : 1,
     [teamRank],
   );
 
   const playerRank = useMemo(
-    () => act && act.asistentes
-      ? act.asistentes.map((pid: number) => {
-        const p = (participants || []).find((x) => x.id === pid);
-        if (!p) return null;
-        return { ...p, pts: actPts(pid, act, participants || []), goles: actGoles(pid, act) };
-      }).filter(Boolean).sort((a: any, b: any) => b.pts - a.pts)
-      : [],
+    () =>
+      act && act.asistentes
+        ? act.asistentes
+            .map((pid: number) => {
+              const p = (participants || []).find((x) => x.id === pid);
+              if (!p) return null;
+              return {
+                ...p,
+                pts: actPts(pid, act, participants || []),
+                goles: actGoles(pid, act),
+              };
+            })
+            .filter(Boolean)
+            .sort((a: any, b: any) => b.pts - a.pts)
+        : [],
     [act, participants],
   );
 
   const TABS = [
-    { value: "equipos", label: "Equipos", icon: LayoutGrid, href: `/activities/${id}/view/equipos` },
-    { value: "asistencia", label: "Asistencia", icon: CheckSquare, href: `/activities/${id}/view/asistencia` },
-    { value: "goleadores", label: "Goleadores", icon: Award, href: `/activities/${id}/view/goleadores` },
-    { value: "juegos", label: "Juegos", icon: Gamepad2, href: `/activities/${id}/view/juegos` },
-    { value: "ranking", label: "Ranking", icon: Trophy, href: `/activities/${id}/view/ranking` },
+    {
+      value: "equipos",
+      label: "Equipos",
+      icon: LayoutGrid,
+      href: `/activities/${id}/view/equipos`,
+    },
+    {
+      value: "asistencia",
+      label: "Asistencia",
+      icon: CheckSquare,
+      href: `/activities/${id}/view/asistencia`,
+    },
+    {
+      value: "goleadores",
+      label: "Goleadores",
+      icon: Award,
+      href: `/activities/${id}/view/goleadores`,
+    },
+    {
+      value: "juegos",
+      label: "Juegos",
+      icon: Gamepad2,
+      href: `/activities/${id}/view/juegos`,
+    },
+    {
+      value: "ranking",
+      label: "Ranking",
+      icon: Trophy,
+      href: `/activities/${id}/view/ranking`,
+    },
   ];
 
   const handleTabChange = (href: string) => {
@@ -100,11 +140,15 @@ export default function ActivityPage({ id, initialTab = "equipos" }: ActivityPag
       const p = participants.find((x) => x.id === pid);
       if (!p) return;
       (["f", "h", "b"] as const).forEach((tipo) => {
-        const cant = (act.goles || []).filter((g: any) => g.pid === pid && g.tipo === tipo).reduce((s: number, g: any) => s + g.cant, 0);
+        const cant = (act.goles || [])
+          .filter((g: any) => g.pid === pid && g.tipo === tipo)
+          .reduce((s: number, g: any) => s + g.cant, 0);
         if (cant > 0) res[tipo].push({ ...p, goles: cant, tipo });
       });
     });
-    Object.keys(res).forEach((k: string) => res[k as keyof typeof res].sort((a: any, b: any) => b.goles - a.goles));
+    Object.keys(res).forEach((k: string) =>
+      res[k as keyof typeof res].sort((a: any, b: any) => b.goles - a.goles),
+    );
     return res;
   }, [act, participants]);
 
@@ -145,45 +189,68 @@ export default function ActivityPage({ id, initialTab = "equipos" }: ActivityPag
               <ChevronLeft className="w-5 h-5" />
             </Button>
             <div className="flex-1">
-              <div className="font-black text-lg">{act.titulo || "Actividad"}</div>
-              <div className="text-sm opacity-70">
-                {formatDate(act.fecha)} · {act.asistentes?.length || 0} presentes
+              <div className="font-black text-lg">
+                {act.titulo || "Actividad"}
               </div>
-              {isAdmin() && (
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => {
-                    router.push(`/activities/${id}/edit/info`);
-                  }}
-                >
-                  Editar
-                </Button>
-              )}
+              <div className="text-sm opacity-70">
+                {formatDate(act.fecha)} · {act.asistentes?.length || 0}{" "}
+                presentes
+              </div>
             </div>
+            {isAdmin() && (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => {
+                  router.push(`/activities/${id}/edit/info`);
+                }}
+              >
+                Editar
+              </Button>
+            )}
           </div>
         </div>
       </div>
 
       <div className="bg-primary px-4 pt-4 flex-1">
         {currentTab === "equipos" && (
-          <TabEquipos act={act} db={db} teamRank={teamRank} maxTeamPts={maxTeamPts} playerRank={playerRank} />
+          <TabEquipos
+            act={act}
+            db={db}
+            teamRank={teamRank}
+            maxTeamPts={maxTeamPts}
+            playerRank={playerRank}
+          />
         )}
         {currentTab === "asistencia" && <TabAsistencia act={act} db={db} />}
         {currentTab === "goleadores" && (
-          <TabGoleadores act={act} showScorers={showScorers} setShowScorers={setShowScorers} scorersByDeporte={scorersByDeporte} />
+          <TabGoleadores
+            act={act}
+            showScorers={showScorers}
+            setShowScorers={setShowScorers}
+            scorersByDeporte={scorersByDeporte}
+          />
         )}
-        {currentTab === "juegos" && <JuegosMixtosView act={act} juegos={act.juegos || []} />}
-        {currentTab === "ranking" && <TabRanking playerRank={playerRank} act={act} />}
+        {currentTab === "juegos" && (
+          <JuegosMixtosView act={act} juegos={act.juegos || []} />
+        )}
+        {currentTab === "ranking" && (
+          <TabRanking playerRank={playerRank} act={act} />
+        )}
       </div>
 
-      <FloatingNav value={currentTab} onValueChange={handleTabChange} items={TABS} />
+      <FloatingNav
+        value={currentTab}
+        onValueChange={handleTabChange}
+        items={TABS}
+      />
     </div>
   );
 }
 
 function JuegosMixtosView({ act, juegos }: { act: any; juegos: any[] }) {
-  if (!juegos?.length) return <Empty className="text-accent" text="Sin juegos registrados" />;
+  if (!juegos?.length)
+    return <Empty className="text-accent" text="Sin juegos registrados" />;
 
   return (
     <div className="flex flex-col gap-4">
@@ -196,20 +263,35 @@ function JuegosMixtosView({ act, juegos }: { act: any; juegos: any[] }) {
           if (!posToTeams[pos]) posToTeams[pos] = [];
           if (Array.isArray(equipos)) posToTeams[pos].push(...equipos);
         });
-        const usedPositions = Object.keys(posToTeams).map(Number).sort((a, b) => a - b);
+        const usedPositions = Object.keys(posToTeams)
+          .map(Number)
+          .sort((a, b) => a - b);
 
         return (
-          <div key={j.id} className="bg-white rounded-xl border border-surface-dark overflow-hidden">
-            <div className="p-3 border-b border-surface-dark font-bold">{j.nombre || `Juego`}</div>
+          <div
+            key={j.id}
+            className="bg-white rounded-xl border border-surface-dark overflow-hidden"
+          >
+            <div className="p-3 border-b border-surface-dark font-bold">
+              {j.nombre || `Juego`}
+            </div>
             <div className="flex flex-col gap-1 p-2">
               {usedPositions.map((pos) => {
                 const teams = posToTeams[pos];
                 return (
-                  <div key={pos} className={`flex items-center gap-2 px-2 py-1.5 rounded-lg ${pos === 1 ? "bg-surface-dark" : "bg-background"}`}>
+                  <div
+                    key={pos}
+                    className={`flex items-center gap-2 px-2 py-1.5 rounded-lg ${pos === 1 ? "bg-surface-dark" : "bg-background"}`}
+                  >
                     <div className="text-xs font-bold w-4">{pos}</div>
                     <div className="flex gap-1.5 flex-wrap flex-1">
                       {teams.map((t: string) => (
-                        <span key={t} className="font-black text-sm px-2 py-0.5 rounded-lg bg-gray-100">{t}</span>
+                        <span
+                          key={t}
+                          className="font-black text-sm px-2 py-0.5 rounded-lg bg-gray-100"
+                        >
+                          {t}
+                        </span>
                       ))}
                     </div>
                   </div>

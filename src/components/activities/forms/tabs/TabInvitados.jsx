@@ -1,10 +1,9 @@
-import { useToast } from "../../../../hooks/use-toast";
+import { toast } from "../../../../hooks/use-toast";
 import { Modal, Label, Empty } from "../../../ui/Common";
 import { Button } from "../../../ui/button";
 import { Combobox } from "../../../ui/combobox";
 
 export function TabInvitados({ act, A, db, onSaveParticipant, locked = false }) {
-  const { toast } = useToast();
   const add = () => {
     A("invitaciones", [
       ...(act.invitaciones || []),

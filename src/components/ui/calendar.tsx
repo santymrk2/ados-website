@@ -10,7 +10,12 @@ import {
 
 import { cn } from "@/lib/utils"
 import { Button, buttonVariants } from "@/components/ui/button"
-import { ChevronLeftIcon, ChevronRightIcon, ChevronDownIcon } from "lucide-react"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
+import { ChevronLeftIcon, ChevronRightIcon, ChevronDownIcon, CalendarIcon } from "lucide-react"
 
 function Calendar({
   className,
@@ -219,4 +224,85 @@ function CalendarDayButton({
   )
 }
 
-export { Calendar, CalendarDayButton }
+const parseLocalDate = (dateStr: string) => {
+  if (!dateStr) return new Date();
+  const [year, month, day] = dateStr.split("-").map(Number);
+  return new Date(year, month - 1, day);
+};
+
+const formatDateString = (date: Date) => {
+  if (isNaN(date.getTime())) return "";
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+function DatePicker({
+  value,
+  onChange,
+  placeholder = "Seleccionar fecha",
+  className,
+  disabled = false,
+}: {
+  value?: string;
+  onChange?: (date: string) => void;
+  placeholder?: string;
+  className?: string;
+  disabled?: boolean;
+}) {
+  const [open, setOpen] = React.useState(false);
+
+  const formatDisplayDate = (dateStr?: string) => {
+    if (!dateStr) return "";
+    const d = parseLocalDate(dateStr);
+    if (isNaN(d.getTime())) return "";
+    return d.toLocaleDateString("es-AR");
+  };
+
+  const handleSelect = (date: string | Date | undefined) => {
+    if (date) {
+      const dateStr = typeof date === "string" ? date : formatDateString(date);
+      onChange?.(dateStr);
+      setOpen(false);
+    } else {
+      onChange?.("");
+      setOpen(false);
+    }
+  };
+
+  return (
+    <div className={className}>
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            variant="outline"
+            disabled={disabled}
+            className={cn(
+              "w-full justify-start font-normal",
+              !value && "text-muted-foreground",
+              disabled && "cursor-not-allowed opacity-50",
+            )}
+          >
+            <CalendarIcon className="mr-2 h-4 w-4" />
+            {value ? formatDisplayDate(value) : placeholder}
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent
+          side="top"
+          className="w-auto overflow-hidden p-0 z-[10051]"
+          align="start"
+        >
+          <Calendar
+            mode="single"
+            selected={value ? parseLocalDate(value) : undefined}
+            onSelect={handleSelect}
+            captionLayout="dropdown"
+          />
+        </PopoverContent>
+      </Popover>
+    </div>
+  );
+}
+
+export { Calendar, CalendarDayButton, DatePicker }

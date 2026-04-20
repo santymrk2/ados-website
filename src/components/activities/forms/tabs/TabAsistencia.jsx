@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { useToast } from "../../../../hooks/use-toast";
+import { toast } from "../../../../hooks/use-toast";
 import {
   Search,
   ArrowUpDown,
@@ -49,7 +49,6 @@ let tempIdCounter = 0;
 const generateTempId = () => -1 - tempIdCounter++;
 
 function NewPlayerModal({ act, db, onClose, onSave, A, Q }) {
-  const { toast } = useToast();
   const [newPlayer, setNewPlayer] = useState({
     nombre: "",
     apellido: "",
@@ -231,7 +230,6 @@ function NewPlayerModal({ act, db, onClose, onSave, A, Q }) {
 }
 
 export function TabAsistencia({ act, A, Q, db, onSaveParticipant, locked = false }) {
-  const { toast } = useToast();
   const [sortOrder, setSortOrder] = useState("asc");
   const [search, setSearch] = useState("");
   const [showNewPlayer, setShowNewPlayer] = useState(false);

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { useToast } from "../../../../hooks/use-toast";
+import { toast } from "../../../../hooks/use-toast";
 import { Plus, Zap } from "lucide-react";
 import { TEAMS, TEAM_COLORS, getTeamBg } from "@/lib/constants";
 import { Button } from "../../../ui/button";
@@ -22,7 +22,6 @@ let tempIdCounter = 0;
 const generateTempId = () => -1 - tempIdCounter++;
 
 export function TabExtras({ act, A, db, locked = false }) {
-  const { toast } = useToast();
   const [view, setView] = useState("ind"); // 'ind' or 'team'
   const [showAdd, setShowAdd] = useState(false);
 

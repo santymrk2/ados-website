@@ -24,7 +24,7 @@ import {
   isWebPushAvailable,
   isWebPushConfigured,
 } from "@/lib/web-push-client";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "@/hooks/use-toast";
 
 function hexToRgb(hex: string) {
   const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
@@ -92,7 +92,6 @@ export function SettingsPanel({ isOpen, onClose, onLogout, role = 'admin' }: {
   onLogout: () => void; 
   role?: string; 
 }) {
-  const { toast } = useToast();
   const [colors, setColors] = useState<Record<string, string>>({});
   const [saved, setSaved] = useState(false);
   const isAdmin = role === 'admin';

@@ -3,6 +3,7 @@ import "@/app/globals.css";
 import { AuthGate } from "@/components/auth/AuthGate";
 import { Inter } from "next/font/google";
 import { cn } from "@/lib/utils";
+import { Toaster } from "@/components/ui/sonner";
 
 const inter = Inter({subsets:['latin'],variable:'--font-sans'});
 
@@ -42,6 +43,7 @@ export default function RootLayout({
     <html lang="es" className={cn("font-sans", inter.variable)}>
       <body className="pb-safe">
         <AuthGate>{children}</AuthGate>
+        <Toaster position="bottom-center" richColors />
       </body>
     </html>
   );

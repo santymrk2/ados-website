@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { useToast } from "../../hooks/use-toast";
+import { toast } from "../../hooks/use-toast";
 import { X, Download, Camera, User } from "lucide-react";
 import { newPart, getEdad } from "@/lib/constants";
 import { Modal, Label, SegmentedButtons } from "../ui/Common";
@@ -28,7 +28,6 @@ import { Tabs, TabsList, TabsTrigger } from "../ui/tabs";
 import { getParticipant } from "@/lib/db-utils";
 
 export function ParticipantFormModal({ db, initial, onClose, onSave }) {
-  const { toast } = useToast();
   const [form, setForm] = useState({ ...newPart(), ...initial });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [tempImage, setTempImage] = useState(null);

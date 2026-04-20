@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { useToast } from "../../../../hooks/use-toast";
+import { toast } from "../../../../hooks/use-toast";
 import { Button } from "../../../ui/button";
 import { Label, Empty } from "../../../ui/Common";
 import { Combobox } from "../../../ui/combobox";
@@ -17,7 +17,6 @@ let tempIdCounter = 0;
 const generateTempId = () => -1 - tempIdCounter++;
 
 export function TabGoles({ act, A, Q, db, locked = false }) {
-  const { toast } = useToast();
   const availablePlayers = useMemo(() => {
     return db.participants
       .filter(

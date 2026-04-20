@@ -4,7 +4,7 @@ import { useState, useCallback } from "react";
 import Cropper from "react-easy-crop";
 import { getDualCroppedImg } from "../../lib/imageUtils";
 import { ZoomIn, ZoomOut, Check } from "lucide-react";
-import { useToast } from "../../hooks/use-toast";
+import { toast } from "../../hooks/use-toast";
 import {
   Dialog,
   DialogHeader,
@@ -16,7 +16,6 @@ import { Button } from "./button";
 import { cn } from "@/lib/utils";
 
 export function ImageCropModal({ image, onCropComplete, onClose }) {
-  const { toast } = useToast();
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);

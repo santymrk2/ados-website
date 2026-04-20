@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
-import { useToast } from "../../hooks/use-toast";
+import { toast } from "../../hooks/use-toast";
 import {
   FileText,
   Users,
@@ -67,7 +67,6 @@ export function ActivityFormModal({
   onSaveParticipant,
   initialTab = "info",
 }) {
-  const { toast } = useToast();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [act, setAct] = useState({ ...newAct(), ...initial });

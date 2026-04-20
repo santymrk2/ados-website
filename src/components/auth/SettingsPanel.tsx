@@ -151,7 +151,9 @@ export function SettingsPanel({ isOpen, onClose, onLogout, role = 'admin' }: {
     saveTeamColors(colors);
     syncTeamConstants();
     setSaved(true);
-    toast.success("Colores guardados correctamente");
+    toast.success("Colores de equipos guardados", {
+      description: "Los colores se aplicarán en todas las actividades",
+    });
     setTimeout(() => setSaved(false), 2000);
   };
 
@@ -189,11 +191,17 @@ export function SettingsPanel({ isOpen, onClose, onLogout, role = 'admin' }: {
           }
         }
       }
-      toast.success(isSubscribed ? "Suscripción a notificaciones cancelada" : "¡Notificaciones activadas!");
+      toast.success(isSubscribed ? "Notificaciones desactivadas" : "Notificaciones activadas", {
+          description: isSubscribed 
+            ? "Ya no recibirás notificaciones push" 
+            : "Recibirás notificaciones cuando haya cumpleños",
+        });
       setSubscriptionSaved(true);
     } catch (error) {
       console.error('Push subscription error:', error);
-      toast.error("Error al configurar notificaciones. Asegurate de dar permisos en tu navegador.");
+      toast.error("Error al activar notificaciones", {
+          description: "Asegurate de dar permisos en tu navegador",
+        });
     }
     
     setIsSubscribing(false);

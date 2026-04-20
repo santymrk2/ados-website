@@ -114,10 +114,39 @@ export function ActivityFormModal({
       try {
         const skipRefresh = type === "game_pos" || type === "game_add" || type === "game_delete";
         const result = await onQuickUpdate(act.id, type, data, skipRefresh);
-        toast.success("Cambios sincronizados");
+        
+        // Mensaje descriptivo según el tipo de cambio
+        const actionMessages = {
+          config: "Configuración actualizada",
+          participant: "Asistencia actualizada",
+          team: "Equipos actualizados",
+          game_pos: "Posiciones de juego actualizadas",
+          game_add: "Juego agregado",
+          game_delete: "Juego eliminado",
+          game_result: "Resultado guardado",
+          goals: "Goles actualizados",
+          extra: "Dato extra actualizado",
+          invite: "Invitado actualizado",
+        };
+        const message = actionMessages[type] || "Cambios guardados";
+        toast.success(message);
         return result;
       } catch (e) {
-        toast.error("Error al sincronizar: " + e.message);
+        const actionMessages = {
+          config: "Error al guardar configuración",
+          participant: "Error al guardar asistencia",
+          team: "Error al guardar equipos",
+          game_pos: "Error al guardar posiciones",
+          game_add: "Error al agregar juego",
+          game_delete: "Error al eliminar juego",
+          game_result: "Error al guardar resultado",
+          goals: "Error al guardar goles",
+          extra: "Error al guardar dato extra",
+          invite: "Error al guardar invitado",
+        };
+        const message = actionMessages[type] || "Error al guardar cambios";
+        toast.error(message);
+        console.error("QuickUpdate error:", e);
       } finally {
         setSavingOps((prev) => {
           const next = new Set(prev);

@@ -8,6 +8,7 @@ import { DatePicker } from "../../../ui/calendar";
 import { RadioGroup, RadioGroupItem } from "../../../ui/radio-group";
 import { Switch } from "../../../ui/switch";
 import { Lock, LockOpen } from "lucide-react";
+import { toast } from "../../../../hooks/use-toast";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -30,6 +31,9 @@ export function TabInfo({ act, A, Q, locked }) {
       } else {
         A("locked", true);
       }
+      toast.success("Actividad bloqueada", {
+        description: "Nadie puede editar hasta que la desbloquees",
+      });
     } else {
       // Unlocking — requires confirmation
       setShowUnlockDialog(true);
@@ -43,6 +47,9 @@ export function TabInfo({ act, A, Q, locked }) {
       A("locked", false);
     }
     setShowUnlockDialog(false);
+    toast.success("Actividad desbloqueada", {
+      description: "Ya se pueden hacer cambios en todas las secciones",
+    });
   };
 
   return (

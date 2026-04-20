@@ -1,3 +1,6 @@
+# Local Development Compose
+# Uso: docker compose up --build
+
 services:
   # PostgreSQL database
   db:
@@ -18,7 +21,7 @@ services:
       timeout: 5s
       retries: 5
 
-  # Next.js app
+  # Next.js app - Desarrollo local
   app:
     build:
       context: .
@@ -33,6 +36,10 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - /app/.next
     command: sh -c "npm run db:push && npm run dev"
 
 volumes:

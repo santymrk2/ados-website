@@ -39,3 +39,14 @@ next-env.d.ts
 
 # old_src (no needed in container)
 old_src
+
+# Docker
+Dockerfile
+Dockerfile.*
+docker-compose*
+.dockerignore
+
+# Docs
+README.md
+AGENTS.md
+*.md

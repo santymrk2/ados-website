@@ -1,16 +1,19 @@
+# Development Dockerfile for Activados
+# Usado con docker compose para desarrollo
+
 FROM node:20-alpine
 
 WORKDIR /app
 
-# Install dependencies
-COPY package*.json ./
+# Instalar dependencias
+COPY package.json package-lock.json* ./
 RUN npm ci
 
-# Copy source code
+# Copiar código fuente
 COPY . .
 
-# Expose port
+# Exponer puerto
 EXPOSE 3000
 
-# Start development server
-CMD ["npm", "run", "dev"]
+# Comando para desarrollo
+CMD ["npm", "run", "dev", "--", "--turbo"]

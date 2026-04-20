@@ -1,13 +1,13 @@
 # Development Dockerfile for Activados
-# Usado con docker compose para desarrollo
+# Usando Bun para mayor velocidad
 
-FROM node:20-alpine
+FROM oven/bun:1
 
 WORKDIR /app
 
 # Instalar dependencias
-COPY package.json package-lock.json* ./
-RUN npm ci
+COPY package.json bun.lock* ./
+RUN bun install --frozen-lockfile
 
 # Copiar código fuente
 COPY . .
@@ -16,4 +16,4 @@ COPY . .
 EXPOSE 3000
 
 # Comando para desarrollo
-CMD ["npm", "run", "dev", "--", "--turbo"]
+CMD ["bun", "run", "dev"]

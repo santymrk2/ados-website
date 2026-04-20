@@ -1,40 +1,62 @@
-# Production Dockerfile for Activados
-# Optimizado para Dokploy usando Bun
-
-FROM oven/bun:1 AS base
+# ==========================================
+# Etapa 1: Base
+# Usamos la imagen oficial de Bun (basada en Alpine por ser muy liviana)
+# ==========================================
+FROM oven/bun:1-alpine AS base
 WORKDIR /app
 
-# ---- Dependencias ----
+# ==========================================
+# Etapa 2: Dependencias (deps)
+# Instalamos dependencias primero para aprovechar el caché de Docker
+# ==========================================
 FROM base AS deps
-COPY package.json bun.lock* ./
+COPY package.json bun.lock ./
+# Instalamos usando Bun. --frozen-lockfile asegura que se instale exactamente lo del lock
 RUN bun install --frozen-lockfile
 
-# ---- Build ----
+# ==========================================
+# Etapa 3: Construcción (builder)
+# Copiamos el código fuente y compilamos la app de Next.js
+# ==========================================
 FROM base AS builder
+# Copiamos las dependencias instaladas en la etapa anterior
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# Generar el build de Next.js
+# Desactivamos la telemetría de Vercel durante el build para ahorrar tiempo
+ENV NEXT_TELEMETRY_DISABLED=1
+
+# Compilamos el proyecto (Bun ejecutará el script "build" de tu package.json)
 RUN bun run build
 
-# ---- Producción ----
+# ==========================================
+# Etapa 4: Producción (runner)
+# Creamos la imagen final, super liviana y segura
+# ==========================================
 FROM base AS runner
 WORKDIR /app
 
-# Variables de entorno para producción
 ENV NODE_ENV=production
-ENV HOST=0.0.0.0
-ENV PORT=3000
+ENV NEXT_TELEMETRY_DISABLED=1
 
-# Copiar archivos necesarios
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/.next ./.next
+# Por seguridad, no ejecutamos la app como el usuario "root"
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nextjs
+USER nextjs
+
+# Copiamos la carpeta public si tienes imágenes, fuentes, etc.
 COPY --from=builder /app/public ./public
-COPY --from=builder /app/package.json ./package.json
-COPY --from=builder /app/.env* ./.env* 2>/dev/null || true
 
-# Exponer puerto
+# Copiamos los archivos estáticos y el servidor standalone que generó Next.js
+# Le damos los permisos al usuario no-root que creamos
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+
+# Exponemos el puerto
 EXPOSE 3000
 
-# Iniciar aplicación en producción
-CMD ["bun", "run", "start"]
+ENV PORT=3000
+ENV HOSTNAME="0.0.0.0"
+
+# Ejecutamos el servidor standalone usando Bun
+CMD ["bun", "run", "server.js"]

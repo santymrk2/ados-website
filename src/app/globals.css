@@ -30,13 +30,10 @@
     --popover-foreground: oklch(0.145 0 0);
 
     --primary: oklch(0.535 0.288 266.6);
-    --primary-foreground: oklch(
-        0.985 0 0
-    );
+    --primary-foreground: oklch(0.985 0 0);
 
     --secondary: oklch(0.885 0.246 128.5);
-    --secondary-foreground: oklch(
-        0.145 0 0
+    --secondary-foreground: oklch(0.145 0 0);
 
     /* Hovers y menús (Accent): Fondo verde lima super claro con texto verde oscuro */
     --accent: oklch(0.97 0 0);
@@ -81,13 +78,11 @@
     --popover: oklch(0.205 0 0);
     --popover-foreground: oklch(0.985 0 0);
 
-    /* Primario: Violeta/Azul */
-    --primary: oklch(0.922 0 0);
-    --primary-foreground: oklch(0.205 0 0);
+    --primary: oklch(0.535 0.288 266.6);
+    --primary-foreground: oklch(0.985 0 0);
 
-    /* Secundario: Verde Lima */
-    --secondary: oklch(0.269 0 0);
-    --secondary-foreground: oklch(0.985 0 0);
+    --secondary: oklch(0.885 0.246 128.5);
+    --secondary-foreground: oklch(0.145 0 0);
 
     /* Hovers en dark mode: Fondo verde muy oscuro, texto verde lima brillante */
     --accent: oklch(0.269 0 0);

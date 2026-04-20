@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   LayoutGrid,
   Award,
@@ -28,26 +28,23 @@ interface ActivityPageProps {
   initialTab?: string;
 }
 
+const VALID_TABS = ["equipos", "asistencia", "goleadores", "juegos", "ranking"];
+
 export default function ActivityPage({ id, initialTab = "equipos" }: ActivityPageProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { db, isLoading } = useApp();
   const { isAdmin } = useAuth();
   const { activities, participants } = db;
 
-  // ALL hooks must be declared first - no early returns!
-  const [tab, setTab] = useState(() => {
-    if (typeof window !== "undefined") {
-      const hash = window.location.hash.replace("#", "");
-      if (["equipos", "asistencia", "goleadores", "juegos", "ranking"].includes(hash)) {
-        return hash;
-      }
-    }
-    return initialTab;
-  });
+  // Get tab from URL params (not from local state)
+  const tab = searchParams.get("tab") || initialTab;
+
+  // Validate tab
+  const currentTab = VALID_TABS.includes(tab) ? tab : "equipos";
 
   const [showScorers, setShowScorers] = useState(false);
 
-  // Then all useMemo
   const act = useMemo(
     () => activities.find((a) => a.id === Number(id)),
     [activities, id],
@@ -85,18 +82,15 @@ export default function ActivityPage({ id, initialTab = "equipos" }: ActivityPag
   );
 
   const TABS = [
-    { value: "equipos", label: "Equipos", icon: LayoutGrid },
-    { value: "asistencia", label: "Asistencia", icon: CheckSquare },
-    { value: "goleadores", label: "Goleadores", icon: Award },
-    { value: "juegos", label: "Juegos", icon: Gamepad2 },
-    { value: "ranking", label: "Ranking", icon: Trophy },
+    { value: "equipos", label: "Equipos", icon: LayoutGrid, href: `/activities/${id}/view/equipos` },
+    { value: "asistencia", label: "Asistencia", icon: CheckSquare, href: `/activities/${id}/view/asistencia` },
+    { value: "goleadores", label: "Goleadores", icon: Award, href: `/activities/${id}/view/goleadores` },
+    { value: "juegos", label: "Juegos", icon: Gamepad2, href: `/activities/${id}/view/juegos` },
+    { value: "ranking", label: "Ranking", icon: Trophy, href: `/activities/${id}/view/ranking` },
   ];
 
-  const handleTabChange = (val: string) => {
-    setTab(val);
-    if (typeof window !== "undefined") {
-      window.history.replaceState(null, "", `#${val}`);
-    }
+  const handleTabChange = (href: string) => {
+    router.push(href);
   };
 
   const scorersByDeporte = useMemo(() => {
@@ -114,7 +108,6 @@ export default function ActivityPage({ id, initialTab = "equipos" }: ActivityPag
     return res;
   }, [act, participants]);
 
-  // NOW render based on state - all hooks already called
   if (isLoading || !db || !db.activities) {
     return (
       <div className="min-h-screen bg-primary flex items-center justify-center">
@@ -138,7 +131,6 @@ export default function ActivityPage({ id, initialTab = "equipos" }: ActivityPag
     );
   }
 
-  // Main render
   return (
     <div className="min-h-screen bg-primary flex flex-col">
       <div className="pt-safe">
@@ -174,18 +166,18 @@ export default function ActivityPage({ id, initialTab = "equipos" }: ActivityPag
       </div>
 
       <div className="bg-primary px-4 pt-4 flex-1">
-        {tab === "equipos" && (
+        {currentTab === "equipos" && (
           <TabEquipos act={act} db={db} teamRank={teamRank} maxTeamPts={maxTeamPts} playerRank={playerRank} />
         )}
-        {tab === "asistencia" && <TabAsistencia act={act} db={db} />}
-        {tab === "goleadores" && (
+        {currentTab === "asistencia" && <TabAsistencia act={act} db={db} />}
+        {currentTab === "goleadores" && (
           <TabGoleadores act={act} showScorers={showScorers} setShowScorers={setShowScorers} scorersByDeporte={scorersByDeporte} />
         )}
-        {tab === "juegos" && <JuegosMixtosView act={act} juegos={act.juegos || []} />}
-        {tab === "ranking" && <TabRanking playerRank={playerRank} act={act} />}
+        {currentTab === "juegos" && <JuegosMixtosView act={act} juegos={act.juegos || []} />}
+        {currentTab === "ranking" && <TabRanking playerRank={playerRank} act={act} />}
       </div>
 
-      <FloatingNav value={tab} onValueChange={handleTabChange} items={TABS} />
+      <FloatingNav value={currentTab} onValueChange={handleTabChange} items={TABS} />
     </div>
   );
 }

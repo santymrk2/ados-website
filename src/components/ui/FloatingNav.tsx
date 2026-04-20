@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { useRouter } from "next/navigation"
 import { ChevronUp, type LucideIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -8,16 +9,18 @@ interface NavItem {
   value: string
   label: string
   icon: LucideIcon
+  href?: string
 }
 
 interface FloatingNavProps {
   value: string
-  onValueChange: (value: string) => void
+  onValueChange?: (value: string) => void
   items: NavItem[]
   lockedValues?: string[]
 }
 
 export function FloatingNav({ value, onValueChange, items, lockedValues = [] }: FloatingNavProps) {
+  const router = useRouter()
   const [isOpen, setIsOpen] = React.useState(false)
   const containerRef = React.useRef<HTMLDivElement>(null)
 
@@ -35,8 +38,15 @@ export function FloatingNav({ value, onValueChange, items, lockedValues = [] }: 
     return () => document.removeEventListener("mousedown", handleClickOutside)
   }, [])
 
-  const handleSelect = (itemValue: string) => {
-    onValueChange(itemValue)
+  const handleSelect = (item: NavItem) => {
+    if (lockedValues.includes(item.value)) return
+    
+    // If item has href, use it; otherwise call onValueChange
+    if (item.href) {
+      router.push(item.href)
+    } else if (onValueChange) {
+      onValueChange(item.value)
+    }
     setIsOpen(false)
   }
 
@@ -59,7 +69,7 @@ export function FloatingNav({ value, onValueChange, items, lockedValues = [] }: 
             return (
               <button
                 key={item.value}
-                onClick={() => !isLocked && handleSelect(item.value)}
+                onClick={() => handleSelect(item)}
                 disabled={isLocked}
                 className={cn(
                   "flex items-center gap-2 rounded-2xl px-3 py-1.5 text-sm font-medium transition-colors",

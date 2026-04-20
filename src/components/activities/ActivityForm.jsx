@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 
 import { useToast } from "../../hooks/use-toast";
 import {
@@ -67,8 +68,29 @@ export function ActivityFormModal({
   initialTab = "info",
 }) {
   const { toast } = useToast();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [act, setAct] = useState({ ...newAct(), ...initial });
-  const [tab, setTab] = useState(initialTab);
+  
+  // Get tab from URL params
+  const urlTab = searchParams.get("tab") || initialTab;
+  const [tab, setTab] = useState(urlTab);
+  
+  // Sync tab when URL changes
+  useEffect(() => {
+    const newTab = searchParams.get("tab") || initialTab;
+    if (newTab !== tab) {
+      setTab(newTab);
+    }
+  }, [searchParams, initialTab]);
+  
+  const handleTabChange = (item) => {
+    if (item.href) {
+      router.push(item.href);
+    }
+    setTab(item.value);
+  };
+  
   const [saveStatus, setSaveStatus] = useState("saved");
   const saveTimerRef = useRef(null);
   const isFirstRender = useRef(true);
@@ -113,14 +135,14 @@ export function ActivityFormModal({
     }
   };
 
-  const TABS = [
-    { value: "info", label: "General", icon: FileText },
-    { value: "asistencia", label: "Asistencia", icon: Users },
-    { value: "equipos", label: "Equipos", icon: LayoutGrid },
-    { value: "juegos", label: "Juegos", icon: Gamepad2 },
-    { value: "invitados", label: "Invitados", icon: Mail },
-    { value: "goles", label: "Goles", icon: Trophy },
-    { value: "extras", label: "Extras", icon: Plus },
+  const TABS = (id) => [
+    { value: "info", label: "General", icon: FileText, href: `/activities/${id}/edit/info` },
+    { value: "asistencia", label: "Asistencia", icon: Users, href: `/activities/${id}/edit/asistencia` },
+    { value: "equipos", label: "Equipos", icon: LayoutGrid, href: `/activities/${id}/edit/equipos` },
+    { value: "juegos", label: "Juegos", icon: Gamepad2, href: `/activities/${id}/edit/juegos` },
+    { value: "invitados", label: "Invitados", icon: Mail, href: `/activities/${id}/edit/invitados` },
+    { value: "goles", label: "Goles", icon: Trophy, href: `/activities/${id}/edit/goles` },
+    { value: "extras", label: "Extras", icon: Plus, href: `/activities/${id}/edit/extras` },
   ];
 
   const doSave = useCallback(
@@ -285,9 +307,8 @@ export function ActivityFormModal({
 
       <FloatingNav 
         value={tab} 
-        onValueChange={setTab} 
-        items={TABS}
-        lockedValues={act.locked ? TABS.slice(1).map(t => t.value) : []}
+        items={TABS(act?.id || 'new')}
+        lockedValues={act.locked ? TABS(act?.id || 'new').slice(1).map(t => t.value) : []}
       />
     </div>
   );

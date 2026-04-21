@@ -35,16 +35,19 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
-  // Skip API endpoints, SSE, and non-GET requests
+  // Skip ALL API endpoints, images, SSE, and non-GET requests
   // These should go directly to network without SW intervention
-  if (
-    url.pathname.startsWith('/api/') || // All API endpoints
-    event.request.method !== 'GET' ||  // POST, PATCH, DELETE, etc.
-    url.pathname.includes('stream') ||  // Streaming responses (SSE)
-    event.request.headers.get('accept')?.includes('text/event-stream') // SSE detection
-  ) {
+  const isApiOrImage = url.pathname.startsWith('/api/') || url.pathname.startsWith('/images/');
+  const isNotGet = event.request.method !== 'GET';
+  const isSse = url.pathname.includes('stream') || 
+    event.request.headers.get('accept')?.includes('text/event-stream');
+
+  if (isApiOrImage || isNotGet || isSse) {
     // Bypass SW completely - go directly to network
-    event.respondWith(fetch(event.request));
+    event.respondWith(fetch(event.request).catch(() => {
+      // If network fails, return network error
+      return new Response('Network error', { status: 500 });
+    }));
     return;
   }
 

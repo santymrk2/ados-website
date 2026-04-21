@@ -22,8 +22,13 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ success: false, error: "No encontrado" }, { status: 404 });
 
       const p = result[0];
-      if (p.foto && !p.foto.startsWith('data:')) p.foto = `/api/images/${p.foto}`;
-      if (p.fotoAltaCalidad && !p.fotoAltaCalidad.startsWith('data:')) p.fotoAltaCalidad = `/api/images/${p.fotoAltaCalidad}`;
+      // Add /api/images/ prefix only if not already present
+      if (p.foto && !p.foto.startsWith('data:') && !p.foto.startsWith('/api/images/')) {
+        p.foto = `/api/images/${p.foto}`;
+      }
+      if (p.fotoAltaCalidad && !p.fotoAltaCalidad.startsWith('data:') && !p.fotoAltaCalidad.startsWith('/api/images/')) {
+        p.fotoAltaCalidad = `/api/images/${p.fotoAltaCalidad}`;
+      }
 
       return NextResponse.json({ success: true, data: p }, { status: 200 });
     }
@@ -41,7 +46,9 @@ export async function GET(request: NextRequest) {
       .from(participants);
 
     const formatted = result.map(p => {
-      if (p.foto && !p.foto.startsWith('data:')) p.foto = `/api/images/${p.foto}`;
+      if (p.foto && !p.foto.startsWith('data:') && !p.foto.startsWith('/api/images/')) {
+        p.foto = `/api/images/${p.foto}`;
+      }
       return p;
     });
 

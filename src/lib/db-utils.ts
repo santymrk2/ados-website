@@ -20,7 +20,7 @@ export async function getParticipants() {
 }
 
 export async function getParticipant(id: number) {
-  const res = await fetch(`${API_BASE}/participants?id=${id}`);
+  const res = await fetch(`${API_BASE}/participants/${id}`);
   if (!res.ok) throw new Error('Failed to fetch participant');
   const json = await res.json();
   return Array.isArray(json) ? json[0] : json.data ?? json;

@@ -77,11 +77,10 @@ async function doRefresh(forceLoader: boolean): Promise<void> {
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     try {
       if (typeof window !== 'undefined') syncTeamConstants();
-      const cacheBuster = `?_=${Date.now()}`;
       const [p, a, rReq] = await Promise.all([
         getParticipants(),
         getActivities(),
-        fetch(`/api/rankings${cacheBuster}`)
+        fetch(`/api/rankings`)
       ]);
 
       // Handle both response formats: direct array or { success, data }

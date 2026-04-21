@@ -5,13 +5,6 @@ import { toast } from "../../../../hooks/use-toast";
 import { Button } from "../../../ui/button";
 import { Label, Empty } from "../../../ui/Common";
 import { Combobox, ComboboxInput, ComboboxContent, ComboboxList, ComboboxItem, ComboboxValue } from "../../../ui/combobox";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "../../../ui/select";
 
 let tempIdCounter = 0;
 const generateTempId = () => -1 - tempIdCounter++;
@@ -85,20 +78,19 @@ export function TabGoles({ act, A, Q, db, locked = false }) {
                   value={g.pid?.toString() || ""}
                   onValueChange={(val) => upd(g.id, "pid", val ? Number(val) : null)}
                   items={availablePlayers}
-                  itemToStringLabel={(item) => item?.label || getParticipantLabel(Number(item?.value))}
                   disabled={locked}
                 >
-                  <ComboboxInput placeholder="Seleccionar jugador..." showTrigger={true} />
+                  <ComboboxInput placeholder="Seleccionar jugador..." />
                   <ComboboxValue>
-                    {({ value }) => getParticipantLabel(Number(value)) || "Seleccionar jugador..."}
+                    {({ value }) => value ? getParticipantLabel(Number(value)) : "Seleccionar jugador..."}
                   </ComboboxValue>
                   <ComboboxContent>
                     <ComboboxList>
-                      {(item) => (
-                        <ComboboxItem key={item.value} value={item.value}>
-                          {item.label}
+                      {availablePlayers.map((p) => (
+                        <ComboboxItem key={p.value} value={p.value}>
+                          {p.label}
                         </ComboboxItem>
-                      )}
+                      ))}
                     </ComboboxList>
                   </ComboboxContent>
                 </Combobox>

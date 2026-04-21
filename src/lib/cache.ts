@@ -128,6 +128,14 @@ export const triggerRankingsRebuild = () => {
         };
       });
 
+      // Contar invitados por cada participante
+      const invitadosCount: Record<number, number> = {};
+      for (const inv of invitacionesRaw) {
+        if (inv.invitadorId) {
+          invitadosCount[inv.invitadorId] = (invitadosCount[inv.invitadorId] || 0) + 1;
+        }
+      }
+
       const rankings = participantsRaw.map(p => {
          const stats = calcPts(p.id, activitiesParsed, participantsRaw);
          return {
@@ -136,7 +144,8 @@ export const triggerRankingsRebuild = () => {
            gf: stats.gf,
            gh: stats.gh,
            gb: stats.gb,
-           acts: stats.acts
+           acts: stats.acts,
+           invitados: invitadosCount[p.id] || 0
          };
       }).sort((a,b) => b.total - a.total);
 

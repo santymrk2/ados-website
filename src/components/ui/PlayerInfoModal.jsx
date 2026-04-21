@@ -3,7 +3,7 @@
 import { X } from "lucide-react";
 import { Avatar } from "./Avatar";
 import { getEdad } from "@/lib/constants";
-import { Dialog, DialogContent } from "./dialog";
+import { Dialog, DialogContent, DialogTitle } from "./dialog";
 import { Button } from "./button";
 
 export function PlayerInfoModal({ player, onClose }) {
@@ -15,6 +15,9 @@ export function PlayerInfoModal({ player, onClose }) {
         showCloseButton={false}
         className="max-w-xs sm:max-w-sm bg-surface rounded-3xl p-6 flex flex-col items-center overflow-y-auto max-h-[90vh]"
       >
+        <DialogTitle className="sr-only">
+          Info de {player.nombre} {player.apellido}
+        </DialogTitle>
         <Button
           variant="ghost"
           size="icon-sm"

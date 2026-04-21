@@ -145,45 +145,43 @@ const upd = async (id, k, v) => {
             <Label>¿Quién invitó?</Label>
             <Combobox
               className="mb-3"
-              items={getAvailableParticipants()}
               value={inv.invitador?.toString() || ""}
               onValueChange={(val) => upd(inv.id, "invitador", val ? Number(val) : null)}
-              itemToStringLabel={(item) => item?.label || getParticipantLabel(Number(item?.value))}
+              items={getAvailableParticipants()}
               disabled={locked}
             >
-              <ComboboxInput placeholder="— Seleccionar —" showTrigger={true} />
+              <ComboboxInput placeholder="— Seleccionar —" />
               <ComboboxValue>
-                {({ value }) => getParticipantLabel(Number(value)) || "— Seleccionar —"}
+                {({ value }) => value ? getParticipantLabel(Number(value)) : "— Seleccionar —"}
               </ComboboxValue>
               <ComboboxContent>
                 <ComboboxList>
-                  {(item) => (
-                    <ComboboxItem key={item.value} value={item.value}>
-                      {item.label}
+                  {getAvailableParticipants().map((p) => (
+                    <ComboboxItem key={p.value} value={p.value}>
+                      {p.label}
                     </ComboboxItem>
-                  )}
+                  ))}
                 </ComboboxList>
               </ComboboxContent>
             </Combobox>
             <Label>Invitado</Label>
             <Combobox
-              items={getAllParticipants()}
               value={inv.invitado_id?.toString() || ""}
               onValueChange={(val) => upd(inv.id, "invitado_id", val ? Number(val) : null)}
-              itemToStringLabel={(item) => item?.label || getParticipantLabel(Number(item?.value))}
+              items={getAllParticipants()}
               disabled={locked}
             >
-              <ComboboxInput placeholder="— Seleccionar —" showTrigger={true} />
+              <ComboboxInput placeholder="— Seleccionar —" />
               <ComboboxValue>
-                {({ value }) => getParticipantLabel(Number(value)) || "— Seleccionar —"}
+                {({ value }) => value ? getParticipantLabel(Number(value)) : "— Seleccionar —"}
               </ComboboxValue>
               <ComboboxContent>
                 <ComboboxList>
-                  {(item) => (
-                    <ComboboxItem key={item.value} value={item.value}>
-                      {item.label}
+                  {getAllParticipants().map((p) => (
+                    <ComboboxItem key={p.value} value={p.value}>
+                      {p.label}
                     </ComboboxItem>
-                  )}
+                  ))}
                 </ComboboxList>
               </ComboboxContent>
             </Combobox>

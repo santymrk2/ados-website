@@ -10,13 +10,6 @@ import { Label, Modal, Empty } from "../../../ui/Common";
 import { Avatar } from "../../../ui/Avatar";
 import { cn } from "@/lib/utils";
 import { Combobox, ComboboxInput, ComboboxContent, ComboboxList, ComboboxItem, ComboboxValue } from "../../../ui/combobox";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "../../../ui/select";
 
 let tempIdCounter = 0;
 const generateTempId = () => -1 - tempIdCounter++;
@@ -236,19 +229,19 @@ function ExtraAddModal({ view, db, act, onClose, onAdd }) {
                   }
                 }}
                 items={availablePlayers}
-                itemToStringLabel={(item) => item?.label || getParticipantLabel(Number(item?.value))}
+                disabled={locked}
               >
-                <ComboboxInput placeholder="Seleccionar jugador..." showTrigger={true} />
+                <ComboboxInput placeholder="Seleccionar jugador..." />
                 <ComboboxValue>
-                  {({ value }) => getParticipantLabel(Number(value)) || "Seleccionar jugador..."}
+                  {({ value }) => value ? getParticipantLabel(Number(value)) : "Seleccionar jugador..."}
                 </ComboboxValue>
                 <ComboboxContent>
                   <ComboboxList>
-                    {(item) => (
-                      <ComboboxItem key={item.value} value={item.value}>
-                        {item.label}
+                    {availablePlayers.map((p) => (
+                      <ComboboxItem key={p.value} value={p.value}>
+                        {p.label}
                       </ComboboxItem>
-                    )}
+                    ))}
                   </ComboboxList>
                 </ComboboxContent>
               </Combobox>

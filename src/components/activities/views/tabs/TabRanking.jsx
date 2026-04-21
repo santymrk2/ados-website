@@ -43,15 +43,10 @@ export function TabRanking({ playerRank, act }) {
   const [rankingType, setRankingType] = useState("puntos");
 
   const availableRankingTypes = useMemo(() => {
-    const types = [{ value: "puntos", label: "Puntaje General" }];
-
-    // Agregar opción de invitados si hay invitaciones registradas
-    const totalInvitados = (act.invitaciones || []).filter(
-      (i) => i.invitado_id && i.invitador
-    ).length;
-    if (totalInvitados > 0) {
-      types.push({ value: "invitados", label: "Invitados Traídos" });
-    }
+    const types = [
+      { value: "puntos", label: "Puntaje General" },
+      { value: "invitados", label: "Jugadores Traídos" }
+    ];
 
     const has = {
       f: { m: false, f: false },

@@ -6,6 +6,7 @@ import { Button } from "./button";
 import {
   Dialog,
   DialogContent,
+  DialogTitle,
 } from "./dialog";
 
 export function ImageExpandModal({ image, playerName, onClose }) {
@@ -22,6 +23,7 @@ export function ImageExpandModal({ image, playerName, onClose }) {
   return (
     <Dialog open={!!image} onOpenChange={(open) => !open && onClose()}>
       <DialogContent showCloseButton={false} className="max-w-4xl max-h-[90vh] bg-transparent border-0 p-0 shadow-none overflow-visible w-full flex flex-col items-center">
+        <DialogTitle className="sr-only">Imagen de {playerName}</DialogTitle>
         <Button
           onClick={onClose}
           variant="ghost"

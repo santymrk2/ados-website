@@ -44,8 +44,11 @@ export function actPts(pid: number, a: any, participants: any[]) {
         }
       }
     }
-    if ((a.invitaciones || []).some((i: any) => i.invitador === pid))
-      pts += PTS.invite;
+    // Contar cuántas personas invitó y sumar puntos por cada una
+    const invitacionesCount = (a.invitaciones || []).filter((i: any) => i.invitador === pid).length;
+    if (invitacionesCount > 0) {
+      pts += invitacionesCount * PTS.invite;
+    }
   }
 
   for (const e of a.extras || []) {

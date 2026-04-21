@@ -91,10 +91,10 @@ export function Section({ icon: Icon, title }) {
 }
 
 // MIGRADO: Label → Label de shadcn/ui
-export function Label({ children, style }) {
+export function Label({ children, style, className }: { children?: React.ReactNode; style?: React.CSSProperties; className?: string } = {}) {
   return (
     <ShadcnLabel
-      className="text-xs text-text-muted font-bold uppercase tracking-wide mb-2 block"
+      className={"text-xs text-text-muted font-bold uppercase tracking-wide mb-2 block" + (className ? " " + className : "")}
       style={style}
     >
       {children}

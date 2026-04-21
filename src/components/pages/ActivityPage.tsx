@@ -18,10 +18,10 @@ import { cn, formatDate } from "@/lib/utils";
 import { useApp } from "@/hooks/useApp";
 import { useAuth } from "@/hooks/useAuth";
 import { FloatingNav } from "@/components/ui/FloatingNav";
-import { TabEquipos } from "@/components/activities/views/tabs/TabEquipos";
-import { TabGoleadores } from "@/components/activities/views/tabs/TabGoleadores";
-import { TabRanking } from "@/components/activities/views/tabs/TabRanking";
-import { TabAsistencia } from "@/components/activities/views/tabs/TabAsistencia";
+import { TabEquipos } from "@/app/activities/[id]/view/tabs/TabEquipos";
+import { TabGoleadores } from "@/app/activities/[id]/view/tabs/TabGoleadores";
+import { TabRanking } from "@/app/activities/[id]/view/tabs/TabRanking";
+import { TabAsistencia } from "@/app/activities/[id]/view/tabs/TabAsistencia";
 
 interface ActivityPageProps {
   id: string;

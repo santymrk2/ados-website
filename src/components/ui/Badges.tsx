@@ -3,35 +3,15 @@
 import React from "react";
 import { Badge } from "./badge";
 import { cn } from "@/lib/utils";
+import { LucideIcon } from "lucide-react";
 
-/**
- * Colores del podio (Gold, Silver, Bronze)
- * Posiciones 1, 2, 3 respectivamente
- */
 const PODIUM_COLORS = [
-  { bg: "#F59E0B", text: "#fff", shadow: "#F59E0B44" }, // Gold
-  { bg: "#94A3B8", text: "#fff", shadow: "#94A3B844" }, // Silver
-  { bg: "#B45309", text: "#fff", shadow: "#B4530944" }, // Bronze
+  { bg: "#F59E0B", text: "#fff", shadow: "#F59E0B44" },
+  { bg: "#94A3B8", text: "#fff", shadow: "#94A3B844" },
+  { bg: "#B45309", text: "#fff", shadow: "#B4530944" },
 ];
 
-/**
- * Colores por sexo
- * M = Cyan, F = Pink, MX = Indigo
- */
-const SEX_COLORS = {
-  M: "bg-cyan-500", // Male
-  F: "bg-pink-500", // Female
-  MX: "bg-indigo-500", // Other/Non-binary
-};
-
-/**
- * RankBadge - Muestra la posición en el ranking
- * Para las primeras 3 posiciones usa colores del podio (oro, plata, bronce)
- * Para otras posiciones muestra el número en texto
- *
- * @param {number} pos - Posición en el ranking
- */
-export function RankBadge({ pos }) {
+export function RankBadge({ pos }: { pos: number }) {
   if (pos <= 3) {
     const c = PODIUM_COLORS[pos - 1];
     return (
@@ -55,11 +35,7 @@ export function RankBadge({ pos }) {
   );
 }
 
-/**
- * PodiumBadge - Versión minimalista del badge de posición
- * Círculo con borde fino y número delgado
- */
-export function PodiumBadge({ pos, className = "" }) {
+export function PodiumBadge({ pos, className = "" }: { pos: number; className?: string }) {
   return (
     <div
       className={cn(
@@ -72,16 +48,7 @@ export function PodiumBadge({ pos, className = "" }) {
   );
 }
 
-/**
- * SexBadge - Muestra un punto de color según el sexo
- * M (Masculino) = Cyan
- * F (Femenino) = Pink
- * MX (Otro) = Indigo
- *
- * @param {string} sex - Sexo (M, F, MX)
- * @param {string} className - Clases adicionales
- */
-export function SexBadge({ sex, className = "" }) {
+export function SexBadge({ sex, className = "" }: { sex: string; className?: string }) {
   const isM = sex === "M";
   const isMX = sex === "MX";
 
@@ -98,15 +65,7 @@ export function SexBadge({ sex, className = "" }) {
   );
 }
 
-/**
- * Chip - Badge reutilizable con icono, valor y label
- * Usado para mostrar estadísticas o información compacta
- *
- * @param {React.ComponentType} icon - Componente de icono (ej: LucideIcon)
- * @param {string|number} val - Valor principal a mostrar
- * @param {string} label - Etiqueta/descripción del valor
- */
-export function Chip({ icon: Icon, val, label }) {
+export function Chip({ icon: Icon, val, label }: { icon?: LucideIcon; val: string | number; label: string }) {
   return (
     <Badge
       variant="outline"

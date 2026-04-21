@@ -12,6 +12,11 @@ export function TabGoleadores({
   showScorers,
   setShowScorers,
   scorersByDeporte,
+}: {
+  act: { equipos?: Record<string, string> };
+  showScorers: boolean;
+  setShowScorers: (v: boolean) => void;
+  scorersByDeporte: Record<string, unknown[]>;
 }) {
   return (
     <div>
@@ -45,7 +50,7 @@ export function TabGoleadores({
             { key: "h", label: "🤾 Handball" },
             { key: "b", label: "🏀 Básquet" },
           ].map(({ key, label }) => {
-            const items = scorersByDeporte[key];
+            const items = (scorersByDeporte[key] || []) as unknown as { id: string; nombre: string; apellido: string; goles: number }[];
             if (items.length === 0) return null;
             return (
               <div key={key}>
@@ -84,7 +89,7 @@ export function TabGoleadores({
               </div>
             );
           })}
-          {Object.values(scorersByDeporte).every((l) => l.length === 0) && (
+          {Object.values(scorersByDeporte as Record<string, unknown[]>).every((l) => Array.isArray(l) && l.length === 0) && (
             <Empty className="text-accent" text="Sin goles registrados" />
           )}
         </div>

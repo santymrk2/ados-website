@@ -8,19 +8,12 @@ import { Input } from "../ui/input";
 import { Switch } from "../ui/switch";
 import { Label } from "../ui/label";
 
-interface LoginScreenProps {
-  onLogin: (password: string, role?: string) => void;
-  error?: string | false;
-  showPass: boolean;
-  setShowPass: (show: boolean) => void;
-}
-
-export function LoginScreen({ onLogin, error, showPass, setShowPass }: LoginScreenProps) {
+export function LoginScreen({ onLogin, error, showPass, setShowPass }) {
   const [password, setPassword] = useState("");
   const [role, setRole] = useState("viewer");
   const [showAdminToggle, setShowAdminToggle] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
     onLogin(password, role);
   };

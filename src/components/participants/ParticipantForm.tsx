@@ -30,12 +30,12 @@ import { getParticipant } from "@/lib/db-utils";
 export function ParticipantFormModal({ db, initial, onClose, onSave }) {
   const [form, setForm] = useState({ ...newPart(), ...initial });
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [tempImage, setTempImage] = useState(null);
+  const [tempImage, setTempImage] = useState<string | null>(null);
   const [hasChanges, setHasChanges] = useState(false);
   const [showUnsavedAlert, setShowUnsavedAlert] = useState(false);
   const [showAgeAlert, setShowAgeAlert] = useState(false);
-  const [pendingAge, setPendingAge] = useState(null);
-  const fileRef = useRef();
+  const [pendingAge, setPendingAge] = useState<number | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   // Cargar datos completos (incluyendo foto HD) al editar
   useEffect(() => {
@@ -69,7 +69,7 @@ export function ParticipantFormModal({ db, initial, onClose, onSave }) {
 
     const reader = new FileReader();
     reader.onload = (e) => {
-      setTempImage(e.target.result);
+      setTempImage(e.target?.result as string || null);
     };
     reader.readAsDataURL(file);
   };
@@ -80,7 +80,7 @@ export function ParticipantFormModal({ db, initial, onClose, onSave }) {
       return toast.error("Ingresá la fecha de nacimiento");
 
     const age = getEdad(form.fechaNacimiento);
-    if (age < 0 || age > 100)
+    if (age === null || age < 0 || age > 100)
       return toast.error("La fecha de nacimiento no es válida");
 
     if (age < 12 || age > 18) {
@@ -95,19 +95,17 @@ export function ParticipantFormModal({ db, initial, onClose, onSave }) {
   const performSave = async () => {
     if (isSubmitting) return;
     setIsSubmitting(true);
-    const loadingToast = toast.loading("Cargando...");
 
     try {
       const isNew = !form.id;
       const p = isNew ? { ...form, id: db.nextPid } : form;
       await onSave(p, isNew);
-      loadingToast.dismiss();
       toast.success("Subido con éxito");
       setHasChanges(false);
       onClose();
     } catch (e) {
-      loadingToast.dismiss();
-      toast.error("Error al guardar: " + e.message);
+      const err = e as Error;
+      toast.error("Error al guardar: " + err.message);
       setIsSubmitting(false);
     }
   };
@@ -224,7 +222,7 @@ export function ParticipantFormModal({ db, initial, onClose, onSave }) {
             type="file"
             accept="image/*"
             className="hidden"
-            onChange={(e) => handlePhoto(e.target.files[0])}
+            onChange={(e) => handlePhoto(e.target.files?.[0])}
             disabled={isSubmitting}
           />
         </div>

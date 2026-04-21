@@ -56,15 +56,13 @@ export function PlayerDetailModal({ player: initialPlayer, db, onEdit, onClose }
     return result;
   }, [player.id, activities]);
 
-  const teamsPlayed = [
-    ...new Set(
-      activities.flatMap((a) =>
+  const teamsPlayed: string[] = Array.from(new Set(
+      (activities as any[]).flatMap((a) =>
         a.asistentes.includes(player.id) && a.equipos?.[player.id]
-          ? [a.equipos[player.id]]
+          ? [a.equipos[player.id] as string]
           : [],
       ),
-    ),
-  ];
+    ));
 
   const handlePhotoClick = () => {
     const imageToShow = player.fotoAltaCalidad || player.foto;

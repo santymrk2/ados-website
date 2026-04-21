@@ -2,7 +2,15 @@
 
 import { useMemo, useState } from "react";
 import { useStore } from "@nanostores/react";
-import { Pencil, Trash2, Users, Gamepad2, Award, Trophy, Moon } from "lucide-react";
+import {
+  Pencil,
+  Trash2,
+  Users,
+  Gamepad2,
+  Award,
+  Trophy,
+  Plus,
+} from "lucide-react";
 import { TEAMS, TEAM_COLORS, getTeamBg } from "@/lib/constants";
 import { PageHeader, Empty } from "../ui/Common";
 import { Chip } from "../ui/Badges";
@@ -24,7 +32,7 @@ import { Input } from "../ui/input";
 export function ActivitiesList({ db, onView, onNew, onEdit, onDelete }) {
   // Check role
   const role = useStore($role);
-  const isAdmin = role === 'admin';
+  const isAdmin = role === "admin";
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [actAEliminar, setActAEliminar] = useState(null);
   const [confirmText, setConfirmText] = useState("");
@@ -60,10 +68,10 @@ export function ActivitiesList({ db, onView, onNew, onEdit, onDelete }) {
       />
       <div className="p-4">
         {isAdmin && (
-        <Button onClick={onNew} className="w-full mb-4" size="lg">
-          <Moon className="w-5 h-5" />
-          Nueva Actividad
-        </Button>
+          <Button onClick={onNew} className="w-full mb-4" size="lg">
+            <Plus className="w-5 h-5" />
+            Agregar Actividad
+          </Button>
         )}
         {sorted.length === 0 ? (
           <Empty text="No hay actividades todavía" />
@@ -85,25 +93,25 @@ export function ActivitiesList({ db, onView, onNew, onEdit, onDelete }) {
                     </div>
                   </div>
                   {isAdmin && (
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onEdit(a);
-                      }}
-                    >
-                      <Pencil className="w-4 h-4" />
-                    </Button>
-                    <Button
-                      variant="destructive"
-                      size="icon"
-                      onClick={(e) => del(a.id, e)}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onEdit(a);
+                        }}
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        size="icon"
+                        onClick={(e) => del(a.id, e)}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
                   )}
                 </div>
                 <div className="p-3 flex gap-2 border-t border-surface-dark flex-wrap">

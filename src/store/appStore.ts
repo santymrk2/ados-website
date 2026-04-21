@@ -72,21 +72,52 @@ export const refreshData = async (forceLoader = false) => {
 async function doRefresh(forceLoader: boolean): Promise<void> {
   let lastError: Error | null = null;
 
+  console.log("[Store] Starting refresh...");
+
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     try {
       if (typeof window !== 'undefined') syncTeamConstants();
       const [p, a, rReq] = await Promise.all([getParticipants(), getActivities(), fetch('/api/rankings')]);
-      const r = rReq.ok ? await rReq.json() : [];
+
+      // Handle both response formats: direct array or { success, data }
+      const pData = p || [];
+      const aData = a || [];
+      const rJson = rReq.ok ? await rReq.json() : [];
+      const rData = Array.isArray(rJson) ? rJson : (rJson.data || []);
+
+      // Compare with existing data to detect changes
+      const oldP = $participants.get();
+      const oldA = $activities.get();
+      const oldR = $rankings.get();
+
+      const pChanged = pData.length !== oldP.length ||
+        pData.some((p, i) => p.id !== oldP[i]?.id);
+      const aChanged = aData.length !== oldA.length ||
+        aData.some((a, i) => a.id !== oldA[i]?.id);
+      const rChanged = rData.length !== oldR.length ||
+        rData.some((r, i) => r.id !== oldR[i]?.id);
+
+      console.log("[Store] Data comparison:", {
+        participants: { old: oldP.length, new: pData.length, changed: pChanged },
+        activities: { old: oldA.length, new: aData.length, changed: aChanged },
+        rankings: { old: oldR.length, new: rData.length, changed: rChanged }
+      });
+
+      // Force new array reference to ensure React re-renders
+      const newParticipants = [...pData];
+      const newActivities = [...aData];
+      const newRankings = [...rData];
 
       // Update all atoms atomically to prevent inconsistent state
-      $participants.set(p || []);
-      $activities.set(a || []);
-      $rankings.set(r.data || r || []);
+      $participants.set(newParticipants);
+      $activities.set(newActivities);
+      $rankings.set(newRankings);
       $dbError.set(null);
       $dbConnected.set(true);
 
       // Success — exit the retry loop
       $dbLoading.set(false);
+      console.log("[Store] Refresh complete");
       return;
     } catch (e) {
       lastError = e instanceof Error ? e : new Error(String(e));

@@ -127,6 +127,11 @@ function ActivityFormContent({
 
   const A = (k: string, v: any) => setAct((a) => ({ ...a, [k]: v }));
 
+  // Handle tab change - update URL like in view mode
+  const handleTabChange = (newTab: string) => {
+    router.push(`/activities/new/${newTab}`);
+  };
+
   const Q = async (type: string, data: any, k: string, v: any) => {
     const opId =
       data.juegoId || data.id || data.participantId || data.pid || "";
@@ -351,7 +356,7 @@ function ActivityFormContent({
 
       <FloatingNav
         value={tab}
-        onValueChange={setTab}
+        onValueChange={handleTabChange}
         items={TABS}
         lockedValues={act.locked ? TABS.slice(1).map((t) => t.value) : []}
       />

@@ -221,7 +221,7 @@ function ActivityPageView({
         </div>
       </div>
 
-      <div className="bg-primary px-4 pt-4 flex-1">
+      <div className="bg-primary px-4 pt-4 flex-1 pb-32">
         {currentTab === "equipos" && (
           <TabEquipos
             act={act}

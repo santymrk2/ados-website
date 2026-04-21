@@ -33,10 +33,30 @@ self.addEventListener('activate', (event) => {
 
 // Fetch event - network first, then cache
 self.addEventListener('fetch', (event) => {
+  const url = new URL(event.request.url);
+
+  // Skip API endpoints, SSE, and non-GET requests
+  // These should go directly to network without SW intervention
+  if (
+    url.pathname.startsWith('/api/') || // All API endpoints
+    event.request.method !== 'GET' ||  // POST, PATCH, DELETE, etc.
+    url.pathname.includes('stream') ||  // Streaming responses (SSE)
+    event.request.headers.get('accept')?.includes('text/event-stream') // SSE detection
+  ) {
+    // Bypass SW completely - go directly to network
+    event.respondWith(fetch(event.request));
+    return;
+  }
+
+  // Only cache GET requests for static assets
   event.respondWith(
     fetch(event.request)
       .then((response) => {
-        // Clone and cache the response
+        // Don't cache non-ok responses
+        if (!response.ok) {
+          return response;
+        }
+        // Clone and cache only successful GET responses
         const responseClone = response.clone();
         caches.open(CACHE_NAME).then((cache) => {
           cache.put(event.request, responseClone);

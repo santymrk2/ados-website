@@ -77,7 +77,12 @@ async function doRefresh(forceLoader: boolean): Promise<void> {
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     try {
       if (typeof window !== 'undefined') syncTeamConstants();
-      const [p, a, rReq] = await Promise.all([getParticipants(), getActivities(), fetch('/api/rankings')]);
+      const cacheBuster = `?_=${Date.now()}`;
+      const [p, a, rReq] = await Promise.all([
+        getParticipants(),
+        getActivities(),
+        fetch(`/api/rankings${cacheBuster}`)
+      ]);
 
       // Handle both response formats: direct array or { success, data }
       const pData = p || [];
@@ -102,6 +107,14 @@ async function doRefresh(forceLoader: boolean): Promise<void> {
         activities: { old: oldA.length, new: aData.length, changed: aChanged },
         rankings: { old: oldR.length, new: rData.length, changed: rChanged }
       });
+
+      // Show sample data to verify actual values
+      if (aData.length > 0) {
+        console.log("[Store] Sample activity:", JSON.stringify(aData[0]));
+      }
+      if (oldA.length > 0) {
+        console.log("[Store] Old sample activity:", JSON.stringify(oldA[0]));
+      }
 
       // Force new array reference to ensure React re-renders
       const newParticipants = [...pData];

@@ -141,6 +141,7 @@ function ActivityFormContent({
   onQuickUpdate: any;
   onSaveParticipant: any;
 }) {
+  const router = useRouter();
   const [act, setAct] = useState({ ...newAct(), ...initial });
   const [tab, setTab] = useState(urlTab);
   const [saveStatus, setSaveStatus] = useState("saved");
@@ -152,6 +153,19 @@ function ActivityFormContent({
   const [savingOps, setSavingOps] = useState<Set<string>>(new Set());
 
   const A = (k: string, v: any) => setAct((a) => ({ ...a, [k]: v }));
+
+  // Handle tab change - update URL like in view mode
+  const handleTabChange = (newTab: string) => {
+    if (mode === "edit" && id) {
+      // Build URL: /activities/{id}/edit/{tab}
+      router.push(`/activities/${id}/edit/${newTab}`);
+    } else if (mode === "new") {
+      router.push(`/activities/new/${newTab}`);
+    } else {
+      // Fallback to state-only change
+      setTab(newTab);
+    }
+  };
 
   const Q = async (type: string, data: any, k: string, v: any) => {
     const opId =
@@ -377,7 +391,7 @@ function ActivityFormContent({
 
       <FloatingNav
         value={tab}
-        onValueChange={setTab}
+        onValueChange={handleTabChange}
         items={TABS}
         lockedValues={act.locked ? TABS.slice(1).map((t) => t.value) : []}
       />

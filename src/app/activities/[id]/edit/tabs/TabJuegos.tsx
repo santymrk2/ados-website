@@ -14,11 +14,11 @@ let tempIdCounter = 0;
 const generateTempId = () => -1 - tempIdCounter++;
 
 export function TabJuegos({ act, A, Q, locked = false, savingOps = new Set() }: { act: any; A: any; Q: any; locked?: boolean; savingOps?: Set<unknown> }) {
-  const isAddingSaving = savingOps.size > 0 && [...savingOps].some(op => op.startsWith('game_add'));
+  const isAddingSaving = savingOps.size > 0 && Array.from(savingOps as Set<string>).some(op => op.startsWith('game_add'));
   // Validar que no haya equipos duplicateados en el mismo juego
   const noDuplicateTeams = useMemo(() => {
     for (const j of act.juegos || []) {
-      const placed = [];
+      const placed: any[] = [];
       Object.values(j.pos || {}).forEach((equipos) => {
         if (Array.isArray(equipos)) {
           placed.push(...equipos);
@@ -155,7 +155,7 @@ function JuegoCard({ j, gi, act, onNombre, onDel, onPos, locked = false, saving 
   const posToTeams = j.pos || {}; // Ahora ya es { posicion: [equipos] }
 
   // Obtener todos los equipos ya asignados (en cualquier posición)
-  const placed = [];
+  const placed: any[] = [];
   Object.values(posToTeams).forEach((equipos) => {
     if (Array.isArray(equipos)) {
       placed.push(...equipos);

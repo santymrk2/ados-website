@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
  * @param {React.ReactNode} children - Contenido hijo
  * @param {string} label - Texto del indicador (default: "Guardando...")
  */
-export function SavingOverlay({ saving, children, className, label = "Guardando..." }) {
+export function SavingOverlay({ saving, children, className, label = "Guardando..." }: { saving: boolean; children: React.ReactNode; className?: string; label?: string }) {
   return (
     <div className={cn("relative", className)}>
       {children}

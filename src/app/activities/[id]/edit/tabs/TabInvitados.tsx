@@ -56,7 +56,8 @@ export function TabInvitados({ act, A, Q, db, onSaveParticipant, locked = false 
         () => toast.success("Invitación eliminada") // callback de éxito
       );
     } catch (e) {
-      toast.error("Error al eliminar invitación: " + e.message);
+      const err = e as Error;
+      toast.error("Error al eliminar invitación: " + err.message);
     }
   };
 
@@ -79,9 +80,10 @@ const upd = async (id, k, v) => {
           ),
         );
         toast.success("Invitación guardada");
-      } catch (e) {
-        toast.error("Error al guardar invitación: " + e.message);
-      }
+} catch (e) {
+      const err = e as Error;
+      toast.error("Error al guardar invitación: " + err.message);
+    }
       return;
     }
 
@@ -97,9 +99,10 @@ const upd = async (id, k, v) => {
           "invitaciones",
           (act.invitaciones || []).map((i) => (i.id === id ? { ...i, [k]: v } : i)),
         );
-      } catch (e) {
-        toast.error("Error al actualizar invitación: " + e.message);
-      }
+} catch (e) {
+      const err = e as Error;
+      toast.error("Error al actualizar invitación: " + err.message);
+    }
       return;
     }
 
@@ -143,48 +146,51 @@ const upd = async (id, k, v) => {
               </Button>
             </div>
             <Label>¿Quién invitó?</Label>
-            <Combobox
-              className="mb-3"
-              value={inv.invitador?.toString() || ""}
-              onValueChange={(val) => upd(inv.id, "invitador", val ? Number(val) : null)}
-              items={getAvailableParticipants()}
-              disabled={locked}
-            >
-              <ComboboxInput placeholder="— Seleccionar —" />
-              <ComboboxValue>
-                {({ value }) => value ? getParticipantLabel(Number(value)) : "— Seleccionar —"}
-              </ComboboxValue>
-              <ComboboxContent>
-                <ComboboxList>
-                  {getAvailableParticipants().map((p) => (
-                    <ComboboxItem key={p.value} value={p.value}>
-                      {p.label}
-                    </ComboboxItem>
-                  ))}
-                </ComboboxList>
-              </ComboboxContent>
-            </Combobox>
+            <div className="mb-3">
+              <Combobox
+                value={inv.invitador?.toString() || ""}
+                onValueChange={(val) => upd(inv.id, "invitador", val ? Number(val) : null)}
+                items={getAvailableParticipants()}
+                disabled={locked}
+              >
+                <ComboboxInput placeholder="— Seleccionar —" />
+                <ComboboxValue>
+                  {({ value }) => value ? getParticipantLabel(Number(value)) : "— Seleccionar —"}
+                </ComboboxValue>
+                <ComboboxContent>
+                  <ComboboxList>
+                    {getAvailableParticipants().map((p) => (
+                      <ComboboxItem key={p.value} value={p.value}>
+                        {p.label}
+                      </ComboboxItem>
+                    ))}
+                  </ComboboxList>
+                </ComboboxContent>
+              </Combobox>
+            </div>
             <Label>Invitado</Label>
-            <Combobox
-              value={inv.invitado_id?.toString() || ""}
-              onValueChange={(val) => upd(inv.id, "invitado_id", val ? Number(val) : null)}
-              items={getAllParticipants()}
-              disabled={locked}
-            >
-              <ComboboxInput placeholder="— Seleccionar —" />
-              <ComboboxValue>
-                {({ value }) => value ? getParticipantLabel(Number(value)) : "— Seleccionar —"}
-              </ComboboxValue>
-              <ComboboxContent>
-                <ComboboxList>
-                  {getAllParticipants().map((p) => (
-                    <ComboboxItem key={p.value} value={p.value}>
-                      {p.label}
-                    </ComboboxItem>
-                  ))}
-                </ComboboxList>
-              </ComboboxContent>
-            </Combobox>
+            <div className="mb-3">
+              <Combobox
+                value={inv.invitado_id?.toString() || ""}
+                onValueChange={(val) => upd(inv.id, "invitado_id", val ? Number(val) : null)}
+                items={getAllParticipants()}
+                disabled={locked}
+              >
+                <ComboboxInput placeholder="— Seleccionar —" />
+                <ComboboxValue>
+                  {({ value }) => value ? getParticipantLabel(Number(value)) : "— Seleccionar —"}
+                </ComboboxValue>
+                <ComboboxContent>
+                  <ComboboxList>
+                    {getAllParticipants().map((p) => (
+                      <ComboboxItem key={p.value} value={p.value}>
+                        {p.label}
+                      </ComboboxItem>
+                    ))}
+                  </ComboboxList>
+                </ComboboxContent>
+              </Combobox>
+            </div>
           </div>
         ))}
         {(act.invitaciones || []).length === 0 && (

@@ -8,6 +8,7 @@ import {
   $rankings,
   $dbLoading,
   $dbError,
+  $dataVersion,
   refreshData
 } from '@/store/appStore';
 import {
@@ -25,6 +26,7 @@ export function useDatabase() {
   const isLoading = useStore($dbLoading);
   const error = useStore($dbError);
   const rankings = useStore($rankings) ?? [];
+  const dataVersion = useStore($dataVersion) ?? 0;
 
   // Función de refresh - llama al store que ya maneja SSE automáticamente
   const refresh = useCallback(async () => {
@@ -70,7 +72,7 @@ export function useDatabase() {
     rankings,
     nextPid: participants.length > 0 ? Math.max(0, ...participants.map((p: any) => p.id)) + 1 : 1,
     nextAid: activities.length > 0 ? Math.max(0, ...activities.map((a: any) => a.id)) + 1 : 1,
-  }), [participants, activities, rankings]);
+  }), [participants, activities, rankings, dataVersion]);
 
   return {
     db,

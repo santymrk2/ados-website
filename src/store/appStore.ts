@@ -17,6 +17,9 @@ export const $dbError = atom<Error | null>(null);
 export const $dbConnected = atom<boolean>(false);
 export const $dbChecked = atom<boolean>(false);
 
+// Version counter - increments on each refresh to force React re-render
+export const $dataVersion = atom<number>(0);
+
 // UI State
 export const $showSettings = atom<boolean>(false);
 export const $showNotifications = atom<boolean>(false);
@@ -126,6 +129,9 @@ async function doRefresh(forceLoader: boolean): Promise<void> {
       $rankings.set(newRankings);
       $dbError.set(null);
       $dbConnected.set(true);
+      
+      // Increment version to force React re-render
+      $dataVersion.set($dataVersion.get() + 1);
 
       // Success — exit the retry loop
       $dbLoading.set(false);

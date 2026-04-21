@@ -22,12 +22,21 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ success: false, error: "No encontrado" }, { status: 404 });
 
       const p = result[0];
-      // Add /api/images/ prefix only if not already present
-      if (p.foto && !p.foto.startsWith('data:') && !p.foto.startsWith('/api/images/')) {
-        p.foto = `/api/images/${p.foto}`;
+      // Normalize photo URL - remove any existing /api/images/ and rebuild
+      if (p.foto) {
+        // eslint-disable-next-line no-control-regex
+        p.foto = p.foto.replace(/^\/api\/images\//, '');
+        p.foto = p.foto.replace(/\/api\/images\//g, '');
+        if (!p.foto.startsWith('data:')) {
+          p.foto = `/api/images/${p.foto}`;
+        }
       }
-      if (p.fotoAltaCalidad && !p.fotoAltaCalidad.startsWith('data:') && !p.fotoAltaCalidad.startsWith('/api/images/')) {
-        p.fotoAltaCalidad = `/api/images/${p.fotoAltaCalidad}`;
+      if (p.fotoAltaCalidad) {
+        p.fotoAltaCalidad = p.fotoAltaCalidad.replace(/^\/api\/images\//, '');
+        p.fotoAltaCalidad = p.fotoAltaCalidad.replace(/\/api\/images\//g, '');
+        if (!p.fotoAltaCalidad.startsWith('data:')) {
+          p.fotoAltaCalidad = `/api/images/${p.fotoAltaCalidad}`;
+        }
       }
 
       return NextResponse.json({ success: true, data: p }, { status: 200 });
@@ -46,8 +55,12 @@ export async function GET(request: NextRequest) {
       .from(participants);
 
     const formatted = result.map(p => {
-      if (p.foto && !p.foto.startsWith('data:') && !p.foto.startsWith('/api/images/')) {
-        p.foto = `/api/images/${p.foto}`;
+      if (p.foto) {
+        p.foto = p.foto.replace(/^\/api\/images\//, '');
+        p.foto = p.foto.replace(/\/api\/images\//g, '');
+        if (!p.foto.startsWith('data:')) {
+          p.foto = `/api/images/${p.foto}`;
+        }
       }
       return p;
     });

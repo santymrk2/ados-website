@@ -83,7 +83,7 @@ async function doRefresh(forceLoader: boolean): Promise<void> {
       const [p, a, rReq] = await Promise.all([
         getParticipants(),
         getActivities(),
-        fetch(`/api/rankings`)
+        fetch(`/api/rankings`, { cache: 'no-store' })
       ]);
 
       // Handle both response formats: direct array or { success, data }

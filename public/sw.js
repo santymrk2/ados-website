@@ -24,19 +24,6 @@ self.addEventListener('activate', (event) => {
       return Promise.all(
         cacheNames
           .filter((name) => name !== CACHE_NAME)
-          .map((name) => caches.delete(name));
-    })
-  );
-  clients.claim();
-});
-
-// Activate event - clean old caches
-self.addEventListener('activate', (event) => {
-  event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames
-          .filter((name) => name !== CACHE_NAME)
           .map((name) => caches.delete(name))
       );
     })
@@ -44,9 +31,15 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-// Fetch event - ALWAYS go directly to network (no caching)
-// This prevents SW from intercepting API/SSE requests
+// Fetch event - Bypass SSE and API requests
 self.addEventListener('fetch', (event) => {
+  const url = new URL(event.request.url);
+
+  // Bypass API and SSE (Live) requests so the browser handles them natively
+  if (url.pathname.startsWith('/api/')) {
+    return;
+  }
+
   // Always bypass - go directly to network
   event.respondWith(fetch(event.request));
 });

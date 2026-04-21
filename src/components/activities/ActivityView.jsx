@@ -19,11 +19,15 @@ import { cn, formatDate } from "@/lib/utils";
 import { FloatingNav } from "../ui/FloatingNav";
 
 // Import modularized view tab components
-import { TabEquipos } from "./views/tabs/TabEquipos";
-import { TabGoleadores } from "./views/tabs/TabGoleadores";
-import { TabPartidos } from "./views/tabs/TabPartidos";
-import { TabRanking } from "./views/tabs/TabRanking";
-import { TabAsistencia } from "./views/tabs/TabAsistencia";
+import { TabEquipos } from "@/app/activities/[id]/view/tabs/TabEquipos";
+
+import { TabGoleadores } from "@/app/activities/[id]/view/tabs/TabGoleadores";
+
+import { TabPartidos } from "@/app/activities/[id]/view/tabs/TabPartidos";
+
+import { TabRanking } from "@/app/activities/[id]/view/tabs/TabRanking";
+
+import { TabAsistencia } from "@/app/activities/[id]/view/tabs/TabAsistencia";
 
 export function ActivityViewModal({
   db,

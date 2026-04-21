@@ -45,14 +45,21 @@ import { Tabs, TabsContent } from "../ui/tabs";
 import { FloatingNav } from "../ui/FloatingNav";
 import { cn, formatDate } from "@/lib/utils";
 import { confirmDialog } from "@/lib/confirm";
-import { TabInfo } from "./forms/tabs/TabInfo";
-import { TabAsistencia } from "./forms/tabs/TabAsistencia";
-import { TabEquipos } from "./forms/tabs/TabEquipos";
-import { TabJuegos } from "./forms/tabs/TabJuegos";
-import { TabDeportes } from "./forms/tabs/TabDeportes";
-import { TabInvitados } from "./forms/tabs/TabInvitados";
-import { TabGoles } from "./forms/tabs/TabGoles";
-import { TabExtras } from "./forms/tabs/TabExtras";
+import { TabInfo } from "@/app/activities/[id]/edit/tabs/TabInfo";
+
+import { TabAsistencia } from "@/app/activities/[id]/edit/tabs/TabAsistencia";
+
+import { TabEquipos } from "@/app/activities/[id]/edit/tabs/TabEquipos";
+
+import { TabJuegos } from "@/app/activities/[id]/edit/tabs/TabJuegos";
+
+import { TabDeportes } from "@/app/activities/[id]/edit/tabs/TabDeportes";
+
+import { TabInvitados } from "@/app/activities/[id]/edit/tabs/TabInvitados";
+
+import { TabGoles } from "@/app/activities/[id]/edit/tabs/TabGoles";
+
+import { TabExtras } from "@/app/activities/[id]/edit/tabs/TabExtras";
 
 // Generar ID único que no sea Date.now()
 let tempIdCounter = 0;

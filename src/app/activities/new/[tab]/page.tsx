@@ -115,6 +115,7 @@ function ActivityFormContent({
   onQuickUpdate: any;
   onSaveParticipant: any;
 }) {
+  const router = useRouter();
   const [act, setAct] = useState({ ...newAct(), ...initial });
   const [tab, setTab] = useState(urlTab);
   const [saveStatus, setSaveStatus] = useState("saved");

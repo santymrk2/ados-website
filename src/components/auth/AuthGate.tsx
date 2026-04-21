@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useApp } from "@/hooks/useApp";
+import { useDatabaseInitialization } from "@/hooks/useDatabaseInitialization";
 import { LoginScreen } from "./LoginScreen";
 import { Loader } from "./Loader";
 import { BottomNav } from "@/components/ui/BottomNav";
@@ -53,6 +54,10 @@ export function AuthGate({ children, showNav = true }: AuthGateProps) {
     dbChecked,
     refresh,
   } = useApp();
+
+  // Initialize database connection and SSE - with proper cleanup
+  useDatabaseInitialization();
+
   const [loginError, setLoginError] = useState<string | false>(false);
   const [showPass, setShowPass] = useState(false);
   const [isRetrying, setIsRetrying] = useState(false);

@@ -1,18 +1,33 @@
 import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
-const MINIO_ENDPOINT = process.env.MINIO_ENDPOINT || 'http://minio:9000';
-const MINIO_ROOT_USER = process.env.MINIO_ROOT_USER || 'minioadmin';
-const MINIO_ROOT_PASSWORD = process.env.MINIO_ROOT_PASSWORD || 'minioadmin';
+// Validate required environment variables - fail fast if not configured
+const MINIO_ENDPOINT = process.env.MINIO_ENDPOINT;
+const MINIO_ROOT_USER = process.env.MINIO_ROOT_USER;
+const MINIO_ROOT_PASSWORD = process.env.MINIO_ROOT_PASSWORD;
 const BUCKET_NAME = process.env.MINIO_BUCKET_NAME || 'activados';
 
+// Check configuration at module load time
+if (!MINIO_ENDPOINT || !MINIO_ROOT_USER || !MINIO_ROOT_PASSWORD) {
+  console.error('[MINIO] Configuration error: MINIO_ENDPOINT, MINIO_ROOT_USER, and MINIO_ROOT_PASSWORD must be set');
+}
+
+// Export config for use in other parts of the app
+export const minioConfig = {
+  endpoint: MINIO_ENDPOINT || '',
+  bucket: BUCKET_NAME,
+  isConfigured: !!(MINIO_ENDPOINT && MINIO_ROOT_USER && MINIO_ROOT_PASSWORD),
+};
+
 export const s3Client = new S3Client({
-  endpoint: MINIO_ENDPOINT,
+  endpoint: MINIO_ENDPOINT || 'http://minio:9000',
   region: 'us-east-1', // MinIO requires a region, us-east-1 is standard default
-  credentials: {
-    accessKeyId: MINIO_ROOT_USER,
-    secretAccessKey: MINIO_ROOT_PASSWORD,
-  },
+  credentials: MINIO_ROOT_USER && MINIO_ROOT_PASSWORD
+    ? {
+        accessKeyId: MINIO_ROOT_USER,
+        secretAccessKey: MINIO_ROOT_PASSWORD,
+      }
+    : undefined, // Will fail if not configured
   forcePathStyle: true, // MUST be true for MinIO
 });
 

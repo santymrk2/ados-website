@@ -3,47 +3,54 @@ import { db } from "@/lib/db";
 import * as schema from "@/lib/schema";
 import { eq, inArray, and } from "drizzle-orm";
 import { eventBus } from "@/lib/eventBus";
+import { validate, configUpdateSchema } from "@/lib/validation";
+
+// Helper function to return server errors without exposing details
+function serverError(e: unknown) {
+  const errorId = Date.now();
+  console.error(`[API Error ${errorId}]`, e);
+  return NextResponse.json(
+    { success: false, error: "Error interno del servidor" },
+    { status: 500 }
+  );
+}
+
+// Helper for client errors
+function clientError(message: string) {
+  return NextResponse.json(
+    { success: false, error: message },
+    { status: 400 }
+  );
+}
+
+// Whitelist of allowed keys for config updates - prevents SQL column injection
+const ALLOWED_CONFIG_KEYS = ["locked", "titulo", "cantEquipos", "fecha"] as const;
+type AllowedConfigKey = typeof ALLOWED_CONFIG_KEYS[number];
 
 export async function GET(request: NextRequest) {
   try {
     const allActs = await db.select().from(schema.activities);
     if (allActs.length === 0) {
-      return NextResponse.json([], { status: 200 });
+      return NextResponse.json({ success: true, data: [] }, { status: 200 });
     }
 
     const actIds = allActs.map((a) => a.id);
-    const ap = await db
-      .select()
-      .from(schema.activityParticipants)
-      .where(inArray(schema.activityParticipants.activityId, actIds));
-    const jj = await db
-      .select()
-      .from(schema.juegos)
-      .where(inArray(schema.juegos.activityId, actIds));
+
+    // Execute all queries in PARALLEL using Promise.all for better performance
+    const [ap, jj, part, gol, ext, inv] = await Promise.all([
+      db.select().from(schema.activityParticipants).where(inArray(schema.activityParticipants.activityId, actIds)),
+      db.select().from(schema.juegos).where(inArray(schema.juegos.activityId, actIds)),
+      db.select().from(schema.partidos).where(inArray(schema.partidos.activityId, actIds)),
+      db.select().from(schema.goles).where(inArray(schema.goles.activityId, actIds)),
+      db.select().from(schema.extras).where(inArray(schema.extras.activityId, actIds)),
+      db.select().from(schema.invitaciones).where(inArray(schema.invitaciones.activityId, actIds)),
+    ]);
+
+    // Then get juego posiciones after we have jjIds
     const jjIds = jj.map((j) => j.id);
-    const jp =
-      jjIds.length > 0
-        ? await db
-            .select()
-            .from(schema.juegoPosiciones)
-            .where(inArray(schema.juegoPosiciones.juegoId, jjIds))
-        : [];
-    const part = await db
-      .select()
-      .from(schema.partidos)
-      .where(inArray(schema.partidos.activityId, actIds));
-    const gol = await db
-      .select()
-      .from(schema.goles)
-      .where(inArray(schema.goles.activityId, actIds));
-    const ext = await db
-      .select()
-      .from(schema.extras)
-      .where(inArray(schema.extras.activityId, actIds));
-    const inv = await db
-      .select()
-      .from(schema.invitaciones)
-      .where(inArray(schema.invitaciones.activityId, actIds));
+    const jp = jjIds.length > 0
+      ? await db.select().from(schema.juegoPosiciones).where(inArray(schema.juegoPosiciones.juegoId, jjIds))
+      : [];
 
     const parsed = allActs.map((a) => {
       const actAp = ap.filter((x) => x.activityId === a.id);
@@ -124,9 +131,9 @@ export async function GET(request: NextRequest) {
       };
     });
 
-    return NextResponse.json(parsed, { status: 200 });
+    return NextResponse.json({ success: true, data: parsed }, { status: 200 });
   } catch (e) {
-    return NextResponse.json({ error: (e as Error).message }, { status: 500 });
+    return serverError(e);
   }
 }
 
@@ -358,7 +365,7 @@ export async function POST(request: NextRequest) {
       { status: 200 },
     );
   } catch (e) {
-    return NextResponse.json({ error: (e as Error).message }, { status: 500 });
+    return serverError(e);
   }
 }
 
@@ -371,7 +378,20 @@ export async function PATCH(request: NextRequest) {
 
     switch (type) {
       case "config": {
+        // Validate using Zod schema
+        const validation = validate(configUpdateSchema, { id: activityId, data });
+        if (!validation.success) {
+          return clientError(validation.error);
+        }
+
         const { k, v } = data;
+
+        // Whitelist check - prevents SQL column injection
+        if (!ALLOWED_CONFIG_KEYS.includes(k as AllowedConfigKey)) {
+          console.warn(`[SECURITY] Blocked attempt to set disallowed config key: ${k}`);
+          return clientError("Clave de configuración no permitida");
+        }
+
         await db
           .update(schema.activities)
           .set({ [k]: v })
@@ -665,7 +685,7 @@ export async function PATCH(request: NextRequest) {
     eventBus.emit("data-changed");
     return NextResponse.json({ success: true }, { status: 200 });
   } catch (e) {
-    return NextResponse.json({ error: (e as Error).message }, { status: 500 });
+    return serverError(e);
   }
 }
 
@@ -703,6 +723,6 @@ export async function DELETE(request: NextRequest) {
 
     return NextResponse.json({ success: true }, { status: 200 });
   } catch (e) {
-    return NextResponse.json({ error: (e as Error).message }, { status: 500 });
+    return serverError(e);
   }
 }

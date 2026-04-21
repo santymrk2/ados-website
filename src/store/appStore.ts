@@ -21,7 +21,9 @@ export const $dbChecked = atom<boolean>(false);
 export const $showSettings = atom<boolean>(false);
 export const $showNotifications = atom<boolean>(false);
 
-let isRefreshing = false;
+// Promise-based locking to prevent race conditions
+// Using a Promise instead of a boolean prevents race conditions between concurrent calls
+let refreshPromise: Promise<void> | null = null;
 let initialLoadDone = false;
 
 export const checkDbConnection = async () => {
@@ -47,14 +49,27 @@ const RETRY_DELAY = 1000;
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 export const refreshData = async (forceLoader = false) => {
-  if (isRefreshing) return;
+  // If a refresh is already in progress, wait for it instead of starting another
+  if (refreshPromise) {
+    return refreshPromise;
+  }
 
   // Only show the loading spinner on the very first load, or when explicitly forced
   if (!initialLoadDone || forceLoader) {
     $dbLoading.set(true);
   }
 
-  isRefreshing = true;
+  // Create the refresh promise and store it to prevent concurrent calls
+  refreshPromise = doRefresh(forceLoader)
+    .finally(() => {
+      refreshPromise = null;
+      initialLoadDone = true;
+    });
+
+  return refreshPromise;
+};
+
+async function doRefresh(forceLoader: boolean): Promise<void> {
   let lastError: Error | null = null;
 
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
@@ -62,20 +77,20 @@ export const refreshData = async (forceLoader = false) => {
       if (typeof window !== 'undefined') syncTeamConstants();
       const [p, a, rReq] = await Promise.all([getParticipants(), getActivities(), fetch('/api/rankings')]);
       const r = rReq.ok ? await rReq.json() : [];
-      
+
+      // Update all atoms atomically to prevent inconsistent state
       $participants.set(p || []);
       $activities.set(a || []);
       $rankings.set(r.data || r || []);
       $dbError.set(null);
       $dbConnected.set(true);
+
       // Success — exit the retry loop
       $dbLoading.set(false);
-      isRefreshing = false;
-      initialLoadDone = true;
       return;
-    } catch (e: any) {
-      lastError = e;
-      console.warn(`Error loading DB (attempt ${attempt}/${MAX_RETRIES}):`, e.message);
+    } catch (e) {
+      lastError = e instanceof Error ? e : new Error(String(e));
+      console.warn(`Error loading DB (attempt ${attempt}/${MAX_RETRIES}):`, lastError.message);
       if (attempt < MAX_RETRIES) {
         await delay(RETRY_DELAY);
       }
@@ -87,16 +102,13 @@ export const refreshData = async (forceLoader = false) => {
   const stillConnected = await checkDbConnection();
   if (!stillConnected) {
     $dbError.set(lastError);
-    // $dbConnected is already set to false by checkDbConnection
   } else {
     // DB is reachable but data loading failed — keep connected, show a softer error
     $dbError.set(lastError);
   }
 
   $dbLoading.set(false);
-  isRefreshing = false;
-  initialLoadDone = true;
-};
+}
 
 // Computed helper for Next IDs
 export const getNextPid = () => {
@@ -109,45 +121,5 @@ export const getNextAid = () => {
   return Math.max(...a.map(x => x.id), 0) + 1;
 };
 
-// Initialize once on client
-let eventSource: EventSource | null = null;
-
-if (typeof window !== 'undefined') {
-  setTimeout(async () => {
-    const isConnected = await checkDbConnection();
-    if (isConnected) {
-      refreshData();
-      
-      // Setup Server-Sent Events for real-time updates without polling
-      if (!eventSource) {
-        const connectSSE = () => {
-          eventSource = new EventSource('/api/live');
-          
-          eventSource.onmessage = (event) => {
-            if (event.data === 'update') {
-              console.log('Received live update from server. Refreshing data...');
-              refreshData(false); // background refresh
-            }
-          };
-
-          eventSource.onerror = (error) => {
-            console.error('SSE connection error:', error);
-            if (!eventSource || eventSource.readyState === EventSource.CLOSED) {
-              console.log('SSE connection closed, reconnecting in 5s...');
-              eventSource = null;
-              setTimeout(connectSSE, 5000);
-            } else if (eventSource.readyState === EventSource.CONNECTING) {
-              console.log('SSE connecting, waiting...');
-            }
-          };
-
-          eventSource.onopen = () => {
-            console.log('SSE connection established');
-          };
-        };
-        
-        connectSSE();
-      }
-    }
-  }, 100);
-}
+// Export for use in hooks (not initialized at module level anymore)
+// Initialization should be handled by useDatabaseInitialization hook

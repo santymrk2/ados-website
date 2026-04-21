@@ -33,37 +33,39 @@ export function useDatabase() {
     await refreshData();
   }, []);
 
-  // Guardar actividad - NO hace refresh local aquí porque SSE lo hace por nosotros
+  // Guardar actividad
   const saveActivity = useCallback(async (activity: any, isNew: boolean) => {
     const id = await dbSaveActivity(activity, isNew);
-    // SSE notificará a todos los clientes automáticamente
+    await refreshData(false);
     return id;
   }, []);
 
   // Eliminar actividad
   const deleteActivity = useCallback(async (id: number) => {
     await dbDeleteActivity(id);
-    // SSE notificará a todos los clientes automáticamente
+    await refreshData(false);
   }, []);
 
   // Quick update (asistencia, equipos, etc)
   const quickUpdate = useCallback(async (activityId: number, type: string, data: any, skipRefresh = false) => {
     const result = await quickUpdateActivity(activityId, type, data);
-    // SSE se encarga del refresh automáticamente
+    if (!skipRefresh) {
+      await refreshData(false);
+    }
     return result;
   }, []);
 
   // Guardar participante
   const saveParticipant = useCallback(async (participant: any, isNew: boolean, invitadorId: number | null = null) => {
     const id = await dbSaveParticipant(participant, isNew, invitadorId);
-    // SSE notificará a todos los clientes automáticamente
+    await refreshData(false);
     return id;
   }, []);
 
   // Eliminar participante
   const deleteParticipant = useCallback(async (id: number) => {
     await dbDeleteParticipant(id);
-    // SSE notificará a todos los clientes automáticamente
+    await refreshData(false);
   }, []);
 
   const db = useMemo(() => ({

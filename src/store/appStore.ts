@@ -27,6 +27,7 @@ export const $showNotifications = atom<boolean>(false);
 // Promise-based locking to prevent race conditions
 // Using a Promise instead of a boolean prevents race conditions between concurrent calls
 let refreshPromise: Promise<void> | null = null;
+let pendingRefresh = false;
 let initialLoadDone = false;
 
 export const checkDbConnection = async () => {
@@ -54,6 +55,7 @@ const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 export const refreshData = async (forceLoader = false) => {
   // If a refresh is already in progress, wait for it instead of starting another
   if (refreshPromise) {
+    pendingRefresh = true;
     return refreshPromise;
   }
 
@@ -64,9 +66,14 @@ export const refreshData = async (forceLoader = false) => {
 
   // Create the refresh promise and store it to prevent concurrent calls
   refreshPromise = doRefresh(forceLoader)
-    .finally(() => {
+    .finally(async () => {
       refreshPromise = null;
       initialLoadDone = true;
+      
+      if (pendingRefresh) {
+        pendingRefresh = false;
+        await refreshData(false);
+      }
     });
 
   return refreshPromise;

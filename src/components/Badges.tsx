@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Badge } from "./badge";
+import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { LucideIcon } from "lucide-react";
 
@@ -35,12 +35,18 @@ export function RankBadge({ pos }: { pos: number }) {
   );
 }
 
-export function PodiumBadge({ pos, className = "" }: { pos: number; className?: string }) {
+export function PodiumBadge({
+  pos,
+  className = "",
+}: {
+  pos: number;
+  className?: string;
+}) {
   return (
     <div
       className={cn(
         "w-6 h-6 rounded-full border border-surface-dark flex items-center justify-center font-extralight text-xs text-text-muted shrink-0",
-        className
+        className,
       )}
     >
       {pos}
@@ -48,7 +54,13 @@ export function PodiumBadge({ pos, className = "" }: { pos: number; className?: 
   );
 }
 
-export function SexBadge({ sex, className = "" }: { sex: string; className?: string }) {
+export function SexBadge({
+  sex,
+  className = "",
+}: {
+  sex: string;
+  className?: string;
+}) {
   const isM = sex === "M";
   const isMX = sex === "MX";
 
@@ -65,7 +77,15 @@ export function SexBadge({ sex, className = "" }: { sex: string; className?: str
   );
 }
 
-export function Chip({ icon: Icon, val, label }: { icon?: LucideIcon; val: string | number; label: string }) {
+export function Chip({
+  icon: Icon,
+  val,
+  label,
+}: {
+  icon?: LucideIcon;
+  val: string | number;
+  label: string;
+}) {
   return (
     <Badge
       variant="outline"

@@ -3,9 +3,9 @@
 import { useState, useMemo } from "react";
 import { Clock, BookOpen, Trophy, Star, Medal } from "lucide-react";
 import { TEAM_COLORS, getTeamBg } from "@/lib/constants";
-import { Avatar } from "@/components/ui/Avatar";
-import { Empty } from "@/components/ui/Common";
-import { HelpInfo } from "@/components/ui/HelpInfo";
+import { Avatar } from "@/components/Avatar";
+import { Empty } from "@/components/Common";
+import { HelpInfo } from "@/components/HelpInfo";
 import { cn } from "@/lib/utils";
 import {
   Select,
@@ -45,7 +45,7 @@ export function TabRanking({ playerRank, act }) {
   const availableRankingTypes = useMemo(() => {
     const types = [
       { value: "puntos", label: "Puntaje General" },
-      { value: "invitados", label: "Jugadores Traídos" }
+      { value: "invitados", label: "Jugadores Traídos" },
     ];
 
     const has = {
@@ -90,7 +90,7 @@ export function TabRanking({ playerRank, act }) {
       return playerRank
         .map((p) => {
           const count = invitaciones.filter(
-            (i) => i.invitador === p.id && i.invitado_id
+            (i) => i.invitador === p.id && i.invitado_id,
           ).length;
           return {
             ...p,
@@ -138,7 +138,11 @@ export function TabRanking({ playerRank, act }) {
           </SelectTrigger>
           <SelectContent>
             {availableRankingTypes.map((t) => (
-              <SelectItem key={t.value} value={t.value} className="text-xs font-bold">
+              <SelectItem
+                key={t.value}
+                value={t.value}
+                className="text-xs font-bold"
+              >
                 {t.label}
               </SelectItem>
             ))}
@@ -351,4 +355,3 @@ export function TabRanking({ playerRank, act }) {
     </div>
   );
 }
-

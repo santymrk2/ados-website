@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { DEPORTES, GENEROS, TEAM_COLORS, getTeamBg } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
-import { Empty } from "@/components/ui/Common";
+import { Empty } from "@/components/Common";
 
 export function TabPartidos({ partidos }) {
   const [filterGenero, setFilterGenero] = useState("all");
@@ -30,7 +30,9 @@ export function TabPartidos({ partidos }) {
             variant={filterGenero === val ? "default" : "outline"}
             size="sm"
             className={`flex-1 rounded-xl font-bold text-xs ${
-              filterGenero === val ? activeBg : "bg-white/20 text-white border-white/30"
+              filterGenero === val
+                ? activeBg
+                : "bg-white/20 text-white border-white/30"
             }`}
           >
             {label}

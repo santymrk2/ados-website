@@ -3,13 +3,9 @@
 import { useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import { useApp } from "@/hooks/useApp";
-import { Avatar } from "@/components/ui/Avatar";
+import { Avatar } from "@/components/Avatar";
 import { cn } from "@/lib/utils";
-import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 
 const MONTHS = [
@@ -74,13 +70,21 @@ function getAge(fechaNacimiento: string | null | undefined) {
   return age;
 }
 
-function PlayerDetailModal({ player, onClose }: { player: any; onClose: () => void }) {
+function PlayerDetailModal({
+  player,
+  onClose,
+}: {
+  player: any;
+  onClose: () => void;
+}) {
   if (!player) return null;
 
   const edad = getAge(player.fechaNacimiento);
   const cumple = player.fechaNacimiento
     ? (() => {
-        const [year, month, day] = player.fechaNacimiento.split("-").map(Number);
+        const [year, month, day] = player.fechaNacimiento
+          .split("-")
+          .map(Number);
         const date = new Date(year, month - 1, day);
         return date.toLocaleDateString("es-AR", {
           day: "numeric",
@@ -95,68 +99,68 @@ function PlayerDetailModal({ player, onClose }: { player: any; onClose: () => vo
         showCloseButton={false}
         className="max-w-sm bg-surface rounded-3xl p-5 flex flex-col overflow-y-auto max-h-[90vh]"
       >
-          <DialogTitle className="sr-only">
-            Detalle de {player.nombre} {player.apellido}
-          </DialogTitle>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onClose}
-            className="absolute top-4 right-4 rounded-full bg-surface-dark text-text-muted hover:bg-black/10"
-          >
-            <X className="w-5 h-5" />
-          </Button>
+        <DialogTitle className="sr-only">
+          Detalle de {player.nombre} {player.apellido}
+        </DialogTitle>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={onClose}
+          className="absolute top-4 right-4 rounded-full bg-surface-dark text-text-muted hover:bg-black/10"
+        >
+          <X className="w-5 h-5" />
+        </Button>
 
-          <div className="flex flex-col items-center mb-4">
-            <Avatar p={player} size={100} />
-            <h3 className="font-black text-xl text-dark mt-3 text-center">
-              {player.nombre} {player.apellido}
-            </h3>
-            {player.apodo && (
-              <div className="text-sm font-medium text-text-muted">
-                "{player.apodo}"
-              </div>
-            )}
-          </div>
-
-          <div className="grid grid-cols-2 gap-3 mb-4">
-            <div className="bg-white rounded-xl p-3 text-center border border-surface-dark">
-              <div className="text-2xl font-black text-primary">
-                {edad || "—"}
-              </div>
-              <div className="text-xs font-bold text-text-muted">AÑOS</div>
+        <div className="flex flex-col items-center mb-4">
+          <Avatar p={player} size={100} />
+          <h3 className="font-black text-xl text-dark mt-3 text-center">
+            {player.nombre} {player.apellido}
+          </h3>
+          {player.apodo && (
+            <div className="text-sm font-medium text-text-muted">
+              "{player.apodo}"
             </div>
-            <div className="bg-white rounded-xl p-3 text-center border border-surface-dark">
-              <div className="text-sm font-black text-dark">{cumple}</div>
-              <div className="text-xs font-bold text-text-muted">CUMPLE</div>
-            </div>
-          </div>
+          )}
+        </div>
 
-          <div className="flex flex-col gap-2 text-sm">
-            {player.telefono && (
-              <div className="flex justify-between bg-white rounded-lg p-2 border border-surface-dark">
-                <span className="text-text-muted">Teléfono</span>
-                <span className="font-medium">{player.telefono}</span>
-              </div>
-            )}
-            {player.email && (
-              <div className="flex justify-between bg-white rounded-lg p-2 border border-surface-dark">
-                <span className="text-text-muted">Email</span>
-                <span className="font-medium">{player.email}</span>
-              </div>
-            )}
+        <div className="grid grid-cols-2 gap-3 mb-4">
+          <div className="bg-white rounded-xl p-3 text-center border border-surface-dark">
+            <div className="text-2xl font-black text-primary">
+              {edad || "—"}
+            </div>
+            <div className="text-xs font-bold text-text-muted">AÑOS</div>
+          </div>
+          <div className="bg-white rounded-xl p-3 text-center border border-surface-dark">
+            <div className="text-sm font-black text-dark">{cumple}</div>
+            <div className="text-xs font-bold text-text-muted">CUMPLE</div>
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-2 text-sm">
+          {player.telefono && (
             <div className="flex justify-between bg-white rounded-lg p-2 border border-surface-dark">
-              <span className="text-text-muted">Sexo</span>
-              <span className="font-medium">
-                {player.sexo === "M"
-                  ? "Masculino"
-                  : player.sexo === "F"
-                    ? "Femenino"
-                    : "Mixto"}
-              </span>
+              <span className="text-text-muted">Teléfono</span>
+              <span className="font-medium">{player.telefono}</span>
             </div>
+          )}
+          {player.email && (
+            <div className="flex justify-between bg-white rounded-lg p-2 border border-surface-dark">
+              <span className="text-text-muted">Email</span>
+              <span className="font-medium">{player.email}</span>
+            </div>
+          )}
+          <div className="flex justify-between bg-white rounded-lg p-2 border border-surface-dark">
+            <span className="text-text-muted">Sexo</span>
+            <span className="font-medium">
+              {player.sexo === "M"
+                ? "Masculino"
+                : player.sexo === "F"
+                  ? "Femenino"
+                  : "Mixto"}
+            </span>
           </div>
-        </DialogContent>
+        </div>
+      </DialogContent>
     </Dialog>
   );
 }
@@ -190,7 +194,8 @@ export default function Page() {
 
   const getDaysInMonth = (year: number, month: number) =>
     new Date(year, month + 1, 0).getDate();
-  const getFirstDayOfMonth = (year: number, month: number) => new Date(year, month, 1).getDay();
+  const getFirstDayOfMonth = (year: number, month: number) =>
+    new Date(year, month, 1).getDay();
 
   const daysInMonth = getDaysInMonth(currentYear, currentMonth);
   const firstDay = getFirstDayOfMonth(currentYear, currentMonth);

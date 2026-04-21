@@ -4,12 +4,12 @@ import { useState, useEffect } from "react";
 import { useApp } from "@/hooks/useApp";
 import { LoginScreen } from "./LoginScreen";
 import { Loader } from "./Loader";
-import { BottomNav } from "@/components/ui/BottomNav";
+import { BottomNav } from "@/components/BottomNav";
 import { WifiOff, RefreshCw } from "lucide-react";
 import { checkDbConnection } from "@/store/appStore";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialogWrapper } from "@/lib/confirm";
-import { PWAInstall } from "@/components/ui/PWAInstall";
+import { PWAInstall } from "@/components/PWAInstall";
 import { cn } from "@/lib/utils";
 
 interface DbErrorScreenProps {
@@ -23,9 +23,12 @@ function DbErrorScreen({ error, onRetry }: DbErrorScreenProps) {
       <div className="bg-red-50 rounded-full p-4 mb-4">
         <WifiOff className="w-12 h-12 text-red-500" />
       </div>
-      <h1 className="text-xl font-black text-red-600 mb-2">Sin conexión a la base de datos</h1>
+      <h1 className="text-xl font-black text-red-600 mb-2">
+        Sin conexión a la base de datos
+      </h1>
       <p className="text-text-muted text-sm mb-6 max-w-xs">
-        {error?.message || "No se puede conectar al servidor. Verifica tu conexión a internet."}
+        {error?.message ||
+          "No se puede conectar al servidor. Verifica tu conexión a internet."}
       </p>
       <Button onClick={onRetry} className="flex items-center gap-2">
         <RefreshCw className="w-4 h-4" />
@@ -41,7 +44,15 @@ interface AuthGateProps {
 }
 
 export function AuthGate({ children, showNav = true }: AuthGateProps) {
-  const { isAuthenticated, isLoading, login, dbError, dbConnected, dbChecked, refresh } = useApp();
+  const {
+    isAuthenticated,
+    isLoading,
+    login,
+    dbError,
+    dbConnected,
+    dbChecked,
+    refresh,
+  } = useApp();
   const [loginError, setLoginError] = useState<string | false>(false);
   const [showPass, setShowPass] = useState(false);
   const [isRetrying, setIsRetrying] = useState(false);
@@ -114,7 +125,7 @@ export function AuthGate({ children, showNav = true }: AuthGateProps) {
       <div
         className={cn(
           "min-h-screen text-dark font-clash pb-24 pt-0",
-          showNav ? "bg-background" : "bg-primary"
+          showNav ? "bg-background" : "bg-primary",
         )}
       >
         {children}

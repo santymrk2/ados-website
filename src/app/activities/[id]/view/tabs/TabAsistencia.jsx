@@ -2,14 +2,10 @@
 
 import { useState, useMemo } from "react";
 import { getEdad } from "@/lib/constants";
-import { Avatar } from "@/components/ui/Avatar";
+import { Avatar } from "@/components/Avatar";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { X, Clock, Users } from "lucide-react";
 
 function PlayerPointsModal({ player, act, participants, onClose }) {
@@ -55,7 +51,10 @@ function PlayerPointsModal({ player, act, participants, onClose }) {
           if (position !== undefined) {
             const recPts = { 1: 10, 2: 7, 3: 4, 4: 2, 5: 1, 6: 0 };
             const pts = recPts[position] || 0;
-            details.push({ label: `${j.nombre || "Juego"} (${position}°)`, pts });
+            details.push({
+              label: `${j.nombre || "Juego"} (${position}°)`,
+              pts,
+            });
             total += pts;
           }
         }
@@ -201,7 +200,8 @@ export function TabAsistencia({ act, db }) {
       })
       .filter(Boolean)
       .filter((p) => {
-        if (selectedAges.length > 0 && !selectedAges.includes(p.edad)) return false;
+        if (selectedAges.length > 0 && !selectedAges.includes(p.edad))
+          return false;
         return true;
       })
       .sort((a, b) =>
@@ -230,14 +230,20 @@ export function TabAsistencia({ act, db }) {
         </div>
         <div className="bg-white/20 rounded-xl p-3 text-center border border-white/20">
           <div className="text-2xl font-black text-accent">{stats.males}</div>
-          <div className="text-xs font-bold opacity-60 text-accent">Varones</div>
+          <div className="text-xs font-bold opacity-60 text-accent">
+            Varones
+          </div>
         </div>
         <div className="bg-white/20 rounded-xl p-3 text-center border border-white/20">
           <div className="text-2xl font-black text-accent">{stats.females}</div>
-          <div className="text-xs font-bold opacity-60 text-accent">Mujeres</div>
+          <div className="text-xs font-bold opacity-60 text-accent">
+            Mujeres
+          </div>
         </div>
         <div className="bg-white/20 rounded-xl p-3 text-center border border-white/20">
-          <div className="text-2xl font-black text-accent">{stats.puntuales}</div>
+          <div className="text-2xl font-black text-accent">
+            {stats.puntuales}
+          </div>
           <div className="text-xs font-bold opacity-60 text-accent flex items-center justify-center gap-1">
             <Clock className="w-3 h-3" />
             Puntuales
@@ -290,7 +296,8 @@ export function TabAsistencia({ act, db }) {
             <div className="bg-accent/20 rounded-xl p-3 border border-accent/30">
               <div className="font-bold text-sm text-accent mb-2 flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-accent" />
-                Mujeres ({filteredAsistentes.filter((p) => p.sexo === "F").length})
+                Mujeres (
+                {filteredAsistentes.filter((p) => p.sexo === "F").length})
               </div>
               <div className="flex flex-col gap-1">
                 {filteredAsistentes
@@ -324,7 +331,8 @@ export function TabAsistencia({ act, db }) {
             <div className="bg-white/20 rounded-xl p-3 border border-white/30">
               <div className="font-bold text-sm text-white mb-2 flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-white" />
-                Varones ({filteredAsistentes.filter((p) => p.sexo === "M").length})
+                Varones (
+                {filteredAsistentes.filter((p) => p.sexo === "M").length})
               </div>
               <div className="flex flex-col gap-1">
                 {filteredAsistentes

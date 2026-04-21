@@ -5,10 +5,24 @@ import { toast } from "@/hooks/use-toast";
 import { List, Users, Zap, Shuffle } from "lucide-react";
 import { TEAMS, TEAM_COLORS, getTeamBg } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
-import { Avatar } from "@/components/ui/Avatar";
-import { SexBadge } from "@/components/ui/Badges";
+import { Avatar } from "@/components/Avatar";
+import { SexBadge } from "@/components/Badges";
 
-export function TabEquipos({ act, A, Q, db, locked = false, savingOps }: { act: any; A: any; Q: any; db: any; locked?: boolean; savingOps?: Set<unknown> }) {
+export function TabEquipos({
+  act,
+  A,
+  Q,
+  db,
+  locked = false,
+  savingOps,
+}: {
+  act: any;
+  A: any;
+  Q: any;
+  db: any;
+  locked?: boolean;
+  savingOps?: Set<unknown>;
+}) {
   const [viewMode, setViewMode] = useState("cards");
   const [selectedTeam, setSelectedTeam] = useState<string | null>(null);
   const activeTeams = useMemo(

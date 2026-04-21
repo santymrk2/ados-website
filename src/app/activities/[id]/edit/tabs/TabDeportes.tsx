@@ -2,10 +2,16 @@
 
 import { useState } from "react";
 import { Trash2, Settings } from "lucide-react";
-import { TEAMS, TEAM_COLORS, getTeamBg, DEPORTES, GENEROS } from "@/lib/constants";
+import {
+  TEAMS,
+  TEAM_COLORS,
+  getTeamBg,
+  DEPORTES,
+  GENEROS,
+} from "@/lib/constants";
 import { Button } from "@/components/ui/button";
-import { Label, Empty, Modal } from "@/components/ui/Common";
-import { SexBadge } from "@/components/ui/Badges";
+import { Label, Empty, Modal } from "@/components/Common";
+import { SexBadge } from "@/components/Badges";
 import { cn } from "@/lib/utils";
 import { confirmDialog } from "@/lib/confirm";
 import {
@@ -19,7 +25,17 @@ import {
 let tempIdCounter = 0;
 const generateTempId = () => -1 - tempIdCounter++;
 
-export function TabDeportes({ act, A, Q, db }: { act: any; A: any; Q?: any; db: any }) {
+export function TabDeportes({
+  act,
+  A,
+  Q,
+  db,
+}: {
+  act: any;
+  A: any;
+  Q?: any;
+  db: any;
+}) {
   const [filterGenero, setFilterGenero] = useState("all");
   const [selectedPartido, setSelectedPartido] = useState(null);
 
@@ -240,7 +256,10 @@ function PartidoEditModal({
           </Button>
           <div className="flex items-center gap-2">
             <Settings className="w-4 h-4 opacity-50" />
-            <Select value={part.deporte} onValueChange={(val) => update("deporte", val)}>
+            <Select
+              value={part.deporte}
+              onValueChange={(val) => update("deporte", val)}
+            >
               <SelectTrigger className="bg-transparent text-white border-none font-black text-base w-auto py-0 px-1">
                 <SelectValue />
               </SelectTrigger>
@@ -283,7 +302,10 @@ function PartidoEditModal({
           </div>
           <div className="grid grid-cols-2 gap-4 mb-6">
             <div className="text-center">
-              <Select value={part.eq1} onValueChange={(val) => update("eq1", val)}>
+              <Select
+                value={part.eq1}
+                onValueChange={(val) => update("eq1", val)}
+              >
                 <SelectTrigger
                   className="mb-2 text-center font-black w-full"
                   style={{
@@ -314,7 +336,10 @@ function PartidoEditModal({
               </div>
             </div>
             <div className="text-center">
-              <Select value={part.eq2} onValueChange={(val) => update("eq2", val)}>
+              <Select
+                value={part.eq2}
+                onValueChange={(val) => update("eq2", val)}
+              >
                 <SelectTrigger
                   className="mb-2 text-center font-black w-full"
                   style={{

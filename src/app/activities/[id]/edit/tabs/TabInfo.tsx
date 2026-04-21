@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Label, SegmentedButtons } from "@/components/ui/Common";
+import { Label, SegmentedButtons } from "@/components/Common";
 import { Input } from "@/components/ui/input";
-import { HelpInfo } from "@/components/ui/HelpInfo";
+import { HelpInfo } from "@/components/HelpInfo";
 import { DatePicker } from "@/components/ui/calendar";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Switch } from "@/components/ui/switch";
@@ -20,7 +20,19 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-export function TabInfo({ act, A, Q, locked, savingOps }: { act: any; A: any; Q: any; locked: boolean; savingOps?: Set<unknown> }) {
+export function TabInfo({
+  act,
+  A,
+  Q,
+  locked,
+  savingOps,
+}: {
+  act: any;
+  A: any;
+  Q: any;
+  locked: boolean;
+  savingOps?: Set<unknown>;
+}) {
   const [showUnlockDialog, setShowUnlockDialog] = useState(false);
 
   const handleLockToggle = (checked) => {
@@ -78,10 +90,7 @@ export function TabInfo({ act, A, Q, locked, savingOps }: { act: any; A: any; Q:
               </p>
             </div>
           </div>
-          <Switch
-            checked={locked}
-            onCheckedChange={handleLockToggle}
-          />
+          <Switch checked={locked} onCheckedChange={handleLockToggle} />
         </div>
       </div>
 
@@ -91,8 +100,8 @@ export function TabInfo({ act, A, Q, locked, savingOps }: { act: any; A: any; Q:
           <AlertDialogHeader>
             <AlertDialogTitle>¿Desbloquear actividad?</AlertDialogTitle>
             <AlertDialogDescription>
-              Al desbloquear la actividad, cualquier persona podrá editar toda la
-              información incluyendo asistencia, equipos, juegos y más.
+              Al desbloquear la actividad, cualquier persona podrá editar toda
+              la información incluyendo asistencia, equipos, juegos y más.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

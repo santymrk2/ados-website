@@ -1,9 +1,30 @@
 import { toast } from "@/hooks/use-toast";
-import { Modal, Label, Empty } from "@/components/ui/Common";
+import { Modal, Label, Empty } from "@/components/Common";
 import { Button } from "@/components/ui/button";
-import { Combobox, ComboboxInput, ComboboxContent, ComboboxList, ComboboxItem, ComboboxValue } from "@/components/ui/combobox";
+import {
+  Combobox,
+  ComboboxInput,
+  ComboboxContent,
+  ComboboxList,
+  ComboboxItem,
+  ComboboxValue,
+} from "@/components/ui/combobox";
 
-export function TabInvitados({ act, A, Q, db, onSaveParticipant, locked = false }: { act: any; A: any; Q?: any; db: any; onSaveParticipant: any; locked?: boolean }) {
+export function TabInvitados({
+  act,
+  A,
+  Q,
+  db,
+  onSaveParticipant,
+  locked = false,
+}: {
+  act: any;
+  A: any;
+  Q?: any;
+  db: any;
+  onSaveParticipant: any;
+  locked?: boolean;
+}) {
   // Función para obtener el label a partir del value (ID)
   const getParticipantLabel = (id) => {
     if (!id) return "";
@@ -49,11 +70,11 @@ export function TabInvitados({ act, A, Q, db, onSaveParticipant, locked = false 
     // Si es un ID real (positivo), hacer operación en DB
     try {
       await Q(
-        "invitacion_delete", 
-        { id }, 
-        "invitaciones", 
+        "invitacion_delete",
+        { id },
+        "invitaciones",
         (act.invitaciones || []).filter((i) => i.id !== id),
-        () => toast.success("Invitación eliminada") // callback de éxito
+        () => toast.success("Invitación eliminada"), // callback de éxito
       );
     } catch (e) {
       const err = e as Error;
@@ -61,7 +82,7 @@ export function TabInvitados({ act, A, Q, db, onSaveParticipant, locked = false 
     }
   };
 
-const upd = async (id, k, v) => {
+  const upd = async (id, k, v) => {
     const inv = (act.invitaciones || []).find((i) => i.id === id);
     if (!inv) return;
 
@@ -76,14 +97,14 @@ const upd = async (id, k, v) => {
         A(
           "invitaciones",
           (act.invitaciones || []).map((i) =>
-            i.id === id ? { ...i, id: result.id, [k]: v } : i
+            i.id === id ? { ...i, id: result.id, [k]: v } : i,
           ),
         );
         toast.success("Invitación guardada");
-} catch (e) {
-      const err = e as Error;
-      toast.error("Error al guardar invitación: " + err.message);
-    }
+      } catch (e) {
+        const err = e as Error;
+        toast.error("Error al guardar invitación: " + err.message);
+      }
       return;
     }
 
@@ -97,12 +118,14 @@ const upd = async (id, k, v) => {
         });
         A(
           "invitaciones",
-          (act.invitaciones || []).map((i) => (i.id === id ? { ...i, [k]: v } : i)),
+          (act.invitaciones || []).map((i) =>
+            i.id === id ? { ...i, [k]: v } : i,
+          ),
         );
-} catch (e) {
-      const err = e as Error;
-      toast.error("Error al actualizar invitación: " + err.message);
-    }
+      } catch (e) {
+        const err = e as Error;
+        toast.error("Error al actualizar invitación: " + err.message);
+      }
       return;
     }
 
@@ -149,13 +172,19 @@ const upd = async (id, k, v) => {
             <div className="mb-3">
               <Combobox
                 value={inv.invitador?.toString() || ""}
-                onValueChange={(val) => upd(inv.id, "invitador", val ? Number(val) : null)}
+                onValueChange={(val) =>
+                  upd(inv.id, "invitador", val ? Number(val) : null)
+                }
                 items={getAvailableParticipants()}
                 disabled={locked}
               >
                 <ComboboxInput placeholder="— Seleccionar —" />
                 <ComboboxValue>
-                  {({ value }) => value ? getParticipantLabel(Number(value)) : "— Seleccionar —"}
+                  {({ value }) =>
+                    value
+                      ? getParticipantLabel(Number(value))
+                      : "— Seleccionar —"
+                  }
                 </ComboboxValue>
                 <ComboboxContent>
                   <ComboboxList>
@@ -172,13 +201,19 @@ const upd = async (id, k, v) => {
             <div className="mb-3">
               <Combobox
                 value={inv.invitado_id?.toString() || ""}
-                onValueChange={(val) => upd(inv.id, "invitado_id", val ? Number(val) : null)}
+                onValueChange={(val) =>
+                  upd(inv.id, "invitado_id", val ? Number(val) : null)
+                }
                 items={getAllParticipants()}
                 disabled={locked}
               >
                 <ComboboxInput placeholder="— Seleccionar —" />
                 <ComboboxValue>
-                  {({ value }) => value ? getParticipantLabel(Number(value)) : "— Seleccionar —"}
+                  {({ value }) =>
+                    value
+                      ? getParticipantLabel(Number(value))
+                      : "— Seleccionar —"
+                  }
                 </ComboboxValue>
                 <ComboboxContent>
                   <ComboboxList>

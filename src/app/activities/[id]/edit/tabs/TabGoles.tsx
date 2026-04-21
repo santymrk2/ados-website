@@ -3,14 +3,41 @@
 import { useMemo } from "react";
 import { toast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { Label, Empty } from "@/components/ui/Common";
-import { Combobox, ComboboxInput, ComboboxContent, ComboboxList, ComboboxItem, ComboboxValue } from "@/components/ui/combobox";
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import { Label, Empty } from "@/components/Common";
+import {
+  Combobox,
+  ComboboxInput,
+  ComboboxContent,
+  ComboboxList,
+  ComboboxItem,
+  ComboboxValue,
+} from "@/components/ui/combobox";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/select";
 
 let tempIdCounter = 0;
 const generateTempId = () => -1 - tempIdCounter++;
 
-export function TabGoles({ act, A, Q, db, locked = false, savingOps }: { act: any; A: any; Q: any; db: any; locked?: boolean; savingOps?: Set<unknown> }) {
+export function TabGoles({
+  act,
+  A,
+  Q,
+  db,
+  locked = false,
+  savingOps,
+}: {
+  act: any;
+  A: any;
+  Q: any;
+  db: any;
+  locked?: boolean;
+  savingOps?: Set<unknown>;
+}) {
   const availablePlayers = useMemo(() => {
     return db.participants
       .filter(
@@ -77,13 +104,19 @@ export function TabGoles({ act, A, Q, db, locked = false, savingOps }: { act: an
               <div className="flex-1">
                 <Combobox
                   value={g.pid?.toString() || ""}
-                  onValueChange={(val) => upd(g.id, "pid", val ? Number(val) : null)}
+                  onValueChange={(val) =>
+                    upd(g.id, "pid", val ? Number(val) : null)
+                  }
                   items={availablePlayers}
                   disabled={locked}
                 >
                   <ComboboxInput placeholder="Seleccionar jugador..." />
                   <ComboboxValue>
-                    {({ value }) => value ? getParticipantLabel(Number(value)) : "Seleccionar jugador..."}
+                    {({ value }) =>
+                      value
+                        ? getParticipantLabel(Number(value))
+                        : "Seleccionar jugador..."
+                    }
                   </ComboboxValue>
                   <ComboboxContent>
                     <ComboboxList>

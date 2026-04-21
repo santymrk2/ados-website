@@ -7,8 +7,8 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-} from "../ui/dialog";
-import { Button } from "../ui/button";
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 
 interface Participant {
   id: number;
@@ -28,9 +28,12 @@ interface Notification {
   participantId?: number;
 }
 
-export function NotificationsModal({ isOpen, onClose }: { 
-  isOpen: boolean; 
-  onClose: () => void; 
+export function NotificationsModal({
+  isOpen,
+  onClose,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
 }) {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [birthdaysToday, setBirthdaysToday] = useState<Participant[]>([]);

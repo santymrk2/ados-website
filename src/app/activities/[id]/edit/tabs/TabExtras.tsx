@@ -6,16 +6,41 @@ import { Plus, Zap } from "lucide-react";
 import { TEAMS, TEAM_COLORS, getTeamBg } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label, Modal, Empty } from "@/components/ui/Common";
-import { Avatar } from "@/components/ui/Avatar";
+import { Label, Modal, Empty } from "@/components/Common";
+import { Avatar } from "@/components/Avatar";
 import { cn } from "@/lib/utils";
-import { Combobox, ComboboxInput, ComboboxContent, ComboboxList, ComboboxItem, ComboboxValue } from "@/components/ui/combobox";
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import {
+  Combobox,
+  ComboboxInput,
+  ComboboxContent,
+  ComboboxList,
+  ComboboxItem,
+  ComboboxValue,
+} from "@/components/ui/combobox";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/select";
 
 let tempIdCounter = 0;
 const generateTempId = () => -1 - tempIdCounter++;
 
-export function TabExtras({ act, A, Q, db, locked = false }: { act: any; A: any; Q?: any; db: any; locked?: boolean }) {
+export function TabExtras({
+  act,
+  A,
+  Q,
+  db,
+  locked = false,
+}: {
+  act: any;
+  A: any;
+  Q?: any;
+  db: any;
+  locked?: boolean;
+}) {
   const [view, setView] = useState("ind"); // 'ind' or 'team'
   const [showAdd, setShowAdd] = useState(false);
 
@@ -23,22 +48,30 @@ export function TabExtras({ act, A, Q, db, locked = false }: { act: any; A: any;
     const extras = act.extras || [];
     const item = extras.find((e) => e.id === id);
     if (!item) return;
-    
+
     // Si tiene ID real, actualizar atómicamente
     if (id > 0) {
       try {
-        await Q("extra_update", { 
-          id, 
-          puntos: k === "puntos" ? v : item.puntos,
-          motivo: k === "motivo" ? v : item.motivo,
-        }, "extras", extras.map(e => e.id === id ? { ...e, [k]: v } : e));
+        await Q(
+          "extra_update",
+          {
+            id,
+            puntos: k === "puntos" ? v : item.puntos,
+            motivo: k === "motivo" ? v : item.motivo,
+          },
+          "extras",
+          extras.map((e) => (e.id === id ? { ...e, [k]: v } : e)),
+        );
       } catch (e) {
         const err = e as Error;
         toast.error("Error al actualizar: " + err.message);
       }
     } else {
       // Solo actualizar estado local para IDs temporales
-      A("extras", extras.map((e) => (e.id === id ? { ...e, [k]: v } : e)));
+      A(
+        "extras",
+        extras.map((e) => (e.id === id ? { ...e, [k]: v } : e)),
+      );
     }
   };
 
@@ -46,21 +79,29 @@ export function TabExtras({ act, A, Q, db, locked = false }: { act: any; A: any;
     const descuentos = act.descuentos || [];
     const item = descuentos.find((d) => d.id === id);
     if (!item) return;
-    
+
     if (id > 0) {
       try {
-        await Q("extra_update", { 
-          id, 
-          tipo: "descuento",
-          puntos: k === "puntos" ? v : item.puntos,
-          motivo: k === "motivo" ? v : item.motivo,
-        }, "descuentos", descuentos.map(d => d.id === id ? { ...d, [k]: v } : d));
+        await Q(
+          "extra_update",
+          {
+            id,
+            tipo: "descuento",
+            puntos: k === "puntos" ? v : item.puntos,
+            motivo: k === "motivo" ? v : item.motivo,
+          },
+          "descuentos",
+          descuentos.map((d) => (d.id === id ? { ...d, [k]: v } : d)),
+        );
       } catch (e) {
         const err = e as Error;
         toast.error("Error al actualizar: " + err.message);
       }
     } else {
-      A("descuentos", descuentos.map((d) => (d.id === id ? { ...d, [k]: v } : d)));
+      A(
+        "descuentos",
+        descuentos.map((d) => (d.id === id ? { ...d, [k]: v } : d)),
+      );
     }
   };
 
@@ -81,7 +122,7 @@ export function TabExtras({ act, A, Q, db, locked = false }: { act: any; A: any;
       pid: view === "ind" ? target.id : undefined,
       team: view === "team" ? target : undefined,
     };
-    
+
     // Agregar al estado local inmediatamente
     A(listKey, [...(act[listKey] || []), newItem]);
     setShowAdd(false);
@@ -187,7 +228,21 @@ export function TabExtras({ act, A, Q, db, locked = false }: { act: any; A: any;
   );
 }
 
-function ExtraAddModal({ view, db, act, onClose, onAdd, locked }: { view: string; db: any; act: any; onClose: () => void; onAdd: any; locked?: boolean }) {
+function ExtraAddModal({
+  view,
+  db,
+  act,
+  onClose,
+  onAdd,
+  locked,
+}: {
+  view: string;
+  db: any;
+  act: any;
+  onClose: () => void;
+  onAdd: any;
+  locked?: boolean;
+}) {
   const [motivo, setMotivo] = useState("");
   const [selected, setSelected] = useState<any>(null);
 
@@ -237,7 +292,11 @@ function ExtraAddModal({ view, db, act, onClose, onAdd, locked }: { view: string
               >
                 <ComboboxInput placeholder="Seleccionar jugador..." />
                 <ComboboxValue>
-                  {({ value }) => value ? getParticipantLabel(Number(value)) : "Seleccionar jugador..."}
+                  {({ value }) =>
+                    value
+                      ? getParticipantLabel(Number(value))
+                      : "Seleccionar jugador..."
+                  }
                 </ComboboxValue>
                 <ComboboxContent>
                   <ComboboxList>

@@ -12,8 +12,8 @@ import {
   Trophy,
   Plus,
 } from "lucide-react";
-import { PageHeader, Empty } from "@/components/ui/Common";
-import { Chip } from "@/components/ui/Badges";
+import { PageHeader, Empty } from "@/components/Common";
+import { Chip } from "@/components/Badges";
 import { Button } from "@/components/ui/button";
 import { formatDate, cn } from "@/lib/utils";
 import { $role } from "@/store/appStore";
@@ -137,7 +137,10 @@ export default function ActivitiesPage() {
                   <Chip icon={Gamepad2} val={a.juegos.length} label="juegos" />
                   <Chip
                     icon={Trophy}
-                    val={(a.goles || []).reduce((s: any, g: any) => s + g.cant, 0)}
+                    val={(a.goles || []).reduce(
+                      (s: any, g: any) => s + g.cant,
+                      0,
+                    )}
                     label="goles"
                   />
                 </div>

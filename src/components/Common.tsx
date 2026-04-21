@@ -1,5 +1,5 @@
 import { ChevronLeft } from "lucide-react";
-import { cn } from "../../lib/utils";
+import { cn } from "@/lib/utils";
 import {
   Dialog,
   DialogContent,
@@ -54,7 +54,9 @@ export function Modal({ title, onClose, children, isLoading = false }) {
             </Button>
           </div>
         </DialogHeader>
-        <div className="p-3 md:p-5 overflow-y-auto max-h-[calc(90vh-70px)]">{children}</div>
+        <div className="p-3 md:p-5 overflow-y-auto max-h-[calc(90vh-70px)]">
+          {children}
+        </div>
       </DialogContent>
     </Dialog>
   );
@@ -91,10 +93,21 @@ export function Section({ icon: Icon, title }) {
 }
 
 // MIGRADO: Label → Label de shadcn/ui
-export function Label({ children, style, className }: { children?: React.ReactNode; style?: React.CSSProperties; className?: string } = {}) {
+export function Label({
+  children,
+  style,
+  className,
+}: {
+  children?: React.ReactNode;
+  style?: React.CSSProperties;
+  className?: string;
+} = {}) {
   return (
     <ShadcnLabel
-      className={"text-xs text-text-muted font-bold uppercase tracking-wide mb-2 block" + (className ? " " + className : "")}
+      className={
+        "text-xs text-text-muted font-bold uppercase tracking-wide mb-2 block" +
+        (className ? " " + className : "")
+      }
       style={style}
     >
       {children}
@@ -104,7 +117,11 @@ export function Label({ children, style, className }: { children?: React.ReactNo
 
 // MANTENIDO: Empty con mejoras
 export function Empty({ text, className = "" }) {
-  return <div className={cn("text-center py-8 text-text-muted text-sm", className)}>{text}</div>;
+  return (
+    <div className={cn("text-center py-8 text-text-muted text-sm", className)}>
+      {text}
+    </div>
+  );
 }
 
 // MIGRADO: InfoCard → Card de shadcn/ui
@@ -157,12 +174,19 @@ export function SegmentedButtons({
 }
 
 // MIGRADO: PillCheck → Toggle de shadcn/ui
-export function PillCheck({ label, icon: Icon, active, onClick, color, disabled = false }: { 
-  label?: string; 
+export function PillCheck({
+  label,
+  icon: Icon,
+  active,
+  onClick,
+  color,
+  disabled = false,
+}: {
+  label?: string;
   icon?: React.ComponentType<{ className?: string }>;
-  active: boolean; 
-  onClick: () => void; 
-  color: string; 
+  active: boolean;
+  onClick: () => void;
+  color: string;
   disabled?: boolean;
 }) {
   return (
@@ -173,7 +197,7 @@ export function PillCheck({ label, icon: Icon, active, onClick, color, disabled 
       className={cn(
         "px-2 py-1 rounded-lg text-sm flex items-center gap-1 hover:bg-opacity-90 transition-colors",
         active ? "border-opacity-40" : "border-opacity-100",
-        disabled && "opacity-50 cursor-not-allowed pointer-events-none"
+        disabled && "opacity-50 cursor-not-allowed pointer-events-none",
       )}
       style={{
         border: `1px solid ${active ? color + "66" : "#e5e5e5"}`,

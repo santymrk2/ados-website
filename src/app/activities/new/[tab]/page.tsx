@@ -26,21 +26,37 @@ import { TabDeportes } from "@/app/activities/[id]/edit/tabs/TabDeportes";
 import { TabInvitados } from "@/app/activities/[id]/edit/tabs/TabInvitados";
 import { TabGoles } from "@/app/activities/[id]/edit/tabs/TabGoles";
 import { TabExtras } from "@/app/activities/[id]/edit/tabs/TabExtras";
-import { FloatingNav } from "@/components/ui/FloatingNav";
+import { FloatingNav } from "@/components/FloatingNav";
 import { formatDate } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
-export default async function Page({ params }: { params: Promise<{ tab: string }> }) {
+export default async function Page({
+  params,
+}: {
+  params: Promise<{ tab: string }>;
+}) {
   const { tab } = await params;
   return <ActivityFormWrapper mode="new" initialTab={tab} />;
 }
 
-function ActivityFormWrapper({ mode = "new", initialTab = "info" }: { mode?: "new" | "edit", initialTab?: string }) {
+function ActivityFormWrapper({
+  mode = "new",
+  initialTab = "info",
+}: {
+  mode?: "new" | "edit";
+  initialTab?: string;
+}) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { db, saveActivity, quickUpdate, saveParticipant, isLoading: dbLoading } = useApp();
+  const {
+    db,
+    saveActivity,
+    quickUpdate,
+    saveParticipant,
+    isLoading: dbLoading,
+  } = useApp();
   const role = useStore($role);
   const isAdmin = role === "admin";
 
@@ -112,7 +128,8 @@ function ActivityFormContent({
   const A = (k: string, v: any) => setAct((a) => ({ ...a, [k]: v }));
 
   const Q = async (type: string, data: any, k: string, v: any) => {
-    const opId = data.juegoId || data.id || data.participantId || data.pid || '';
+    const opId =
+      data.juegoId || data.id || data.participantId || data.pid || "";
     const opKey = `${type}:${opId}`;
 
     skipNextAutoSave.current = true;
@@ -121,7 +138,8 @@ function ActivityFormContent({
 
     if (act.id) {
       try {
-        const skipRefresh = type === "game_pos" || type === "game_add" || type === "game_delete";
+        const skipRefresh =
+          type === "game_pos" || type === "game_add" || type === "game_delete";
         const result = await onQuickUpdate(act.id, type, data, skipRefresh);
         toast.success("Cambios sincronizados");
         return result;
@@ -169,9 +187,11 @@ function ActivityFormContent({
       } catch (e) {
         setSaveStatus("error");
         const err = e as Error;
-        if (err.message.startsWith('VERSION_CONFLICT:')) {
-          const serverVersion = err.message.split(':')[1];
-          toast.error(`⚠️ Alguien más modificó esta actividad (v${serverVersion}). Recargá la página y volvé a intentar.`);
+        if (err.message.startsWith("VERSION_CONFLICT:")) {
+          const serverVersion = err.message.split(":")[1];
+          toast.error(
+            `⚠️ Alguien más modificó esta actividad (v${serverVersion}). Recargá la página y volvé a intentar.`,
+          );
         } else {
           toast.error("Error al guardar: " + err.message);
         }
@@ -259,7 +279,13 @@ function ActivityFormContent({
         <div className="w-full">
           <div className="p-4">
             {tab === "info" && (
-              <TabInfo act={act} A={A} Q={Q} locked={!!act.locked} savingOps={savingOps} />
+              <TabInfo
+                act={act}
+                A={A}
+                Q={Q}
+                locked={!!act.locked}
+                savingOps={savingOps}
+              />
             )}
 
             {tab === "asistencia" && (
@@ -275,11 +301,24 @@ function ActivityFormContent({
             )}
 
             {tab === "equipos" && (
-              <TabEquipos act={act} A={A} Q={Q} db={db} locked={!!act.locked} savingOps={savingOps} />
+              <TabEquipos
+                act={act}
+                A={A}
+                Q={Q}
+                db={db}
+                locked={!!act.locked}
+                savingOps={savingOps}
+              />
             )}
 
             {tab === "juegos" && (
-              <TabJuegos act={act} A={A} Q={Q} locked={!!act.locked} savingOps={savingOps} />
+              <TabJuegos
+                act={act}
+                A={A}
+                Q={Q}
+                locked={!!act.locked}
+                savingOps={savingOps}
+              />
             )}
 
             {tab === "invitados" && (
@@ -293,7 +332,14 @@ function ActivityFormContent({
             )}
 
             {tab === "goles" && (
-              <TabGoles act={act} A={A} Q={Q} db={db} locked={!!act.locked} savingOps={savingOps} />
+              <TabGoles
+                act={act}
+                A={A}
+                Q={Q}
+                db={db}
+                locked={!!act.locked}
+                savingOps={savingOps}
+              />
             )}
 
             {tab === "extras" && (
@@ -303,11 +349,11 @@ function ActivityFormContent({
         </div>
       </div>
 
-      <FloatingNav 
-        value={tab} 
-        onValueChange={setTab} 
+      <FloatingNav
+        value={tab}
+        onValueChange={setTab}
         items={TABS}
-        lockedValues={act.locked ? TABS.slice(1).map(t => t.value) : []}
+        lockedValues={act.locked ? TABS.slice(1).map((t) => t.value) : []}
       />
     </div>
   );

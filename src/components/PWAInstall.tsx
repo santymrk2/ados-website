@@ -2,12 +2,12 @@
 
 import { useState, useEffect } from "react";
 import { Download, Share2, Smartphone } from "lucide-react";
-import { Button } from "./button";
+import { Button } from "@/components/ui/button";
 
 let deferredPrompt: any = null;
 
 // Paths where PWA install should be shown
-const ALLOWED_PATHS = ['/', '/activities', '/participants', '/calendar'];
+const ALLOWED_PATHS = ["/", "/activities", "/participants", "/calendar"];
 
 export function PWAInstall() {
   const [showAndroidBtn, setShowAndroidBtn] = useState(false);
@@ -20,8 +20,8 @@ export function PWAInstall() {
   useEffect(() => {
     // Check current path
     const path = window.location.pathname;
-    const isAllowed = ALLOWED_PATHS.some(p => 
-      path === p || (p !== '/' && path.startsWith(p))
+    const isAllowed = ALLOWED_PATHS.some(
+      (p) => path === p || (p !== "/" && path.startsWith(p)),
     );
     setShouldShow(isAllowed);
   }, []);
@@ -30,7 +30,7 @@ export function PWAInstall() {
     if (!shouldShow) return;
 
     // Check if user previously dismissed
-    const wasDismissed = localStorage.getItem('pwa_install_dismissed');
+    const wasDismissed = localStorage.getItem("pwa_install_dismissed");
     if (wasDismissed) {
       setDismissed(true);
     }
@@ -61,7 +61,8 @@ export function PWAInstall() {
 
     // iOS detection
     const isIOS =
-      /iphone|ipad|ipod/i.test(navigator.userAgent) && !(window as any).MSStream;
+      /iphone|ipad|ipod/i.test(navigator.userAgent) &&
+      !(window as any).MSStream;
 
     if (isIOS && !isStandalone) {
       setShowIOSBtn(true);
@@ -71,7 +72,10 @@ export function PWAInstall() {
     window.addEventListener("appinstalled", handleAppInstalled);
 
     return () => {
-      window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+      window.removeEventListener(
+        "beforeinstallprompt",
+        handleBeforeInstallPrompt,
+      );
       window.removeEventListener("appinstalled", handleAppInstalled);
     };
   }, [shouldShow]);
@@ -90,7 +94,7 @@ export function PWAInstall() {
   };
 
   const handleDismiss = () => {
-    localStorage.setItem('pwa_install_dismissed', 'true');
+    localStorage.setItem("pwa_install_dismissed", "true");
     setDismissed(true);
   };
 
@@ -202,7 +206,8 @@ export function PWAInstall() {
                   1
                 </div>
                 <p className="text-sm text-dark leading-relaxed">
-                  Abrí la app en <span className="font-bold">Safari</span> (no funciona en otros navegadores)
+                  Abrí la app en <span className="font-bold">Safari</span> (no
+                  funciona en otros navegadores)
                 </p>
               </div>
 
@@ -211,7 +216,8 @@ export function PWAInstall() {
                   2
                 </div>
                 <p className="text-sm text-dark leading-relaxed">
-                  Tocá el ícono de <Share2 className="w-4 h-4 inline" /> <span className="font-bold">Compartir</span>
+                  Tocá el ícono de <Share2 className="w-4 h-4 inline" />{" "}
+                  <span className="font-bold">Compartir</span>
                 </p>
               </div>
 
@@ -220,7 +226,10 @@ export function PWAInstall() {
                   3
                 </div>
                 <p className="text-sm text-dark leading-relaxed">
-                  Deslizá y tocá <span className="bg-muted border border-border px-2 py-0.5 rounded-md text-xs font-bold">Agregar a inicio</span>
+                  Deslizá y tocá{" "}
+                  <span className="bg-muted border border-border px-2 py-0.5 rounded-md text-xs font-bold">
+                    Agregar a inicio
+                  </span>
                 </p>
               </div>
 
@@ -229,7 +238,8 @@ export function PWAInstall() {
                   4
                 </div>
                 <p className="text-sm text-dark leading-relaxed">
-                  Confirmá tocando <span className="font-bold">Agregar</span> arriba a la derecha
+                  Confirmá tocando <span className="font-bold">Agregar</span>{" "}
+                  arriba a la derecha
                 </p>
               </div>
             </div>

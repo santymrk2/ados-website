@@ -19,17 +19,14 @@ import {
   getTeamBg,
   newPart,
 } from "@/lib/constants";
-import { Modal, Label, Empty, PillCheck } from "@/components/ui/Common";
-import { SexBadge } from "@/components/ui/Badges";
-import { Avatar } from "@/components/ui/Avatar";
+import { Modal, Label, Empty, PillCheck } from "@/components/Common";
+import { SexBadge } from "@/components/Badges";
+import { Avatar } from "@/components/Avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { confirmDialog } from "@/lib/confirm";
-import {
-  Dialog,
-  DialogContent,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { DatePicker } from "@/components/ui/calendar";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Check } from "lucide-react";
@@ -50,7 +47,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Combobox, ComboboxInput, ComboboxContent, ComboboxList, ComboboxItem } from "@/components/ui/combobox";
+import {
+  Combobox,
+  ComboboxInput,
+  ComboboxContent,
+  ComboboxList,
+  ComboboxItem,
+} from "@/components/ui/combobox";
 
 let tempIdCounter = 0;
 const generateTempId = () => -1 - tempIdCounter++;
@@ -141,119 +144,139 @@ function NewPlayerModal({ act, db, onClose, onSave, A, Q }) {
         showCloseButton={false}
         className="max-w-sm bg-surface rounded-3xl p-5 flex flex-col overflow-y-auto max-h-[90vh]"
       >
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-black text-lg text-dark">Nuevo Jugador</h3>
-            <Button
-              onClick={onClose}
-              variant="ghost"
-              size="icon-sm"
-              className="rounded-full bg-surface-dark text-text-muted hover:bg-black/10"
-            >
-              <X className="w-5 h-5" />
-            </Button>
-          </div>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-black text-lg text-dark">Nuevo Jugador</h3>
+          <Button
+            onClick={onClose}
+            variant="ghost"
+            size="icon-sm"
+            className="rounded-full bg-surface-dark text-text-muted hover:bg-black/10"
+          >
+            <X className="w-5 h-5" />
+          </Button>
+        </div>
 
-          <div className="grid grid-cols-2 gap-3 mb-4">
-            <div>
-              <Label className="mb-1">Nombre</Label>
-              <Input
-                value={newPlayer.nombre}
-                onChange={(e) =>
-                  setNewPlayer((p) => ({ ...p, nombre: e.target.value }))
-                }
-                placeholder="Nombre"
-                className="text-sm"
-              />
-            </div>
-            <div>
-              <Label className="mb-1">Apellido</Label>
-              <Input
-                value={newPlayer.apellido}
-                onChange={(e) =>
-                  setNewPlayer((p) => ({ ...p, apellido: e.target.value }))
-                }
-                placeholder="Apellido"
-                className="text-sm"
-              />
-            </div>
-          </div>
-
-          <div className="mb-4">
-            <Label className="mb-1">Fecha de Nacimiento</Label>
-            <DatePicker
-              value={newPlayer.fechaNacimiento}
-              onChange={(date) =>
-                setNewPlayer((p) => ({ ...p, fechaNacimiento: date }))
+        <div className="grid grid-cols-2 gap-3 mb-4">
+          <div>
+            <Label className="mb-1">Nombre</Label>
+            <Input
+              value={newPlayer.nombre}
+              onChange={(e) =>
+                setNewPlayer((p) => ({ ...p, nombre: e.target.value }))
               }
-              placeholder="Seleccionar fecha"
+              placeholder="Nombre"
+              className="text-sm"
             />
           </div>
-
-          <div className="mb-4">
-            <Label className="mb-1">Sexo</Label>
-            <div className="flex gap-2">
-              <Button
-                variant={newPlayer.sexo === "M" ? "default" : "outline"}
-                onClick={() => setNewPlayer((p) => ({ ...p, sexo: "M" }))}
-                className={cn(
-                  "flex-1",
-                  newPlayer.sexo === "M" ? "bg-cyan-600 border-cyan-600" : "border-surface-dark"
-                )}
-              >
-                Varón
-              </Button>
-              <Button
-                variant={newPlayer.sexo === "F" ? "default" : "outline"}
-                onClick={() => setNewPlayer((p) => ({ ...p, sexo: "F" }))}
-                className={cn(
-                  "flex-1",
-                  newPlayer.sexo === "F" ? "bg-pink-500 border-pink-500" : "border-surface-dark"
-                )}
-              >
-                Mujer
-              </Button>
-            </div>
-          </div>
-
-<div className="mb-4">
-            <Label className="mb-1">¿Quién lo invitó?</Label>
-            <Combobox
-              value={newPlayer.invitadorId || ""}
-              onValueChange={(val) =>
-                setNewPlayer((p) => ({ ...p, invitadorId: val }))
+          <div>
+            <Label className="mb-1">Apellido</Label>
+            <Input
+              value={newPlayer.apellido}
+              onChange={(e) =>
+                setNewPlayer((p) => ({ ...p, apellido: e.target.value }))
               }
-              items={availableInvitados.map((p) => ({
-                value: p.id.toString(),
-                label: `${p.nombre} ${p.apellido}`,
-              }))}
-            >
-              <ComboboxInput placeholder="Seleccionar invitador..." />
-              <ComboboxContent>
-                <ComboboxList>
-                  {availableInvitados.map((p) => (
-                    <ComboboxItem key={p.id.toString()} value={p.id.toString()}>
-                      {p.nombre} {p.apellido}
-                    </ComboboxItem>
-                  ))}
-                </ComboboxList>
-              </ComboboxContent>
-            </Combobox>
+              placeholder="Apellido"
+              className="text-sm"
+            />
           </div>
+        </div>
 
-          <Button
-            onClick={handleCreatePlayer}
-            disabled={isSubmittingPlayer}
-            className="w-full gap-2"
+        <div className="mb-4">
+          <Label className="mb-1">Fecha de Nacimiento</Label>
+          <DatePicker
+            value={newPlayer.fechaNacimiento}
+            onChange={(date) =>
+              setNewPlayer((p) => ({ ...p, fechaNacimiento: date }))
+            }
+            placeholder="Seleccionar fecha"
+          />
+        </div>
+
+        <div className="mb-4">
+          <Label className="mb-1">Sexo</Label>
+          <div className="flex gap-2">
+            <Button
+              variant={newPlayer.sexo === "M" ? "default" : "outline"}
+              onClick={() => setNewPlayer((p) => ({ ...p, sexo: "M" }))}
+              className={cn(
+                "flex-1",
+                newPlayer.sexo === "M"
+                  ? "bg-cyan-600 border-cyan-600"
+                  : "border-surface-dark",
+              )}
+            >
+              Varón
+            </Button>
+            <Button
+              variant={newPlayer.sexo === "F" ? "default" : "outline"}
+              onClick={() => setNewPlayer((p) => ({ ...p, sexo: "F" }))}
+              className={cn(
+                "flex-1",
+                newPlayer.sexo === "F"
+                  ? "bg-pink-500 border-pink-500"
+                  : "border-surface-dark",
+              )}
+            >
+              Mujer
+            </Button>
+          </div>
+        </div>
+
+        <div className="mb-4">
+          <Label className="mb-1">¿Quién lo invitó?</Label>
+          <Combobox
+            value={newPlayer.invitadorId || ""}
+            onValueChange={(val) =>
+              setNewPlayer((p) => ({ ...p, invitadorId: val }))
+            }
+            items={availableInvitados.map((p) => ({
+              value: p.id.toString(),
+              label: `${p.nombre} ${p.apellido}`,
+            }))}
           >
-            <Plus className="w-4 h-4" />
-            {isSubmittingPlayer ? "Cargando..." : "Agregar y registrar"}
-          </Button>
-        </DialogContent>
+            <ComboboxInput placeholder="Seleccionar invitador..." />
+            <ComboboxContent>
+              <ComboboxList>
+                {availableInvitados.map((p) => (
+                  <ComboboxItem key={p.id.toString()} value={p.id.toString()}>
+                    {p.nombre} {p.apellido}
+                  </ComboboxItem>
+                ))}
+              </ComboboxList>
+            </ComboboxContent>
+          </Combobox>
+        </div>
+
+        <Button
+          onClick={handleCreatePlayer}
+          disabled={isSubmittingPlayer}
+          className="w-full gap-2"
+        >
+          <Plus className="w-4 h-4" />
+          {isSubmittingPlayer ? "Cargando..." : "Agregar y registrar"}
+        </Button>
+      </DialogContent>
     </Dialog>
   );
 }
 
-export function TabAsistencia({ act, A, Q, db, onSaveParticipant, locked = false, savingOps }: { act: any; A: any; Q: any; db: any; onSaveParticipant: any; locked?: boolean; savingOps?: Set<unknown> }) {
+export function TabAsistencia({
+  act,
+  A,
+  Q,
+  db,
+  onSaveParticipant,
+  locked = false,
+  savingOps,
+}: {
+  act: any;
+  A: any;
+  Q: any;
+  db: any;
+  onSaveParticipant: any;
+  locked?: boolean;
+  savingOps?: Set<unknown>;
+}) {
   const [sortOrder, setSortOrder] = useState("asc");
   const [search, setSearch] = useState("");
   const [showNewPlayer, setShowNewPlayer] = useState(false);
@@ -397,7 +420,7 @@ export function TabAsistencia({ act, A, Q, db, onSaveParticipant, locked = false
           return (
             <div
               key={p.id}
-              className={`rounded-lg border bg-white ${here ? 'border-primary shadow-md shadow-primary/20' : 'border-surface-dark'}`}
+              className={`rounded-lg border bg-white ${here ? "border-primary shadow-md shadow-primary/20" : "border-surface-dark"}`}
             >
               <div className="flex items-center p-3 gap-3">
                 <Checkbox
@@ -472,8 +495,8 @@ export function TabAsistencia({ act, A, Q, db, onSaveParticipant, locked = false
           <AlertDialogHeader>
             <AlertDialogTitle>Limpiar asistencia</AlertDialogTitle>
             <AlertDialogDescription>
-              ¿Estás seguro que querés quitar la asistencia de todos los jugadores?
-              Esta acción no se puede deshacer.
+              ¿Estás seguro que querés quitar la asistencia de todos los
+              jugadores? Esta acción no se puede deshacer.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -497,7 +520,8 @@ export function TabAsistencia({ act, A, Q, db, onSaveParticipant, locked = false
           <AlertDialogHeader>
             <AlertDialogTitle>Seleccionar todos</AlertDialogTitle>
             <AlertDialogDescription>
-              ¿Estás seguro que querés marcar a todos los {sorted.length} jugadores como presentes?
+              ¿Estás seguro que querés marcar a todos los {sorted.length}{" "}
+              jugadores como presentes?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

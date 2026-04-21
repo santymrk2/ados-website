@@ -16,8 +16,8 @@ import {
   Calendar,
 } from "lucide-react";
 import { getEdad } from "@/lib/constants";
-import { PageHeader, Empty } from "@/components/ui/Common";
-import { Avatar } from "@/components/ui/Avatar";
+import { PageHeader, Empty } from "@/components/Common";
+import { Avatar } from "@/components/Avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { formatDate } from "@/lib/utils";
@@ -331,7 +331,9 @@ export default function Page() {
                     {isAdmin && (
                       <>
                         <Button
-                          onClick={() => router.push(`/participants/${p.id}/edit`)}
+                          onClick={() =>
+                            router.push(`/participants/${p.id}/edit`)
+                          }
                           variant="outline"
                           size="icon"
                           className="text-primary"

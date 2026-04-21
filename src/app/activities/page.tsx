@@ -17,7 +17,7 @@ import { Chip } from "@/components/ui/Badges";
 import { Button } from "@/components/ui/button";
 import { formatDate, cn } from "@/lib/utils";
 import { $role } from "@/store/appStore";
-import { deleteActivity as dbDeleteActivity } from "@/lib/db-utils";
+import { deleteActivity as dbDeleteActivity } from "@/lib/api-client";
 import {
   AlertDialog,
   AlertDialogAction,

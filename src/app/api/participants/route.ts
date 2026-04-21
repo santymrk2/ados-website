@@ -5,7 +5,7 @@ export const dynamic = 'force-dynamic';
 import { participants, activityParticipants, goles, extras, invitaciones } from "@/lib/schema";
 import { eq, or } from "drizzle-orm";
 import { eventBus } from "@/lib/eventBus";
-import { uploadBase64Image } from "@/lib/minio";
+import { uploadBase64Image } from "@/services/minio";
 
 const generateUniqueFilename = (prefix: string) => `${prefix}_${Date.now()}_${Math.random().toString(36).substring(7)}.jpg`;
 

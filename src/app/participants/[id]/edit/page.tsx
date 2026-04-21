@@ -12,7 +12,7 @@ import { SexBadge } from "@/components/ui/Badges";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ImageCropModal } from "@/components/ui/ImageCropModal";
-import { downloadBase64Image } from "@/lib/imageUtils";
+import { downloadBase64Image } from "@/lib/image-utils";
 import { DatePicker } from "@/components/ui/calendar";
 import {
   AlertDialog,
@@ -25,7 +25,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { getParticipant } from "@/lib/db-utils";
+import { getParticipant } from "@/lib/api-client";
 import { ChevronLeft, X, Download, Camera } from "lucide-react";
 
 export const dynamic = "force-dynamic";

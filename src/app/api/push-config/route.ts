@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getVapidPublicKey, isWebPushConfigured } from "@/lib/web-push-server";
+import { getVapidPublicKey, isWebPushConfigured } from "@/services/web-push-server";
 
 export async function GET() {
   return NextResponse.json({

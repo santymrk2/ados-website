@@ -1,4 +1,11 @@
-export const createImage = (url) =>
+export interface PixelCrop {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+export const createImage = (url: string): Promise<HTMLImageElement> =>
   new Promise((resolve, reject) => {
     const image = new Image();
     image.addEventListener('load', () => resolve(image));
@@ -7,7 +14,7 @@ export const createImage = (url) =>
     image.src = url;
   });
 
-function analyzePixels(data) {
+function analyzePixels(data: Uint8ClampedArray) {
   let rTotal = 0, gTotal = 0, bTotal = 0;
   const hist = new Uint32Array(256);
   const pixelCount = data.length / 4;
@@ -34,11 +41,11 @@ function analyzePixels(data) {
   return { avgBrightness, medianGray };
 }
 
-function enhanceExposure(ctx, canvas) {
+function enhanceExposure(ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement) {
   let imgData;
   try {
     imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-  } catch (e) {
+  } catch (e: any) {
     console.warn('enhanceExposure: no se pudo acceder a los píxeles:', e.message);
     return;
   }
@@ -67,7 +74,7 @@ function enhanceExposure(ctx, canvas) {
   ctx.putImageData(imgData, 0, 0);
 }
 
-function resolveOutputFormat(image) {
+function resolveOutputFormat(image: HTMLImageElement) {
   const src = image.src ?? '';
   const mightHaveAlpha = /\.(png|webp|gif)(\?|$)/i.test(src);
   if (!mightHaveAlpha) return { mime: 'image/jpeg', quality: 0.95 };
@@ -76,6 +83,8 @@ function resolveOutputFormat(image) {
   probe.width = Math.min(image.naturalWidth, 64);
   probe.height = Math.min(image.naturalHeight, 64);
   const pCtx = probe.getContext('2d');
+  if (!pCtx) return { mime: 'image/jpeg', quality: 0.95 };
+  
   pCtx.drawImage(image, 0, 0, probe.width, probe.height);
 
   try {
@@ -88,7 +97,7 @@ function resolveOutputFormat(image) {
   return { mime: 'image/jpeg', quality: 0.95 };
 }
 
-function createScaledCanvas(srcWidth, srcHeight, maxSize) {
+function createScaledCanvas(srcWidth: number, srcHeight: number, maxSize: number) {
   let width = srcWidth;
   let height = srcHeight;
 
@@ -104,7 +113,7 @@ function createScaledCanvas(srcWidth, srcHeight, maxSize) {
   return canvas;
 }
 
-function drawCrop(ctx, image, pixelCrop, destWidth, destHeight) {
+function drawCrop(ctx: CanvasRenderingContext2D, image: HTMLImageElement, pixelCrop: PixelCrop, destWidth: number, destHeight: number) {
   ctx.imageSmoothingEnabled  = true;
   ctx.imageSmoothingQuality  = 'high';
   ctx.drawImage(
@@ -117,20 +126,24 @@ function drawCrop(ctx, image, pixelCrop, destWidth, destHeight) {
 const MAX_SIZE  = 1200;
 const THUMB_SIZE = 300;
 
-export async function getDualCroppedImg(imageSrc, pixelCrop) {
+export async function getDualCroppedImg(imageSrc: string, pixelCrop: PixelCrop) {
   const image = await createImage(imageSrc);
   const { mime, quality } = resolveOutputFormat(image);
 
   const hqCanvas = createScaledCanvas(pixelCrop.width, pixelCrop.height, MAX_SIZE);
   const hqCtx    = hqCanvas.getContext('2d');
-  drawCrop(hqCtx, image, pixelCrop, hqCanvas.width, hqCanvas.height);
-  enhanceExposure(hqCtx, hqCanvas);
+  if (hqCtx) {
+    drawCrop(hqCtx, image, pixelCrop, hqCanvas.width, hqCanvas.height);
+    enhanceExposure(hqCtx, hqCanvas);
+  }
 
   const thumbCanvas = createScaledCanvas(hqCanvas.width, hqCanvas.height, THUMB_SIZE);
   const thumbCtx    = thumbCanvas.getContext('2d');
-  thumbCtx.imageSmoothingEnabled = true;
-  thumbCtx.imageSmoothingQuality = 'high';
-  thumbCtx.drawImage(hqCanvas, 0, 0, thumbCanvas.width, thumbCanvas.height);
+  if (thumbCtx) {
+    thumbCtx.imageSmoothingEnabled = true;
+    thumbCtx.imageSmoothingQuality = 'high';
+    thumbCtx.drawImage(hqCanvas, 0, 0, thumbCanvas.width, thumbCanvas.height);
+  }
 
   return {
     altaCalidad: hqCanvas.toDataURL(mime, quality),
@@ -138,7 +151,7 @@ export async function getDualCroppedImg(imageSrc, pixelCrop) {
   };
 }
 
-export function downloadBase64Image(base64Data, filename) {
+export function downloadBase64Image(base64Data: string, filename: string) {
   const link = document.createElement('a');
   link.href     = base64Data;
   link.download = filename;

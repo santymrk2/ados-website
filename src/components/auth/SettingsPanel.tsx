@@ -26,7 +26,7 @@ import {
   isPushSubscribed,
   isWebPushAvailable,
   isWebPushConfigured,
-} from "@/lib/web-push-client";
+} from "@/services/web-push-client";
 import { toast } from "@/hooks/use-toast";
 
 function hexToRgb(hex: string) {

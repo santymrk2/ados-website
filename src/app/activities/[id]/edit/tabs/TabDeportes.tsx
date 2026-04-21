@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Label, Empty, Modal } from "@/components/ui/Common";
 import { SexBadge } from "@/components/ui/Badges";
 import { cn } from "@/lib/utils";
-import { confirmDialog } from "@/lib/confirm";
+import { confirmDialog } from "@/components/ui/confirm-dialog";
 import {
   Select,
   SelectContent,

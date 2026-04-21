@@ -9,7 +9,7 @@ import { BottomNav } from "@/components/ui/BottomNav";
 import { WifiOff, RefreshCw } from "lucide-react";
 import { checkDbConnection } from "@/store/appStore";
 import { Button } from "@/components/ui/button";
-import { ConfirmDialogWrapper } from "@/lib/confirm";
+import { ConfirmDialogWrapper } from "@/components/ui/confirm-dialog";
 import { PWAInstall } from "@/components/ui/PWAInstall";
 import { cn } from "@/lib/utils";
 

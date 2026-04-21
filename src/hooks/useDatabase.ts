@@ -17,7 +17,7 @@ import {
   saveParticipant as dbSaveParticipant,
   deleteParticipant as dbDeleteParticipant,
   quickUpdateActivity,
-} from '@/lib/db-utils';
+} from "@/lib/api-client";
 
 export function useDatabase() {
   // Always provide default values to prevent undefined errors

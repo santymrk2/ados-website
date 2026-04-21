@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from "react";
 import Cropper from "react-easy-crop";
-import { getDualCroppedImg } from "@/lib/imageUtils";
+import { getDualCroppedImg, PixelCrop } from "@/lib/image-utils";
 import { ZoomIn, ZoomOut, Check } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import {
@@ -18,7 +18,7 @@ import { cn } from "@/lib/utils";
 export function ImageCropModal({ image, onCropComplete, onClose }) {
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
-  const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState<PixelCrop | null>(null);
 
   const onCropChange = (crop) => {
     setCrop(crop);
@@ -36,6 +36,7 @@ export function ImageCropModal({ image, onCropComplete, onClose }) {
   );
 
   const handleDone = async () => {
+    if (!croppedAreaPixels) return;
     try {
       const { altaCalidad, thumb } = await getDualCroppedImg(
         image,

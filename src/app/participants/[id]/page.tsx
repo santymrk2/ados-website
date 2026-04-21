@@ -22,7 +22,7 @@ import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/button";
 import { formatDate } from "@/lib/utils";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
-import { getParticipant } from "@/lib/db-utils";
+import { getParticipant } from "@/lib/api-client";
 import type { ParticipantBasic, Activity } from "@/lib/types";
 
 export const dynamic = "force-dynamic";

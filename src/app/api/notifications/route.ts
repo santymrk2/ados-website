@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { participants, pushSubscriptions } from "@/lib/schema";
-import { sendBirthdayNotification, isWebPushConfigured } from "@/lib/web-push-server";
+import { sendBirthdayNotification, isWebPushConfigured } from "@/services/web-push-server";
 import { getEdad } from "@/lib/constants";
 
 function getArgentinaDate() {

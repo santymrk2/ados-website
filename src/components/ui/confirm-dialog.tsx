@@ -1,3 +1,5 @@
+"use client";
+
 import { atom } from 'nanostores';
 import { useStore } from '@nanostores/react';
 import {
@@ -8,16 +10,28 @@ import {
   AlertDialogFooter,
   AlertDialogCancel,
   AlertDialogAction,
-} from '../components/ui/alert-dialog';
+} from '@/components/ui/alert-dialog';
 
-const confirmState = atom({
+export interface ConfirmOptions {
+  confirmText?: string;
+  isDestructive?: boolean;
+}
+
+export interface ConfirmState {
+  isOpen: boolean;
+  message: string;
+  options: ConfirmOptions;
+  resolve: ((value: boolean) => void) | null;
+}
+
+const confirmState = atom<ConfirmState>({
   isOpen: false,
   message: '',
   options: {},
   resolve: null,
 });
 
-export function openConfirmDialog(message, options = {}) {
+export function openConfirmDialog(message: string, options: ConfirmOptions = {}): Promise<boolean> {
   return new Promise((resolve) => {
     confirmState.set({ isOpen: true, message, options, resolve });
   });
@@ -30,7 +44,7 @@ function ConfirmDialog() {
 
   if (!isOpen) return null;
 
-  const close = (result) => {
+  const close = (result: boolean) => {
     resolve?.(result);
     confirmState.set({ isOpen: false, message: '', options: {}, resolve: null });
   };

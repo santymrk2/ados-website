@@ -271,13 +271,8 @@ function ActivityFormContent({
     if (!initial || !initial.id) return;
     if (saveStatus !== "saved") return;
 
-    const initialStr = JSON.stringify(initial);
-    const actStr = JSON.stringify(act);
-
-    if (initialStr === actStr) {
-      return;
-    }
-  }, [initial, saveStatus]);
+    setAct(prev => ({ ...prev, ...initial }));
+  }, [initial]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const statusIndicator = {
     saved: { color: "text-accent", label: "Guardado" },

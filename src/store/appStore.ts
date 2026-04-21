@@ -1,5 +1,5 @@
 import { atom } from 'nanostores';
-import { getParticipants, getActivities, checkDatabaseConnection } from '@/lib/db-utils';
+import { getParticipants, getActivities, checkDatabaseConnection } from "@/lib/api-client";
 import { syncTeamConstants } from '@/lib/constants';
 import type { ParticipantBasic, Activity, Ranking } from '@/lib/types';
 

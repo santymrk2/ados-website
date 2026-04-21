@@ -157,7 +157,14 @@ export function SegmentedButtons({
 }
 
 // MIGRADO: PillCheck → Toggle de shadcn/ui
-export function PillCheck({ label, icon: Icon, active, onClick, color, disabled = false }) {
+export function PillCheck({ label, icon: Icon, active, onClick, color, disabled = false }: { 
+  label?: string; 
+  icon?: React.ComponentType<{ className?: string }>;
+  active: boolean; 
+  onClick: () => void; 
+  color: string; 
+  disabled?: boolean;
+}) {
   return (
     <Toggle
       pressed={active}

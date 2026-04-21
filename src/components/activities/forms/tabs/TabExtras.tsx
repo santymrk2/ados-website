@@ -10,6 +10,7 @@ import { Label, Modal, Empty } from "@/components/ui/Common";
 import { Avatar } from "@/components/ui/Avatar";
 import { cn } from "@/lib/utils";
 import { Combobox, ComboboxInput, ComboboxContent, ComboboxList, ComboboxItem, ComboboxValue } from "@/components/ui/combobox";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 
 let tempIdCounter = 0;
 const generateTempId = () => -1 - tempIdCounter++;
@@ -32,7 +33,8 @@ export function TabExtras({ act, A, Q, db, locked = false }: { act: any; A: any;
           motivo: k === "motivo" ? v : item.motivo,
         }, "extras", extras.map(e => e.id === id ? { ...e, [k]: v } : e));
       } catch (e) {
-        toast.error("Error al actualizar: " + e.message);
+        const err = e as Error;
+        toast.error("Error al actualizar: " + err.message);
       }
     } else {
       // Solo actualizar estado local para IDs temporales
@@ -54,7 +56,8 @@ export function TabExtras({ act, A, Q, db, locked = false }: { act: any; A: any;
           motivo: k === "motivo" ? v : item.motivo,
         }, "descuentos", descuentos.map(d => d.id === id ? { ...d, [k]: v } : d));
       } catch (e) {
-        toast.error("Error al actualizar: " + e.message);
+        const err = e as Error;
+        toast.error("Error al actualizar: " + err.message);
       }
     } else {
       A("descuentos", descuentos.map((d) => (d.id === id ? { ...d, [k]: v } : d)));
@@ -177,15 +180,16 @@ export function TabExtras({ act, A, Q, db, locked = false }: { act: any; A: any;
           act={act}
           onClose={() => setShowAdd(false)}
           onAdd={onAdd}
+          locked={locked}
         />
       )}
     </div>
   );
 }
 
-function ExtraAddModal({ view, db, act, onClose, onAdd }) {
+function ExtraAddModal({ view, db, act, onClose, onAdd, locked }: { view: string; db: any; act: any; onClose: () => void; onAdd: any; locked?: boolean }) {
   const [motivo, setMotivo] = useState("");
-  const [selected, setSelected] = useState(null);
+  const [selected, setSelected] = useState<any>(null);
 
   const activeTeams = TEAMS.slice(0, act.cantEquipos || 4);
 

@@ -10,7 +10,7 @@ import { SexBadge } from "@/components/ui/Badges";
 
 export function TabEquipos({ act, A, Q, db, locked = false, savingOps }: { act: any; A: any; Q: any; db: any; locked?: boolean; savingOps?: Set<unknown> }) {
   const [viewMode, setViewMode] = useState("cards");
-  const [selectedTeam, setSelectedTeam] = useState(null);
+  const [selectedTeam, setSelectedTeam] = useState<string | null>(null);
   const activeTeams = useMemo(
     () => TEAMS.slice(0, act.cantEquipos || 4),
     [act.cantEquipos],

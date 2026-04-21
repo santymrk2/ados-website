@@ -33,7 +33,14 @@ export async function GET(request: NextRequest) {
   try {
     const allActs = await db.select().from(schema.activities);
     if (allActs.length === 0) {
-      return NextResponse.json({ success: true, data: [] }, { status: 200 });
+    return NextResponse.json({ success: true, data: [] }, { 
+      status: 200,
+      headers: {
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
+      }
+    });
     }
 
     const actIds = allActs.map((a) => a.id);
@@ -133,7 +140,14 @@ export async function GET(request: NextRequest) {
       };
     });
 
-    return NextResponse.json({ success: true, data: parsed }, { status: 200 });
+    return NextResponse.json({ success: true, data: parsed }, { 
+      status: 200,
+      headers: {
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
+      }
+    });
   } catch (e) {
     return serverError(e);
   }

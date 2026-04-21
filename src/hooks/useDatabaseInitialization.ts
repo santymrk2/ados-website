@@ -28,8 +28,10 @@ export function useDatabaseInitialization() {
     eventSource.onmessage = (event) => {
       console.log("[SSE Client] Received message:", event.data);
       if (event.data === "update") {
-        console.log("[SSE Client] Triggering refresh...");
-        refreshData(false);
+        console.log("[SSE Client] Triggering refresh in 400ms to allow DB replication...");
+        setTimeout(() => {
+          refreshData(false);
+        }, 400);
       }
     };
 

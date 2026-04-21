@@ -1,16 +1,17 @@
 import { eventBus } from './eventBus';
 import { calcPts } from './calc';
+import type { Activity, Participant, Ranking, Juego, Gol, Extra, Invitacion } from './types';
 
 // Objeto global en el proceso Node.js para mantener la caché entre llamadas
 const globalForCache = globalThis as unknown as {
-  __activadosRankingsCache: any | undefined;
+  __activadosRankingsCache: Ranking[] | undefined;
   __activadosLastUpdated: number | undefined;
 };
 
 // Evita regenerar frenéticamente. Se debouncea la generación 3 segundos.
-let rebuildTimeout: any = null;
+let rebuildTimeout: ReturnType<typeof setTimeout> | null = null;
 
-export const setRankingsCache = (rankings: any) => {
+export const setRankingsCache = (rankings: Ranking[]) => {
   globalForCache.__activadosRankingsCache = rankings;
   globalForCache.__activadosLastUpdated = Date.now();
 };
@@ -47,16 +48,16 @@ export const triggerRankingsRebuild = () => {
       ]);
 
       // Build activities with all related data
-      const activitiesParsed = activitiesRaw.map((a: any) => {
+      const activitiesParsed = activitiesRaw.map((a) => {
         const actId = a.id;
 
         // Filter related data for this activity
-        const actParticipants = activityParticipantsRaw.filter((ap: any) => ap.activityId === actId);
-        const actJuegos = juegosRaw.filter((j: any) => j.activityId === actId);
-        const actGoles = golesRaw.filter((g: any) => g.activityId === actId);
-        const actExtras = extrasRaw.filter((e: any) => e.activityId === actId);
-        const actInvitaciones = invitacionesRaw.filter((i: any) => i.activityId === actId);
-        const actPartidos = partidosRaw.filter((p: any) => p.activityId === actId);
+        const actParticipants = activityParticipantsRaw.filter((ap) => ap.activityId === actId);
+        const actJuegos = juegosRaw.filter((j) => j.activityId === actId);
+        const actGoles = golesRaw.filter((g) => g.activityId === actId);
+        const actExtras = extrasRaw.filter((e) => e.activityId === actId);
+        const actInvitaciones = invitacionesRaw.filter((i) => i.activityId === actId);
+        const actPartidos = partidosRaw.filter((p) => p.activityId === actId);
 
         // Build asistentes, puntuales, biblias, socials, equipos
         const asistentes: number[] = [];
@@ -76,8 +77,8 @@ export const triggerRankingsRebuild = () => {
         }
 
         // Build juegos with posiciones
-        const juegos = actJuegos.map((j: any) => {
-          const posiciones = juegoPosicionesRaw.filter((jp: any) => jp.juegoId === j.id);
+        const juegos: Juego[] = actJuegos.map((j) => {
+          const posiciones = juegoPosicionesRaw.filter((jp) => jp.juegoId === j.id);
           const pos: Record<string, string[]> = {};
           for (const jp of posiciones) {
             if (!pos[jp.posicion]) pos[jp.posicion] = [];
@@ -87,24 +88,24 @@ export const triggerRankingsRebuild = () => {
         });
 
         // Build goles
-        const goles = actGoles.map((g: any) => ({
+        const goles: Gol[] = actGoles.map((g) => ({
           pid: g.participantId,
-          tipo: g.tipo,
+          tipo: g.tipo as Gol['tipo'],
           cant: g.cant,
         }));
 
         // Build extras (puntos extra)
-        const extras = actExtras.map((e: any) => ({
+        const extras: Extra[] = actExtras.map((e) => ({
           pid: e.participantId,
           team: e.team,
-          tipo: e.tipo,
+          tipo: e.tipo as Extra['tipo'],
           puntos: e.puntos,
           motivo: e.motivo,
         }));
 
         // Build invitaciones
-        const invitaciones = actInvitaciones.map((i: any) => ({
-          invitadorId: i.invitadorId,
+        const invitaciones: Invitacion[] = actInvitaciones.map((i) => ({
+          invitador: i.invitadorId,
           invitadoId: i.invitadoId,
         }));
 
@@ -136,7 +137,7 @@ export const triggerRankingsRebuild = () => {
         }
       }
 
-      const rankings = participantsRaw.map(p => {
+      const rankings: Ranking[] = participantsRaw.map(p => {
          const stats = calcPts(p.id, activitiesParsed, participantsRaw);
          return {
            id: p.id,

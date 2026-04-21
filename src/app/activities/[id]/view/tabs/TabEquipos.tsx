@@ -9,8 +9,18 @@ import { cn } from "@/lib/utils";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { X, Clock, BookOpen, Users } from "lucide-react";
+import type { Activity, ParticipantBasic } from "@/lib/types";
 
-function getPlayerPoints(pid, act, participants) {
+interface TeamRankItem {
+  team: string;
+  pts: number;
+}
+
+interface PlayerRankItem extends ParticipantBasic {
+  pts: number;
+}
+
+function getPlayerPoints(pid: number, act: Activity, participants: ParticipantBasic[]): { total: number; details: { label: string; pts: number }[] } {
   const a = act;
   const p = participants.find((x) => x.id === pid);
   if (!p) return { total: 0, details: [] };
@@ -85,7 +95,14 @@ function getPlayerPoints(pid, act, participants) {
   return { total, details };
 }
 
-function PlayerPointsModal({ player, act, participants, onClose }) {
+interface PlayerPointsModalProps {
+  player: ParticipantBasic;
+  act: Activity;
+  participants: ParticipantBasic[];
+  onClose: () => void;
+}
+
+function PlayerPointsModal({ player, act, participants, onClose }: PlayerPointsModalProps) {
   const { total, details } = useMemo(
     () => getPlayerPoints(player.id, act, participants),
     [player, act, participants],
@@ -160,10 +177,18 @@ function PlayerPointsModal({ player, act, participants, onClose }) {
   );
 }
 
-export function TabEquipos({ act, db, teamRank, maxTeamPts, playerRank }) {
+interface TabEquiposProps {
+  act: Activity;
+  db: { participants: ParticipantBasic[] };
+  teamRank: TeamRankItem[];
+  maxTeamPts: number;
+  playerRank: PlayerRankItem[];
+}
+
+export function TabEquipos({ act, db, teamRank, maxTeamPts, playerRank }: TabEquiposProps) {
   const participants = db.participants;
-  const [selectedTeam, setSelectedTeam] = useState(null);
-  const [selectedPlayer, setSelectedPlayer] = useState(null);
+  const [selectedTeam, setSelectedTeam] = useState<string | null>(null);
+  const [selectedPlayer, setSelectedPlayer] = useState<ParticipantBasic | null>(null);
 
   const activeTeams = TEAMS.slice(0, act.cantEquipos || 4);
 
@@ -171,7 +196,7 @@ export function TabEquipos({ act, db, teamRank, maxTeamPts, playerRank }) {
     if (!selectedTeam) return null;
     const present = act.asistentes
       .map((pid) => participants.find((p) => p.id === pid))
-      .filter((p) => p && act.equipos?.[p.id] === selectedTeam);
+      .filter((p): p is ParticipantBasic => !!p && act.equipos?.[p.id] === selectedTeam);
 
     return {
       team: selectedTeam,

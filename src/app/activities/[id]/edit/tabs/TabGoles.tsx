@@ -19,9 +19,13 @@ import {
   SelectContent,
   SelectItem,
 } from "@/components/ui/select";
+import type { Activity, Gol, ParticipantBasic, AppState } from "@/lib/types";
 
 let tempIdCounter = 0;
 const generateTempId = () => -1 - tempIdCounter++;
+
+type ActionFn = (key: string, value: unknown) => void;
+type QueryFn = (key: string, data: unknown, target: string, value: unknown) => Promise<unknown>;
 
 export function TabGoles({
   act,
@@ -30,28 +34,29 @@ export function TabGoles({
   db,
   locked = false,
   savingOps,
+  onSaveParticipant,
 }: {
-  act: any;
-  A: any;
-  Q: any;
-  db: any;
+  act: Activity;
+  A: ActionFn;
+  Q: QueryFn;
+  db: AppState;
   locked?: boolean;
-  savingOps?: Set<unknown>;
+  savingOps?: Set<string>;
+  onSaveParticipant?: (data: unknown, isNew: boolean, invitadorId?: string | null) => Promise<number>;
 }) {
   const availablePlayers = useMemo(() => {
     return db.participants
       .filter(
-        (p) =>
+        (p: ParticipantBasic) =>
           act.asistentes.includes(p.id) && !(act.socials || []).includes(p.id),
       )
-      .map((p) => ({
+      .map((p: ParticipantBasic) => ({
         value: p.id.toString(),
         label: `${p.nombre} ${p.apellido}`,
       }));
   }, [db.participants, act.asistentes, act.socials]);
 
-  // Función para obtener el label a partir del value (ID)
-  const getParticipantLabel = (id) => {
+  const getParticipantLabel = (id: number) => {
     if (!id) return "";
     const p = db.participants.find((p) => p.id === id);
     return p ? `${p.nombre} ${p.apellido}` : "";
@@ -95,8 +100,8 @@ export function TabGoles({
       </div>
       <div className="flex flex-col gap-2">
         {(act.goles || [])
-          .filter((g) => !g.matchId)
-          .map((g) => (
+          .filter((g: Gol) => !g.matchId)
+          .map((g: Gol) => (
             <div
               key={g.id}
               className="bg-white rounded-xl p-3 border border-surface-dark flex gap-2 items-center shadow-sm"
@@ -120,7 +125,7 @@ export function TabGoles({
                   </ComboboxValue>
                   <ComboboxContent>
                     <ComboboxList>
-                      {availablePlayers.map((p) => (
+                      {availablePlayers.map((p: { value: string; label: string }) => (
                         <ComboboxItem key={p.value} value={p.value}>
                           {p.label}
                         </ComboboxItem>

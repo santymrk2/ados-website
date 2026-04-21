@@ -1,6 +1,7 @@
 import { atom } from 'nanostores';
 import { getParticipants, getActivities, checkDatabaseConnection } from '@/lib/db-utils';
 import { syncTeamConstants } from '@/lib/constants';
+import type { ParticipantBasic, Activity, Ranking } from '@/lib/types';
 
 // Auth State
 export const $isAuthenticated = atom<boolean>(false);
@@ -8,11 +9,11 @@ export const $authLoading = atom<boolean>(true);
 export const $role = atom<string>('admin'); // 'admin' or 'viewer'
 
 // Database State
-export const $participants = atom<any[]>([]);
-export const $activities = atom<any[]>([]);
-export const $rankings = atom<any[]>([]);
+export const $participants = atom<ParticipantBasic[]>([]);
+export const $activities = atom<Activity[]>([]);
+export const $rankings = atom<Ranking[]>([]);
 export const $dbLoading = atom<boolean>(true);
-export const $dbError = atom<any>(null);
+export const $dbError = atom<Error | null>(null);
 export const $dbConnected = atom<boolean>(false);
 export const $dbChecked = atom<boolean>(false);
 
@@ -32,7 +33,7 @@ export const checkDbConnection = async () => {
   } catch (e) {
     console.error('DB Connection Error:', e);
     $dbConnected.set(false);
-    $dbError.set(e);
+    $dbError.set(e instanceof Error ? e : new Error(String(e)));
     $dbLoading.set(false);
     return false;
   } finally {
@@ -54,7 +55,7 @@ export const refreshData = async (forceLoader = false) => {
   }
 
   isRefreshing = true;
-  let lastError: any = null;
+  let lastError: Error | null = null;
 
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     try {

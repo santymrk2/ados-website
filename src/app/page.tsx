@@ -22,6 +22,31 @@ import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/button";
 import { SexBadge, RankBadge, PodiumBadge } from "@/components/ui/Badges";
 import { cn, formatDate } from "@/lib/utils";
+import type { ParticipantBasic, Activity, Ranking } from "@/lib/types";
+
+// Tipo para ranking calculado con stats
+interface RankingWithStats extends ParticipantBasic {
+  total: number;
+  gf: number;
+  gh: number;
+  gb: number;
+  acts: number;
+  goals?: number;
+}
+
+// Tipo para stats del dashboard
+interface DashboardStats {
+  jugadoresActivos: number;
+  porcentajeActivos: number;
+  totalGoles: number;
+  avgAsistencia: number;
+  masGoles: { f: number; h: number; b: number };
+  totalPartidos: number;
+  top5ScorersM: RankingWithStats[];
+  top5ScorersF: RankingWithStats[];
+  maleCount: number;
+  femaleCount: number;
+}
 
 const PODIUM_COLORS = [
   { bg: "#F59E0B", text: "#fff", shadow: "#F59E0B44" },
@@ -35,9 +60,20 @@ const RANKING_METRICS = [
   { key: "gh", label: "Handball", Icon: Circle, cols: 1 },
   { key: "gb", label: "Básquet", Icon: Circle, cols: 1 },
   { key: "acts", label: "Asist.", Icon: ClipboardList, cols: 1 },
-];
+] as const;
 
-function RankRow({ p, pos, activities, metric }) {
+type RankingMetricKey = (typeof RANKING_METRICS)[number]['key'];
+
+function RankRow({
+  p,
+  pos,
+  metric,
+}: {
+  p: RankingWithStats;
+  pos: number;
+  activities: Activity[];
+  metric: RankingMetricKey;
+}) {
   const metricValue = p[metric] || 0;
 
   return (
@@ -85,8 +121,8 @@ export default function Page() {
 
   const [showRanking, setShowRanking] = useState(false);
   const [showTopGoleadores, setShowTopGoleadores] = useState(false);
-  const [topGoleadoresGender, setTopGoleadoresGender] = useState("M");
-  const [rankingMetric, setRankingMetric] = useState("total");
+  const [topGoleadoresGender, setTopGoleadoresGender] = useState<'M' | 'F'>('M');
+  const [rankingMetric, setRankingMetric] = useState<RankingMetricKey>('total');
 
   const handleActivityClick = (activityId: number) => {
     router.push(`/activities/${activityId}`);
@@ -338,7 +374,7 @@ export default function Page() {
                       topGoleadoresGender === t.val ? "default" : "outline"
                     }
                     size="sm"
-                    onClick={() => setTopGoleadoresGender(t.val)}
+                    onClick={() => setTopGoleadoresGender(t.val as 'M' | 'F')}
                     className={cn(
                       "flex-1",
                       topGoleadoresGender === t.val

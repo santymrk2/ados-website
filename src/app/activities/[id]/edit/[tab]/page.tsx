@@ -149,7 +149,7 @@ function ActivityFormContent({
   const actRef = useRef(act);
   actRef.current = act;
   const skipNextAutoSave = useRef(false);
-  const [savingOps, setSavingOps] = useState(new Set());
+  const [savingOps, setSavingOps] = useState<Set<string>>(new Set());
 
   const A = (k: string, v: any) => setAct((a) => ({ ...a, [k]: v }));
 

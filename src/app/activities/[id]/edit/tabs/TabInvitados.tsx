@@ -1,5 +1,5 @@
 import { toast } from "@/hooks/use-toast";
-import { Modal, Label, Empty } from "@/components/ui/Common";
+import { Label, Empty } from "@/components/ui/Common";
 import { Button } from "@/components/ui/button";
 import {
   Combobox,
@@ -9,24 +9,38 @@ import {
   ComboboxItem,
   ComboboxValue,
 } from "@/components/ui/combobox";
+import type { Activity, ParticipantBasic, AppState } from "@/lib/types";
+
+interface InvitacionWithId {
+  id: number;
+  invitador: number | null;
+  invitadorId: number | null;
+  invitadoId: number | null;
+}
+
+type ActionFn = (key: string, value: unknown) => void;
+type QueryFn = (key: string, data: unknown, target?: string, value?: unknown) => Promise<unknown>;
 
 export function TabInvitados({
   act,
   A,
   Q,
   db,
-  onSaveParticipant,
   locked = false,
+  savingOps,
+  onSaveParticipant,
 }: {
-  act: any;
-  A: any;
-  Q?: any;
-  db: any;
-  onSaveParticipant: any;
+  act: Activity;
+  A: ActionFn;
+  Q?: QueryFn;
+  db: AppState;
   locked?: boolean;
+  savingOps?: Set<string>;
+  onSaveParticipant?: (data: unknown, isNew: boolean, invitadorId?: string | null) => Promise<number>;
 }) {
-  // Función para obtener el label a partir del value (ID)
-  const getParticipantLabel = (id) => {
+  const invitacionesList = (act.invitaciones || []) as InvitacionWithId[];
+
+  const getParticipantLabel = (id: number) => {
     if (!id) return "";
     const p = db.participants.find((p) => p.id === id);
     return p ? `${p.nombre} ${p.apellido}` : "";
@@ -34,70 +48,65 @@ export function TabInvitados({
 
   const getAvailableParticipants = () =>
     db.participants
-      .filter((p) => act.asistentes.includes(p.id))
-      .map((p) => ({
+      .filter((p: ParticipantBasic) => act.asistentes.includes(p.id))
+      .map((p: ParticipantBasic) => ({
         value: p.id.toString(),
         label: `${p.nombre} ${p.apellido}`,
       }));
 
   const getAllParticipants = () =>
-    db.participants.map((p) => ({
+    db.participants.map((p: ParticipantBasic) => ({
       value: p.id.toString(),
       label: `${p.nombre} ${p.apellido}`,
     }));
 
   const add = async () => {
-    // Crear invitación vacía temporalmente en UI (ID negativo para distinguir de DB)
     const tempId = -Date.now();
     A("invitaciones", [
-      ...(act.invitaciones || []),
-      { id: tempId, invitador: null, invitado_id: null },
+      ...invitacionesList,
+      { id: tempId, invitador: null, invitadorId: null, invitadoId: null },
     ]);
     toast.success("Invitación agregada");
   };
 
-  const del = async (id) => {
-    // Si es un ID temporal (negativo) o inválido, solo borrar del estado local
+  const del = async (id: number) => {
     if (!id || id < 0) {
       A(
         "invitaciones",
-        (act.invitaciones || []).filter((i) => i.id !== id),
+        invitacionesList.filter((i) => i.id !== id),
       );
       toast.success("Invitación eliminada");
       return;
     }
 
-    // Si es un ID real (positivo), hacer operación en DB
     try {
-      await Q(
+      await Q?.(
         "invitacion_delete",
         { id },
         "invitaciones",
-        (act.invitaciones || []).filter((i) => i.id !== id),
-        () => toast.success("Invitación eliminada"), // callback de éxito
+        invitacionesList.filter((i) => i.id !== id),
       );
+      toast.success("Invitación eliminada");
     } catch (e) {
       const err = e as Error;
       toast.error("Error al eliminar invitación: " + err.message);
     }
   };
 
-  const upd = async (id, k, v) => {
-    const inv = (act.invitaciones || []).find((i) => i.id === id);
+  const upd = async (id: number, k: string, v: unknown) => {
+    const inv = invitacionesList.find((i) => i.id === id);
     if (!inv) return;
 
-    // Si es ID temporal y estamos actualizando el invitado, crear en DB
-    if (id < 0 && k === "invitado_id" && v) {
+    if (id < 0 && k === "invitadoId" && v) {
       try {
-        const result = await Q("invitacion_add", {
+        const result = await Q?.("invitacion_add", {
           invitador: inv.invitador,
-          invited_id: v,
+          invitadoId: v as number,
         });
-        // Reemplazar el temporal por el real
         A(
           "invitaciones",
-          (act.invitaciones || []).map((i) =>
-            i.id === id ? { ...i, id: result.id, [k]: v } : i,
+          invitacionesList.map((i) =>
+            i.id === id ? { ...i, id: (result as { id: number }).id, [k]: v } : i,
           ),
         );
         toast.success("Invitación guardada");
@@ -108,17 +117,16 @@ export function TabInvitados({
       return;
     }
 
-    // Si ya existe en DB, actualizar atómicamente
     if (id > 0) {
       try {
-        await Q("invitacion_update", {
+        await Q?.("invitacion_update", {
           id,
           invitador: k === "invitador" ? v : inv.invitador,
-          invited_id: k === "invitado_id" ? v : inv.invitado_id,
+          invitadoId: k === "invitadoId" ? v : inv.invitadoId,
         });
         A(
           "invitaciones",
-          (act.invitaciones || []).map((i) =>
+          invitacionesList.map((i) =>
             i.id === id ? { ...i, [k]: v } : i,
           ),
         );
@@ -129,10 +137,9 @@ export function TabInvitados({
       return;
     }
 
-    // Solo actualizar estado local para IDs temporales sinDB aún
     A(
       "invitaciones",
-      (act.invitaciones || []).map((i) => (i.id === id ? { ...i, [k]: v } : i)),
+      invitacionesList.map((i) => (i.id === id ? { ...i, [k]: v } : i)),
     );
   };
 
@@ -151,7 +158,7 @@ export function TabInvitados({
         </Button>
       </div>
       <div className="flex flex-col gap-3 mt-3">
-        {(act.invitaciones || []).map((inv) => (
+        {invitacionesList.map((inv) => (
           <div
             key={inv.id}
             className="bg-white rounded-xl border border-surface-dark p-3 shadow-sm"
@@ -200,9 +207,9 @@ export function TabInvitados({
             <Label>Invitado</Label>
             <div className="mb-3">
               <Combobox
-                value={inv.invitado_id?.toString() || ""}
+                value={inv.invitadoId?.toString() || ""}
                 onValueChange={(val) =>
-                  upd(inv.id, "invitado_id", val ? Number(val) : null)
+                  upd(inv.id, "invitadoId", val ? Number(val) : null)
                 }
                 items={getAllParticipants()}
                 disabled={locked}
@@ -228,7 +235,7 @@ export function TabInvitados({
             </div>
           </div>
         ))}
-        {(act.invitaciones || []).length === 0 && (
+        {invitacionesList.length === 0 && (
           <Empty text="Sin invitados" />
         )}
       </div>

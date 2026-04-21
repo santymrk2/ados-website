@@ -23,6 +23,7 @@ import { Button } from "@/components/ui/button";
 import { formatDate } from "@/lib/utils";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { getParticipant } from "@/lib/db-utils";
+import type { ParticipantBasic, Activity } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -66,7 +67,7 @@ export default async function Page({
 
   const { activities, participants, rankings } = db;
 
-  const [expandedImage, setExpandedImage] = useState(null);
+  const [expandedImage, setExpandedImage] = useState<string | null>(null);
   const [player, setPlayer] = useState(participant);
   const [isLoadingFull, setIsLoadingFull] = useState(false);
 

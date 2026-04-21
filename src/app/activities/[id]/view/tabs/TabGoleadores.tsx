@@ -6,6 +6,11 @@ import { HelpInfo } from "@/components/ui/HelpInfo";
 import { Empty } from "@/components/ui/Common";
 import { Avatar } from "@/components/ui/Avatar";
 import { TEAM_COLORS } from "@/lib/constants";
+import type { Activity, ParticipantBasic } from "@/lib/types";
+
+interface ScorerItem extends ParticipantBasic {
+  goles: number;
+}
 
 export function TabGoleadores({
   act,
@@ -13,10 +18,10 @@ export function TabGoleadores({
   setShowScorers,
   scorersByDeporte,
 }: {
-  act: { equipos?: Record<string, string> };
+  act: Pick<Activity, 'equipos'>;
   showScorers: boolean;
   setShowScorers: (v: boolean) => void;
-  scorersByDeporte: Record<string, unknown[]>;
+  scorersByDeporte: Record<string, ScorerItem[]>;
 }) {
   return (
     <div>
@@ -50,7 +55,7 @@ export function TabGoleadores({
             { key: "h", label: "🤾 Handball" },
             { key: "b", label: "🏀 Básquet" },
           ].map(({ key, label }) => {
-            const items = (scorersByDeporte[key] || []) as unknown as { id: string; nombre: string; apellido: string; goles: number }[];
+            const items = scorersByDeporte[key] || [];
             if (items.length === 0) return null;
             return (
               <div key={key}>
@@ -89,7 +94,7 @@ export function TabGoleadores({
               </div>
             );
           })}
-          {Object.values(scorersByDeporte as Record<string, unknown[]>).every((l) => Array.isArray(l) && l.length === 0) && (
+          {Object.values(scorersByDeporte).every((l) => Array.isArray(l) && l.length === 0) && (
             <Empty className="text-accent" text="Sin goles registrados" />
           )}
         </div>

@@ -14,6 +14,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import type { Activity, ParticipantBasic, Ranking, Gol, Invitacion } from "@/lib/types";
+
+interface PlayerRankItem extends ParticipantBasic {
+  pts: number;
+  displayValue?: number;
+  displayLabel?: string;
+}
 
 const PODIUM_COLORS = [
   {
@@ -39,7 +46,12 @@ const PODIUM_COLORS = [
   },
 ];
 
-export function TabRanking({ playerRank, act }) {
+interface TabRankingProps {
+  playerRank: PlayerRankItem[];
+  act: Activity;
+}
+
+export function TabRanking({ playerRank, act }: TabRankingProps) {
   const [rankingType, setRankingType] = useState("puntos");
 
   const availableRankingTypes = useMemo(() => {
@@ -90,7 +102,7 @@ export function TabRanking({ playerRank, act }) {
       return playerRank
         .map((p) => {
           const count = invitaciones.filter(
-            (i) => i.invitador === p.id && i.invitado_id,
+            (i) => i.invitador === p.id && i.invitadoId,
           ).length;
           return {
             ...p,

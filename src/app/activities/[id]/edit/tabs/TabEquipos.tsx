@@ -7,6 +7,10 @@ import { TEAMS, TEAM_COLORS, getTeamBg } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import { Avatar } from "@/components/ui/Avatar";
 import { SexBadge } from "@/components/ui/Badges";
+import type { Activity, ParticipantBasic, AppState } from "@/lib/types";
+
+type ActionFn = (key: string, value: unknown) => void;
+type QueryFn = (key: string, data: unknown, target: string, value: unknown) => Promise<unknown>;
 
 export function TabEquipos({
   act,
@@ -15,26 +19,28 @@ export function TabEquipos({
   db,
   locked = false,
   savingOps,
+  onSaveParticipant,
 }: {
-  act: any;
-  A: any;
-  Q: any;
-  db: any;
+  act: Activity;
+  A: ActionFn;
+  Q: QueryFn;
+  db: AppState;
   locked?: boolean;
-  savingOps?: Set<unknown>;
+  savingOps?: Set<string>;
+  onSaveParticipant?: (data: unknown, isNew: boolean, invitadorId?: string | null) => Promise<number>;
 }) {
-  const [viewMode, setViewMode] = useState("cards");
+  const [viewMode, setViewMode] = useState<"cards" | "list">("cards");
   const [selectedTeam, setSelectedTeam] = useState<string | null>(null);
   const activeTeams = useMemo(
     () => TEAMS.slice(0, act.cantEquipos || 4),
     [act.cantEquipos],
   );
 
-  const present = useMemo(
+  const present = useMemo<ParticipantBasic[]>(
     () =>
       db.participants
         .filter(
-          (p) =>
+          (p: ParticipantBasic) =>
             act.asistentes.includes(p.id) &&
             !(act.socials || []).includes(p.id),
         )
@@ -46,9 +52,9 @@ export function TabEquipos({
     [db.participants, act.asistentes, act.socials],
   );
 
-  const setTeam = (pid, team) => {
+  const setTeam = (pid: number, team: string) => {
     const eq = { ...(act.equipos || {}) };
-    let finalTeam = team;
+    let finalTeam: string | null = team;
     if (eq[pid] === team) {
       delete eq[pid];
       finalTeam = null;
@@ -61,7 +67,7 @@ export function TabEquipos({
 
   const autoBalance = (resetAll = false) => {
     const eq = resetAll ? {} : { ...(act.equipos || {}) };
-    const counts = {};
+    const counts: Record<string, { M: number; F: number; total: number }> = {};
     activeTeams.forEach((t) => {
       counts[t] = { M: 0, F: 0, total: 0 };
     });
@@ -78,7 +84,7 @@ export function TabEquipos({
     const masc = unassigned.filter((p) => p.sexo === "M");
     const fem = unassigned.filter((p) => p.sexo === "F");
 
-    [...masc, ...fem].forEach((p) => {
+    [...masc, ...fem].forEach((p: ParticipantBasic) => {
       const best = [...activeTeams].sort(
         (a, b) =>
           counts[a][p.sexo] - counts[b][p.sexo] ||
@@ -221,7 +227,7 @@ export function TabEquipos({
                       Mujer ({selectedTeamData.women.length})
                     </div>
                     <div className="flex flex-col gap-1">
-                      {selectedTeamData.women.map((p) => (
+                      {selectedTeamData.women.map((p: ParticipantBasic) => (
                         <div
                           key={p.id}
                           className="bg-white rounded-lg p-2 flex items-center gap-2"
@@ -244,7 +250,7 @@ export function TabEquipos({
                       Varón ({selectedTeamData.men.length})
                     </div>
                     <div className="flex flex-col gap-1">
-                      {selectedTeamData.men.map((p) => (
+                      {selectedTeamData.men.map((p: ParticipantBasic) => (
                         <div
                           key={p.id}
                           className="bg-white rounded-lg p-2 flex items-center gap-2"
@@ -273,7 +279,7 @@ export function TabEquipos({
         </>
       ) : viewMode === "list" ? (
         <div className="flex flex-col gap-1">
-          {present.map((p) => {
+          {present.map((p: ParticipantBasic) => {
             const cur = act.equipos?.[p.id];
             return (
               <div

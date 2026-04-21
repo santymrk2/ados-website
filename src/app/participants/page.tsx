@@ -40,6 +40,20 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import type { ParticipantBasic, Ranking } from "@/lib/types";
+
+type SortBy = 'nombre' | 'apellido' | 'fechaNacimiento' | 'sexo' | 'total' | 'gf' | 'gh' | 'gb';
+type SortOrder = 'asc' | 'desc';
+type ViewMode = 'grid' | 'list';
+
+// Participant con stats de ranking
+interface ParticipantWithStats extends ParticipantBasic {
+  total: number;
+  gf: number;
+  gh: number;
+  gb: number;
+  acts: number;
+}
 
 export default function Page() {
   const router = useRouter();
@@ -47,12 +61,12 @@ export default function Page() {
   const { participants, activities, rankings } = db;
 
   const [search, setSearch] = useState("");
-  const [sortBy, setSortBy] = useState("nombre");
-  const [sortOrder, setSortOrder] = useState("asc");
-  const [filterSex, setFilterSex] = useState("all");
-  const [viewMode, setViewMode] = useState("grid");
+  const [sortBy, setSortBy] = useState<SortBy>("nombre");
+  const [sortOrder, setSortOrder] = useState<SortOrder>("asc");
+  const [filterSex, setFilterSex] = useState<string>("all");
+  const [viewMode, setViewMode] = useState<ViewMode>("grid");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [jugadorAEliminar, setJugadorAEliminar] = useState<any>(null);
+  const [jugadorAEliminar, setJugadorAEliminar] = useState<ParticipantBasic | null>(null);
   const [confirmName, setConfirmName] = useState("");
 
   // Get role from store
@@ -110,9 +124,18 @@ export default function Page() {
           ? valA.localeCompare(valB)
           : valB.localeCompare(valA);
       }
-      const valA = a[sortBy] || 0;
-      const valB = b[sortBy] || 0;
-      return sortOrder === "asc" ? valA - valB : valB - valA;
+      const valA = a[sortBy] || '';
+      const valB = b[sortBy] || '';
+      if (sortBy === 'fechaNacimiento' && typeof valA === 'string' && typeof valB === 'string') {
+        // Sort by date (older first for asc, newer first for desc)
+        return sortOrder === "asc"
+          ? (valA || '').localeCompare(valB || '')
+          : (valB || '').localeCompare(valA || '');
+      }
+      // String comparison
+      return sortOrder === "asc"
+        ? String(valA).localeCompare(String(valB))
+        : String(valB).localeCompare(String(valA));
     });
 
     return result;
@@ -127,7 +150,7 @@ export default function Page() {
   };
 
   const handleConfirmDelete = async () => {
-    if (confirmName.trim() === "Confirmar") {
+    if (confirmName.trim() === "Confirmar" && jugadorAEliminar) {
       await deleteParticipant(jugadorAEliminar.id);
       setDeleteDialogOpen(false);
       setJugadorAEliminar(null);
@@ -135,7 +158,7 @@ export default function Page() {
     }
   };
 
-  const toggleSort = (field: string) => {
+  const toggleSort = (field: SortBy) => {
     if (sortBy === field) {
       setSortOrder(sortOrder === "asc" ? "desc" : "asc");
     } else {
@@ -145,7 +168,7 @@ export default function Page() {
   };
 
   // Componente de card para vista grid
-  function PlayerCard({ p }: { p: any }) {
+  function PlayerCard({ p }: { p: ParticipantWithStats }) {
     return (
       <div
         onClick={() => router.push(`/participants/${p.id}`)}
@@ -235,7 +258,7 @@ export default function Page() {
           </Select>
 
           <div className="flex flex-1 gap-2">
-            <Select value={sortBy} onValueChange={(value) => setSortBy(value)}>
+            <Select value={sortBy} onValueChange={(value) => setSortBy(value as SortBy)}>
               <SelectTrigger className="flex-1">
                 <SelectValue />
               </SelectTrigger>

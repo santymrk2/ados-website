@@ -54,11 +54,22 @@ import {
   ComboboxList,
   ComboboxItem,
 } from "@/components/ui/combobox";
+import type { Activity, ParticipantBasic, AppState, Genero } from "@/lib/types";
 
 let tempIdCounter = 0;
 const generateTempId = () => -1 - tempIdCounter++;
 
-function NewPlayerModal({ act, db, onClose, onSave, A, Q }) {
+type ActionFn = (key: string, value: unknown) => void;
+type QueryFn = (key: string, data: unknown, target: string, value: unknown) => Promise<unknown>;
+
+function NewPlayerModal({ act, db, onClose, onSave, A, Q }: {
+  act: Activity;
+  db: AppState;
+  onClose: () => void;
+  onSave: (data: unknown, isNew: boolean, invitadorId?: string | null) => Promise<number>;
+  A: ActionFn;
+  Q: QueryFn;
+}) {
   const [newPlayer, setNewPlayer] = useState<{
     nombre: string;
     apellido: string;
@@ -76,7 +87,7 @@ function NewPlayerModal({ act, db, onClose, onSave, A, Q }) {
 
   const availableInvitados = useMemo(() => {
     return db.participants
-      .filter((p) => act.asistentes.includes(p.id))
+      .filter((p: ParticipantBasic) => act.asistentes.includes(p.id))
       .sort((a, b) =>
         `${a.apellido} ${a.nombre}`.localeCompare(`${b.apellido} ${b.nombre}`),
       );
@@ -104,7 +115,7 @@ function NewPlayerModal({ act, db, onClose, onSave, A, Q }) {
     if (isSubmittingPlayer) return;
     setIsSubmittingPlayer(true);
     try {
-      const p = { ...newPart(), ...newPlayer, id: db.nextPid };
+      const p = { ...newPart(), ...newPlayer, id: 0 };
       const { invitadorId, ...participantData } = p;
       const newId = await onSave(participantData, true, invitadorId);
       const playerId = newId || p.id;
@@ -237,11 +248,11 @@ function NewPlayerModal({ act, db, onClose, onSave, A, Q }) {
             <ComboboxInput placeholder="Seleccionar invitador..." />
             <ComboboxContent>
               <ComboboxList>
-                {availableInvitados.map((p) => (
-                  <ComboboxItem key={p.id.toString()} value={p.id.toString()}>
-                    {p.nombre} {p.apellido}
-                  </ComboboxItem>
-                ))}
+{availableInvitados.map((p: ParticipantBasic) => (
+                <ComboboxItem key={p.id.toString()} value={p.id.toString()}>
+                  {p.nombre} {p.apellido}
+                </ComboboxItem>
+              ))}
               </ComboboxList>
             </ComboboxContent>
           </Combobox>
@@ -269,22 +280,22 @@ export function TabAsistencia({
   locked = false,
   savingOps,
 }: {
-  act: any;
-  A: any;
-  Q: any;
-  db: any;
-  onSaveParticipant: any;
+  act: Activity;
+  A: ActionFn;
+  Q: QueryFn;
+  db: AppState;
+  onSaveParticipant: (data: unknown, isNew: boolean, invitadorId?: string | null) => Promise<number>;
   locked?: boolean;
-  savingOps?: Set<unknown>;
+  savingOps?: Set<string>;
 }) {
-  const [sortOrder, setSortOrder] = useState("asc");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
   const [search, setSearch] = useState("");
   const [showNewPlayer, setShowNewPlayer] = useState(false);
   const [confirmClearOpen, setConfirmClearOpen] = useState(false);
   const [confirmAllOpen, setConfirmAllOpen] = useState(false);
 
-  const toggle = (key, id) => {
-    const c = act[key] || [];
+  const toggle = (key: string, id: number) => {
+    const c = act[key as keyof Activity] as number[] || [];
     const isIncluded = c.includes(id);
     const newValue = isIncluded ? c.filter((x) => x !== id) : [...c, id];
 
@@ -323,8 +334,8 @@ export function TabAsistencia({
     }
   };
 
-  const sorted = useMemo(() => {
-    let arr = [...db.participants];
+  const sorted = useMemo<ParticipantBasic[]>(() => {
+    let arr: ParticipantBasic[] = [...db.participants];
     if (search) {
       arr = arr.filter((p) =>
         `${p.nombre} ${p.apellido}`
@@ -412,7 +423,7 @@ export function TabAsistencia({
       </div>
 
       <div className="flex flex-col gap-1">
-        {sorted.map((p) => {
+        {sorted.map((p: ParticipantBasic) => {
           const here = act.asistentes.includes(p.id);
           const punct = (act.puntuales || []).includes(p.id);
           const bib = (act.biblias || []).includes(p.id);

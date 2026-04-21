@@ -9,39 +9,45 @@ import { cn } from "@/lib/utils";
 import { Label, Empty } from "@/components/ui/Common";
 import { PodiumBadge } from "@/components/ui/Badges";
 import { SavingOverlay } from "@/components/ui/SavingOverlay";
+import type { Activity, Juego, AppState } from "@/lib/types";
 
 let tempIdCounter = 0;
 const generateTempId = () => -1 - tempIdCounter++;
+
+type ActionFn = (key: string, value: unknown) => void;
+type QueryFn = (key: string, data: unknown, target: string, value: unknown) => Promise<unknown>;
 
 export function TabJuegos({
   act,
   A,
   Q,
   locked = false,
-  savingOps = new Set(),
+  savingOps = new Set<string>(),
+  db,
+  onSaveParticipant,
 }: {
-  act: any;
-  A: any;
-  Q: any;
+  act: Activity;
+  A: ActionFn;
+  Q: QueryFn;
   locked?: boolean;
-  savingOps?: Set<unknown>;
+  savingOps?: Set<string>;
+  db?: AppState;
+  onSaveParticipant?: (data: unknown, isNew: boolean, invitadorId?: string | null) => Promise<number>;
 }) {
   const isAddingSaving =
     savingOps.size > 0 &&
-    Array.from(savingOps as Set<string>).some((op) =>
+    Array.from(savingOps).some((op) =>
       op.startsWith("game_add"),
     );
-  // Validar que no haya equipos duplicateados en el mismo juego
   const noDuplicateTeams = useMemo(() => {
     for (const j of act.juegos || []) {
-      const placed: any[] = [];
+      const placed: string[] = [];
       Object.values(j.pos || {}).forEach((equipos) => {
         if (Array.isArray(equipos)) {
-          placed.push(...equipos);
+          placed.push(...(equipos as string[]));
         }
       });
-      // Check for duplicates in the same game
-      const seen = new Set();
+      const seen = new Set<string>();
       for (const t of placed) {
         if (seen.has(t)) {
           return false;
@@ -61,41 +67,38 @@ export function TabJuegos({
 
   const add = async () => {
     const tempId = generateTempId();
-    const nj = { id: tempId, nombre: "", pos: {} };
+    const nj: Juego = { id: tempId, nombre: "", pos: {} };
     const result = await Q("game_add", nj, "juegos", [
       ...(act.juegos || []),
       nj,
     ]);
-    // Replace the temp ID with the real DB-generated ID
-    if (result?.id) {
-      A("juegos", [...(act.juegos || []), { ...nj, id: result.id }]);
+    if (result && typeof result === "object" && "id" in result) {
+      A("juegos", [...(act.juegos || []), { ...nj, id: (result as { id: number }).id }]);
     }
   };
-  const del = (id) =>
+  const del = (id: number) =>
     Q(
       "game_delete",
       { id },
       "juegos",
-      (act.juegos || []).filter((j) => j.id !== id),
+      (act.juegos || []).filter((j: Juego) => j.id !== id),
     );
-  const updN = (id, v) =>
+  const updN = (id: number, v: string) =>
     A(
       "juegos",
-      (act.juegos || []).map((j) => (j.id === id ? { ...j, nombre: v } : j)),
+      (act.juegos || []).map((j: Juego) => (j.id === id ? { ...j, nombre: v } : j)),
     );
-  const updPos = (jid, team, pos) => {
-    const game = (act.juegos || []).find((j) => j.id === jid);
+  const updPos = (jid: number, team: string, pos: string) => {
+    const game = (act.juegos || []).find((j: Juego) => j.id === jid);
     if (!game) return;
 
-    // Deep clone para evitar mutar el state anterior
-    const newPos = {};
+    const newPos: Record<string, string[]> = {};
     Object.entries(game.pos || {}).forEach(([k, v]) => {
       if (Array.isArray(v)) {
-        newPos[k] = [...v];
+        newPos[k] = [...(v as string[])];
       }
     });
 
-    // Verificar si el equipo ya está en esta posición (toggle off)
     const isToggleOff =
       Array.isArray(newPos[pos]) && newPos[pos].includes(team);
 
@@ -109,13 +112,12 @@ export function TabJuegos({
       }
     });
 
-    // Segundo: si no es toggle off, agregar a la nueva posición
     if (!isToggleOff) {
       const posArray = newPos[pos] ? [...newPos[pos]] : [];
       newPos[pos] = [...posArray, team].sort();
     }
 
-    const newList = (act.juegos || []).map((g) =>
+    const newList = (act.juegos || []).map((g: Juego) =>
       g.id === jid ? { ...g, pos: newPos } : g,
     );
     Q("game_pos", { juegoId: jid, pos: newPos }, "juegos", newList);
@@ -141,15 +143,15 @@ export function TabJuegos({
         </Button>
       </div>
       <div className="flex flex-col gap-4">
-        {(act.juegos || []).map((j, gi) => (
+        {(act.juegos || []).map((j: Juego, gi: number) => (
           <JuegoCard
             key={j.id}
             j={j}
             gi={gi}
             act={act}
-            onNombre={(v) => updN(j.id, v)}
+            onNombre={(v: string) => updN(j.id, v)}
             onDel={() => del(j.id)}
-            onPos={(team, pos) => updPos(j.id, team, pos)}
+            onPos={(team: string, pos: string) => updPos(j.id, team, pos)}
             locked={locked}
             saving={[...savingOps].some(
               (op) => op === `game_pos:${j.id}` || op === `game_delete:${j.id}`,
@@ -173,23 +175,30 @@ function JuegoCard({
   onPos,
   locked = false,
   saving = false,
+}: {
+  j: Juego;
+  gi: number;
+  act: Activity;
+  onNombre: (v: string) => void;
+  onDel: () => void;
+  onPos: (team: string, pos: string) => void;
+  locked?: boolean;
+  saving?: boolean;
 }) {
-  // Nueva estructura: j.pos = { 1: ["E1", "E2"], 2: ["E3"], 3: ["E4"] }
-  const posToTeams = j.pos || {}; // Ahora ya es { posicion: [equipos] }
+  const posToTeams = j.pos || {};
 
-  // Obtener todos los equipos ya asignados (en cualquier posición)
-  const placed: any[] = [];
+  const placed: string[] = [];
   Object.values(posToTeams).forEach((equipos) => {
     if (Array.isArray(equipos)) {
-      placed.push(...equipos);
+      placed.push(...(equipos as string[]));
     }
   });
 
   const activeTeams = TEAMS.slice(0, act.cantEquipos || 4);
   const unplaced = activeTeams.filter((t) => !placed.includes(t));
   const posArray = useMemo(() => {
-    const arr = [1, 2, 3, 4];
-    if (act.cantEquipos === 6) arr.push(5, 6);
+    const arr: string[] = ["1", "2", "3", "4"];
+    if (act.cantEquipos === 6) arr.push("5", "6");
     return arr;
   }, [act.cantEquipos]);
 
@@ -203,7 +212,7 @@ function JuegoCard({
             {gi + 1}
           </div>
           <Input
-            value={j.nombre}
+            value={j.nombre || ""}
             onChange={(e) => onNombre(e.target.value)}
             placeholder="Nombre del juego..."
             className="flex-1 bg-white"
@@ -221,16 +230,16 @@ function JuegoCard({
         <div className="p-3">
           <div className="flex flex-col gap-2 mb-3">
             {posArray.map((pos) => {
-              const teamsInPos = posToTeams[pos] || [];
+              const teamsInPos = (posToTeams[String(pos)]) || [];
               return (
                 <div
                   key={pos}
                   className="flex flex-col p-2 rounded-xl min-h-12 bg-surface-dark/10 border border-surface-dark/30"
                 >
                   <div className="flex items-center gap-2 mb-2 px-1">
-                    <PodiumBadge pos={pos} />
+                    <PodiumBadge pos={Number(pos) as number} />
                     <span className="text-[10px] text-text-muted font-bold tracking-wider">
-                      +{PTS.rec[pos] || 0} PTS
+                      +{(PTS.rec as Record<string, number>)[pos] ?? 0} PTS
                     </span>
                   </div>
                   {Array.isArray(teamsInPos) && teamsInPos.length > 0 ? (
@@ -238,7 +247,7 @@ function JuegoCard({
                       {teamsInPos.map((team) => (
                         <div
                           key={team}
-                          onClick={() => !isDisabled && onPos(team, pos)}
+                          onClick={() => !isDisabled && onPos(team, String(pos))}
                           className={cn(
                             "flex items-center justify-between px-3 py-1.5 rounded-lg flex-1 min-w-[100px]",
                             !isDisabled && "cursor-pointer",

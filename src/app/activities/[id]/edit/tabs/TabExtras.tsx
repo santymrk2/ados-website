@@ -24,9 +24,17 @@ import {
   SelectContent,
   SelectItem,
 } from "@/components/ui/select";
+import type { Activity, Extra, ParticipantBasic, AppState } from "@/lib/types";
 
 let tempIdCounter = 0;
 const generateTempId = () => -1 - tempIdCounter++;
+
+type ActionFn = (key: string, value: unknown) => void;
+type QueryFn = (key: string, data: unknown, target: string, value: unknown) => Promise<unknown>;
+
+interface ExtraWithId extends Extra {
+  id: number;
+}
 
 export function TabExtras({
   act,
@@ -34,25 +42,28 @@ export function TabExtras({
   Q,
   db,
   locked = false,
+  savingOps,
+  onSaveParticipant,
 }: {
-  act: any;
-  A: any;
-  Q?: any;
-  db: any;
+  act: Activity;
+  A: ActionFn;
+  Q?: QueryFn;
+  db: AppState;
   locked?: boolean;
+  savingOps?: Set<string>;
+  onSaveParticipant?: (data: unknown, isNew: boolean, invitadorId?: string | null) => Promise<number>;
 }) {
-  const [view, setView] = useState("ind"); // 'ind' or 'team'
+  const [view, setView] = useState("ind");
   const [showAdd, setShowAdd] = useState(false);
 
-  const updE = async (id, k, v) => {
-    const extras = act.extras || [];
+  const updE = async (id: number, k: string, v: unknown) => {
+    const extras = (act.extras || []) as ExtraWithId[];
     const item = extras.find((e) => e.id === id);
     if (!item) return;
 
-    // Si tiene ID real, actualizar atómicamente
     if (id > 0) {
       try {
-        await Q(
+        await Q?.(
           "extra_update",
           {
             id,
@@ -67,7 +78,6 @@ export function TabExtras({
         toast.error("Error al actualizar: " + err.message);
       }
     } else {
-      // Solo actualizar estado local para IDs temporales
       A(
         "extras",
         extras.map((e) => (e.id === id ? { ...e, [k]: v } : e)),
@@ -75,14 +85,14 @@ export function TabExtras({
     }
   };
 
-  const updD = async (id, k, v) => {
-    const descuentos = act.descuentos || [];
+  const updD = async (id: number, k: string, v: unknown) => {
+    const descuentos = (act.descuentos || []) as ExtraWithId[];
     const item = descuentos.find((d) => d.id === id);
     if (!item) return;
 
     if (id > 0) {
       try {
-        await Q(
+        await Q?.(
           "extra_update",
           {
             id,
@@ -105,22 +115,25 @@ export function TabExtras({
     }
   };
 
-  const filteredE = (act.extras || []).filter((x) =>
+  const extrasList = (act.extras || []) as ExtraWithId[];
+  const descuentosList = (act.descuentos || []) as ExtraWithId[];
+  const filteredE = extrasList.filter((x) =>
     view === "team" ? !!x.team : !x.team,
   );
-  const filteredD = (act.descuentos || []).filter((x) =>
+  const filteredD = descuentosList.filter((x) =>
     view === "team" ? !!x.team : !x.team,
   );
 
-  const onAdd = async (type, target, pts, motivo) => {
+  const onAdd = async (type: string, target: ParticipantBasic | string, pts: number, motivo: string) => {
     const listKey = type === "extra" ? "extras" : "descuentos";
     const tempId = generateTempId();
-    const newItem = {
+    const newItem: ExtraWithId = {
       id: tempId,
       puntos: pts,
       motivo: motivo,
-      pid: view === "ind" ? target.id : undefined,
-      team: view === "team" ? target : undefined,
+      tipo: type === "extra" ? "extra" : "descuento",
+      pid: view === "ind" ? (target as ParticipantBasic).id : null,
+      team: view === "team" ? (target as string) : undefined,
     };
 
     // Agregar al estado local inmediatamente
@@ -163,10 +176,10 @@ export function TabExtras({
                   key={e.id}
                   item={e}
                   color="#22C55E"
-                  onDel={(id) =>
+                  onDel={(id: number) =>
                     A(
                       "extras",
-                      act.extras.filter((x) => x.id !== id),
+                      extrasList.filter((x) => x.id !== id),
                     )
                   }
                   db={db}
@@ -187,10 +200,10 @@ export function TabExtras({
                   key={d.id}
                   item={d}
                   color="#FF6B6B"
-                  onDel={(id) =>
+                  onDel={(id: number) =>
                     A(
                       "descuentos",
-                      act.descuentos.filter((x) => x.id !== id),
+                      descuentosList.filter((x) => x.id !== id),
                     )
                   }
                   db={db}
@@ -237,33 +250,32 @@ function ExtraAddModal({
   locked,
 }: {
   view: string;
-  db: any;
-  act: any;
+  db: AppState;
+  act: Activity;
   onClose: () => void;
-  onAdd: any;
+  onAdd: (type: string, target: ParticipantBasic | string, pts: number, motivo: string) => Promise<void>;
   locked?: boolean;
 }) {
   const [motivo, setMotivo] = useState("");
-  const [selected, setSelected] = useState<any>(null);
+  const [selected, setSelected] = useState<ParticipantBasic | string | null>(null);
 
   const activeTeams = TEAMS.slice(0, act.cantEquipos || 4);
 
   const availablePlayers = useMemo(() => {
     return db.participants
       .filter(
-        (p) =>
+        (p: ParticipantBasic) =>
           act.asistentes.includes(p.id) && !(act.socials || []).includes(p.id),
       )
-      .map((p) => ({
+      .map((p: ParticipantBasic) => ({
         value: p.id.toString(),
         label: `${p.nombre} ${p.apellido}`,
       }));
   }, [db.participants, act.asistentes, act.socials]);
 
-  // Función para obtener el label a partir del value (ID)
-  const getParticipantLabel = (id) => {
+  const getParticipantLabel = (id: number) => {
     if (!id) return "";
-    const p = db.participants.find((p) => p.id === id);
+    const p = db.participants.find((p: ParticipantBasic) => p.id === id);
     return p ? `${p.nombre} ${p.apellido}` : "";
   };
 
@@ -273,20 +285,20 @@ function ExtraAddModal({
       onClose={onClose}
     >
       <div className="flex flex-col gap-4">
-        {view === "ind" ? (
-          <div>
-            <Label>1. Buscar Persona</Label>
-            <div className="mb-3">
-              <Combobox
-                value={selected?.id?.toString() || ""}
-                onValueChange={(val) => {
-                  if (val) {
-                    const p = db.participants.find((p) => p.id === Number(val));
-                    setSelected(p);
-                  } else {
-                    setSelected(null);
-                  }
-                }}
+{view === "ind" ? (
+            <div>
+              <Label>1. Buscar Persona</Label>
+              <div className="mb-3">
+                <Combobox
+                  value={selected && typeof selected === "object" && "id" in selected ? (selected as ParticipantBasic).id?.toString() || "" : ""}
+                  onValueChange={(val) => {
+                    if (val) {
+                      const p = db.participants.find((p) => p.id === Number(val));
+                      setSelected(p ?? null);
+                    } else {
+                      setSelected(null);
+                    }
+                  }}
                 items={availablePlayers}
                 disabled={locked}
               >
@@ -300,11 +312,11 @@ function ExtraAddModal({
                 </ComboboxValue>
                 <ComboboxContent>
                   <ComboboxList>
-                    {availablePlayers.map((p) => (
-                      <ComboboxItem key={p.value} value={p.value}>
-                        {p.label}
-                      </ComboboxItem>
-                    ))}
+{availablePlayers.map((p: { value: string; label: string }) => (
+                    <ComboboxItem key={p.value} value={p.value}>
+                      {p.label}
+                    </ComboboxItem>
+                  ))}
                   </ComboboxList>
                 </ComboboxContent>
               </Combobox>
@@ -389,8 +401,20 @@ function ExtraAddModal({
   );
 }
 
-function ExtraRow({ item, color, onDel, db, isTeam, locked = false }) {
-  const p = !isTeam ? db.participants.find((p) => p.id === item.pid) : null;
+function ExtraRow({ item, color, onDel, db, isTeam, locked = false }: {
+  item: ExtraWithId;
+  color: string;
+  onDel: (id: number) => void;
+  db: AppState;
+  isTeam: boolean;
+  locked?: boolean;
+}) {
+  const p = !isTeam ? db.participants.find((p: ParticipantBasic) => p.id === item.pid) : null;
+  const handleDel = () => {
+    if (item.id !== undefined) {
+      onDel(item.id);
+    }
+  };
 
   return (
     <div
@@ -406,7 +430,7 @@ function ExtraRow({ item, color, onDel, db, isTeam, locked = false }) {
         </div>
         <div className="flex-1 min-w-0">
           <div className="font-bold text-sm truncate">
-            {isTeam ? (
+            {isTeam && item.team ? (
               <span style={{ color: TEAM_COLORS[item.team] }}>{item.team}</span>
             ) : p ? (
               `${p.nombre} ${p.apellido}`
@@ -421,7 +445,7 @@ function ExtraRow({ item, color, onDel, db, isTeam, locked = false }) {
           )}
         </div>
         <Button
-          onClick={() => onDel(item.id)}
+          onClick={handleDel}
           variant="destructive"
           size="icon"
           disabled={locked}

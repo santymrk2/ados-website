@@ -4,15 +4,16 @@ import { useState } from "react";
 import { DEPORTES, GENEROS, TEAM_COLORS, getTeamBg } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import { Empty } from "@/components/ui/Common";
+import type { Partido } from "@/lib/types";
 
-export function TabPartidos({ partidos }: { partidos: unknown[] }) {
+export function TabPartidos({ partidos }: { partidos: Partido[] }) {
     const [filterGenero, setFilterGenero] = useState("all");
-    const filtered = (partidos as { genero?: string }[]).filter(
+    const filtered = partidos.filter(
         (p) => filterGenero === "all" || p.genero === filterGenero,
     );
-    const byDeporte: Record<string, unknown[]> = {};
+    const byDeporte: Record<string, Partido[]> = {};
     filtered.forEach((p) => {
-        const group = (p as { deporte?: string }).deporte || "otro";
+        const group = p.deporte || "otro";
         if (!byDeporte[group]) byDeporte[group] = [];
         byDeporte[group].push(p);
     });
@@ -44,14 +45,13 @@ export function TabPartidos({ partidos }: { partidos: unknown[] }) {
                 <Empty text="Sin partidos" />
             ) : (
                 Object.entries(byDeporte).map(([deporte, matches]) => {
-                    const typedMatches = matches as { id: string }[];
                     return (
                         <div key={deporte} className="mb-6">
                             <div className="font-bold text-sm text-white/70 mb-3">
                                 {DEPORTES[deporte] || deporte}
                             </div>
-                            {typedMatches.map((p) => (
-                                <PartidoReadOnlyCard key={p.id} partido={p as { resultado?: string; eq1?: string; eq2?: string; fecha?: string; hora?: string; genero?: string } & Record<string, unknown>} />
+                            {matches.map((p) => (
+                                <PartidoReadOnlyCard key={p.id} partido={p} />
                             ))}
                         </div>
                     );
@@ -61,7 +61,7 @@ export function TabPartidos({ partidos }: { partidos: unknown[] }) {
     );
 }
 
-function PartidoReadOnlyCard({ partido }: { partido: { resultado?: string; eq1?: string; eq2?: string; fecha?: string; hora?: string; genero?: string } }) {
+function PartidoReadOnlyCard({ partido }: { partido: Partido }) {
     const isEmpate = partido.resultado === "E";
     const isEq1Win = parseInt(partido.resultado || "0") > 0;
     const isEq2Win = parseInt(partido.resultado || "0") < 0;

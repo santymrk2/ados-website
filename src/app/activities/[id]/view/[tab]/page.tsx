@@ -89,24 +89,21 @@ function ActivityPageView({
     [teamRank],
   );
 
-  const playerRank = useMemo(
-    () =>
-      act && act.asistentes
-        ? act.asistentes
-            .map((pid: number) => {
-              const p = (participants || []).find((x) => x.id === pid);
-              if (!p) return null;
-              return {
-                ...p,
-                pts: actPts(pid, act, participants || []),
-                goles: actGoles(pid, act),
-              };
-            })
-            .filter(Boolean)
-            .sort((a: any, b: any) => b.pts - a.pts)
-        : [],
-    [act, participants],
-  );
+  const playerRank = useMemo(() => {
+    if (!act || !act.asistentes) return [];
+    return act.asistentes
+      .map((pid: number) => {
+        const p = (participants || []).find((x) => x.id === pid);
+        if (!p) return null;
+        return {
+          ...p,
+          pts: actPts(pid, act, participants || []),
+          goles: actGoles(pid, act),
+        };
+      })
+      .filter((x): x is NonNullable<typeof x> => x !== null)
+      .sort((a, b) => b.pts - a.pts);
+  }, [act, participants]);
 
   const TABS = [
     {

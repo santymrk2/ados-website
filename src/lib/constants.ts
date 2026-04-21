@@ -94,23 +94,16 @@ export function getTeamBgLightColor(team: string): string {
   return getStoredTeamBgLight()[team] || DEFAULT_TEAM_BG_LIGHT[team] || '#f5f5f5';
 }
 
-export const TEAM_COLORS: Record<string, string> = {} as any;
-export const TEAM_BG_LIGHT: Record<string, string> = {} as any;
-export const TEAM_BG: Record<string, string> = {} as any;
-
-if (typeof window !== 'undefined') {
-  Object.defineProperty(TEAM_COLORS, '_get', {
-    get() {
-      return getStoredTeamColors();
-    }
-  });
-}
+// Constantes con valores por defecto - se actualizan en runtime via syncTeamConstants()
+export const TEAM_COLORS: Record<string, string> = { ...DEFAULT_TEAM_COLORS };
+export const TEAM_BG_LIGHT: Record<string, string> = { ...DEFAULT_TEAM_BG_LIGHT };
+export const TEAM_BG: Record<string, string> = { ...DEFAULT_TEAM_BG };
 
 export function syncTeamConstants() {
   const colors = getStoredTeamColors();
   const bgLight = getStoredTeamBgLight();
   const bgDark = getStoredTeamBg();
-  
+
   TEAMS.forEach(team => {
     TEAM_COLORS[team] = colors[team] || DEFAULT_TEAM_COLORS[team];
     TEAM_BG_LIGHT[team] = bgLight[team] || DEFAULT_TEAM_BG_LIGHT[team];
@@ -165,20 +158,20 @@ export const PTS = {
   rec: { 1: 10, 2: 7, 3: 4, 4: 2, 5: 1, 6: 0 },
 };
 
-function calcularEdad(fechaNacimiento: string) {
-  if (!fechaNacimiento) return null;
+function calcularEdad(fechaNacimiento: string | null | undefined): number {
+  if (!fechaNacimiento) return 0;
   const [year, month, day] = fechaNacimiento.split("-").map(Number);
-  const nacimiento = new Date(year, month - 1, day);
-  const hoy = new Date();
-  let edad = hoy.getFullYear() - nacimiento.getFullYear();
-  const mes = hoy.getMonth() - nacimiento.getMonth();
-  if (mes < 0 || (mes === 0 && hoy.getDate() < nacimiento.getDate())) {
+  const birth = new Date(year, month - 1, day);
+  const today = new Date();
+  let edad = today.getFullYear() - birth.getFullYear();
+  const m = today.getMonth() - birth.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) {
     edad--;
   }
   return edad;
 }
 
-export function getEdad(fechaNacimiento: string) {
+export function getEdad(fechaNacimiento: string | null | undefined): number {
   return calcularEdad(fechaNacimiento);
 }
 

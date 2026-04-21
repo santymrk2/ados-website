@@ -21,26 +21,36 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import type { Activity, Partido, Gol, AppState, ParticipantBasic, Genero } from "@/lib/types";
 
 let tempIdCounter = 0;
 const generateTempId = () => -1 - tempIdCounter++;
+
+type ActionFn = (key: string, value: unknown) => void;
+type QueryFn = (key: string, data: unknown, target: string, value: unknown) => Promise<unknown>;
 
 export function TabDeportes({
   act,
   A,
   Q,
   db,
+  locked = false,
+  savingOps,
+  onSaveParticipant,
 }: {
-  act: any;
-  A: any;
-  Q?: any;
-  db: any;
+  act: Activity;
+  A: ActionFn;
+  Q?: QueryFn;
+  db: AppState;
+  locked?: boolean;
+  savingOps?: Set<string>;
+  onSaveParticipant?: (data: unknown, isNew: boolean, invitadorId?: string | null) => Promise<number>;
 }) {
-  const [filterGenero, setFilterGenero] = useState("all");
-  const [selectedPartido, setSelectedPartido] = useState(null);
+  const [filterGenero, setFilterGenero] = useState<string>("all");
+  const [selectedPartido, setSelectedPartido] = useState<Partido | null>(null);
 
   const add = () => {
-    const np = {
+    const np: Partido = {
       id: generateTempId(),
       deporte: "Fútbol",
       genero: "M",
@@ -48,25 +58,27 @@ export function TabDeportes({
       eq2: "E2",
       resultado: null,
     };
-    Q("partido_add", np, "partidos", [...(act.partidos || []), np]);
+    Q?.("partido_add", np, "partidos", [...(act.partidos || []), np]);
   };
-  const del = (id) =>
-    Q(
+  const del = (id: number) =>
+    Q?.(
       "partido_delete",
       { id },
       "partidos",
-      (act.partidos || []).filter((p) => p.id !== id),
+      (act.partidos || []).filter((p: Partido) => p.id !== id),
     );
-  const upd = (id, k, v) => {
-    const newList = (act.partidos || []).map((p) =>
+  const upd = (id: number, k: string, v: unknown) => {
+    const newList = (act.partidos || []).map((p: Partido) =>
       p.id === id ? { ...p, [k]: v } : p,
     );
     const p = newList.find((x) => x.id === id);
-    Q("partido_update", p, "partidos", newList);
+    if (p) {
+      Q?.("partido_update", p, "partidos", newList);
+    }
   };
 
   const filtered = (act.partidos || []).filter(
-    (p) => filterGenero === "all" || p.genero === filterGenero,
+    (p: Partido) => filterGenero === "all" || p.genero === filterGenero,
   );
 
   return (
@@ -83,7 +95,7 @@ export function TabDeportes({
         </Button>
       </div>
       <div className="mb-4">
-        <Select value={filterGenero} onValueChange={setFilterGenero}>
+        <Select value={filterGenero} onValueChange={(val) => setFilterGenero(val)}>
           <SelectTrigger>
             <SelectValue placeholder="Filtrar por..." />
           </SelectTrigger>
@@ -99,7 +111,7 @@ export function TabDeportes({
         <Empty text="Sin partidos" />
       ) : (
         <div className="flex flex-col gap-2">
-          {filtered.map((p) => (
+          {filtered.map((p: Partido) => (
             <PartidoResumenCard
               key={p.id}
               part={p}
@@ -124,10 +136,10 @@ export function TabDeportes({
   );
 }
 
-function PartidoResumenCard({ part, act, onClick }) {
-  const goles = (act.goles || []).filter((g) => g.matchId === part.id);
-  const score1 = goles.filter((g) => g.team === part.eq1).length;
-  const score2 = goles.filter((g) => g.team === part.eq2).length;
+function PartidoResumenCard({ part, act, onClick }: { part: Partido; act: Activity; onClick: () => void }) {
+  const goles = (act.goles || []).filter((g: Gol) => g.matchId === part.id);
+  const score1 = goles.filter((g: Gol) => g.team === part.eq1).length;
+  const score2 = goles.filter((g: Gol) => g.team === part.eq2).length;
   const icons = { Fútbol: "⚽", Handball: "🤾", Básquet: "🏀", Vóley: "🏐" };
 
   return (
@@ -171,14 +183,26 @@ function PartidoEditModal({
   onUpd,
   onDel,
   Q,
+}: {
+  part: Partido;
+  act: Activity;
+  db: AppState;
+  onClose: () => void;
+  onUpd: (id: number, k: string, v: unknown) => void;
+  onDel: (id: number) => void;
+  Q?: QueryFn;
 }) {
-  const part = act.partidos.find((p) => p.id === initialPart.id) || initialPart;
-  const update = (k, v) => onUpd(part.id, k, v);
-  const goles = (act.goles || []).filter((g) => g.matchId === part.id);
-  const s1 = (goles || []).filter((g) => g.team === part.eq1).length;
-  const s2 = (goles || []).filter((g) => g.team === part.eq2).length;
+  const part = act.partidos.find((p: Partido) => p.id === initialPart.id) || initialPart;
+  const update = (k: string, v: unknown) => {
+    if (part.id !== undefined) {
+      onUpd(part.id, k, v);
+    }
+  };
+  const goles = (act.goles || []).filter((g: Gol) => g.matchId === part.id);
+  const s1 = (goles || []).filter((g: Gol) => g.team === part.eq1).length;
+  const s2 = (goles || []).filter((g: Gol) => g.team === part.eq2).length;
 
-  const addGoal = async (team) => {
+  const addGoal = async (team: string) => {
     const tipos = { Fútbol: "f", Handball: "h", Básquet: "b" };
     const tempId = generateTempId();
     const ng = {
@@ -190,12 +214,11 @@ function PartidoEditModal({
       cant: 1,
     };
     const all = [...(act.goles || []), ng];
-    const result = await Q("goal_add", ng, "goles", all);
+    const result = await Q?.("goal_add", ng, "goles", all);
 
-    // Actualizar con el ID real devuelto por el servidor
-    if (result?.id) {
+    if (result && typeof result === "object" && "id" in result) {
       const updatedGoles = all.map((g) =>
-        g.id === tempId ? { ...g, id: result.id } : g,
+        g.id === tempId ? { ...g, id: (result as { id: number }).id } : g,
       );
       update("goles", updatedGoles);
     }
@@ -213,9 +236,9 @@ function PartidoEditModal({
     update("resultado", res);
   };
 
-  const delGoal = (id) => {
-    const all = (act.goles || []).filter((g) => g.id !== id);
-    Q("goal_remove", { id }, "goles", all);
+  const delGoal = (id: number) => {
+    const all = (act.goles || []).filter((g: Gol) => g.id !== id);
+    Q?.("goal_remove", { id }, "goles", all);
     const ns1 = all.filter(
       (g) => g.matchId === part.id && g.team === part.eq1,
     ).length;
@@ -228,9 +251,9 @@ function PartidoEditModal({
     update("resultado", res);
   };
 
-  const getTeamPlayers = (t) =>
+  const getTeamPlayers = (t: string) =>
     db.participants.filter(
-      (p) =>
+      (p: ParticipantBasic) =>
         act.asistentes.includes(p.id) &&
         act.equipos?.[p.id] === t &&
         (part.genero === "MX" || p.sexo === part.genero),
@@ -377,13 +400,13 @@ function PartidoEditModal({
                   Goles {t}
                 </div>
                 {goles
-                  .filter((g) => g.team === t)
-                  .map((g) => (
+                  .filter((g: Gol) => g.team === t)
+                  .map((g: Gol) => (
                     <div key={g.id} className="flex gap-1 mb-1">
                       <Select
                         value={g.pid?.toString() || ""}
                         onValueChange={(val) =>
-                          Q(
+                          Q?.(
                             "goal_update",
                             { id: g.id, pid: val ? Number(val) : null },
                             "goles",
@@ -400,14 +423,14 @@ function PartidoEditModal({
                         </SelectTrigger>
                         <SelectContent>
                           {getTeamPlayers(t).map((p) => (
-                            <SelectItem key={p.id} value={p.id.toString()}>
+                            <SelectItem key={p.id} value={p.id.toString() as string}>
                               {p.nombre} {p.apellido[0]}.
                             </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
                       <Button
-                        onClick={() => delGoal(g.id)}
+                        onClick={() => g.id !== undefined && delGoal(g.id)}
                         variant="destructive"
                         size="icon"
                         className="w-5 h-5 text-[10px]"

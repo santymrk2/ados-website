@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { useApp } from "@/hooks/useApp";
+import type { Activity } from "@/lib/types";
 
 export default function ActivitiesPage() {
   const router = useRouter();
@@ -38,7 +39,7 @@ export default function ActivitiesPage() {
   const isAdmin = role === "admin";
 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [actAEliminar, setActAEliminar] = useState<any>(null);
+  const [actAEliminar, setActAEliminar] = useState<Activity | null>(null);
   const [confirmText, setConfirmText] = useState("");
 
   const sorted = useMemo(
@@ -46,7 +47,7 @@ export default function ActivitiesPage() {
     [db.activities],
   );
 
-  const handleView = (activity: any) => {
+  const handleView = (activity: Activity) => {
     router.push(`/activities/${activity.id}`);
   };
 
@@ -54,7 +55,7 @@ export default function ActivitiesPage() {
     router.push(`/activities/new`);
   };
 
-  const handleEdit = (activity: any, e: any) => {
+  const handleEdit = (activity: Activity, e: React.MouseEvent) => {
     e.stopPropagation();
     router.push(`/activities/${activity.id}/edit`);
   };
@@ -63,9 +64,9 @@ export default function ActivitiesPage() {
     await deleteActivity(id);
   };
 
-  const del = (id: number, e: any) => {
+  const del = (id: number, e: React.MouseEvent) => {
     e.stopPropagation();
-    const activity = db.activities.find((a: any) => a.id === id);
+    const activity = db.activities.find((a) => a.id === id);
     if (!activity) return;
     setActAEliminar(activity);
     setConfirmText("");

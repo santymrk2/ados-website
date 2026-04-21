@@ -7,17 +7,30 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { X, Clock, Users } from "lucide-react";
+import type { Activity, ParticipantBasic } from "@/lib/types";
 
-type Actividad = any;
-type Participante = any;
+interface PlayerPointsDetail {
+  label: string;
+  pts: number;
+}
 
-function PlayerPointsModal({ player, act, participants, onClose }: { player: any; act: Actividad; participants: Participante[]; onClose: () => void }) {
+function PlayerPointsModal({
+  player,
+  act,
+  participants,
+  onClose,
+}: {
+  player: ParticipantBasic;
+  act: Activity;
+  participants: ParticipantBasic[];
+  onClose: () => void;
+}) {
   const { total, details } = useMemo(() => {
-    const p = participants.find((x: any) => x.id === player.id);
+    const p = participants.find((x) => x.id === player.id);
     if (!p) return { total: 0, details: [] };
 
-    const a = act as Actividad;
-    const team = a.equipos?.[player.id];
+    const a = act;
+    const team = a.equipos?.[String(player.id)];
     const details: { label: string; pts: number }[] = [];
     let total = 0;
 

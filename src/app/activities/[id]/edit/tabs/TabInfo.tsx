@@ -19,6 +19,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import type { Activity } from "@/lib/types";
+
+type ActionFn = (key: string, value: unknown) => void;
+type QueryFn = (key: string, data: unknown, target: string, value: unknown) => Promise<unknown>;
+type SavingOps = Set<string>;
 
 export function TabInfo({
   act,
@@ -27,15 +32,15 @@ export function TabInfo({
   locked,
   savingOps,
 }: {
-  act: any;
-  A: any;
-  Q: any;
+  act: Activity;
+  A: ActionFn;
+  Q: QueryFn;
   locked: boolean;
-  savingOps?: Set<unknown>;
+  savingOps?: SavingOps;
 }) {
   const [showUnlockDialog, setShowUnlockDialog] = useState(false);
 
-  const handleLockToggle = (checked) => {
+  const handleLockToggle = (checked: boolean) => {
     if (checked) {
       // Locking — no confirmation needed
       if (act.id) {

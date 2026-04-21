@@ -26,12 +26,15 @@ export function useDatabaseInitialization() {
     eventSourceRef.current = eventSource;
 
     eventSource.onmessage = (event) => {
+      console.log("[SSE Client] Received message:", event.data);
       if (event.data === "update") {
+        console.log("[SSE Client] Triggering refresh...");
         refreshData(false);
       }
     };
 
-    eventSource.onerror = () => {
+    eventSource.onerror = (error) => {
+      console.error("[SSE Client] Error:", error);
       // Close and schedule reconnection
       eventSource.close();
       eventSourceRef.current = null;
@@ -43,8 +46,9 @@ export function useDatabaseInitialization() {
     };
 
     eventSource.onopen = () => {
-      // SSE connected - will receive updates automatically
+      console.log("[SSE Client] Connection opened successfully");
     };
+
   }, []);
 
   const initialize = useCallback(async () => {

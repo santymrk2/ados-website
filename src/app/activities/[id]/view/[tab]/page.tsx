@@ -263,7 +263,7 @@ function JuegosMixtosView({ act, juegos }: { act: any; juegos: any[] }) {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="font-bold text-sm text-text-muted mb-2 flex items-center gap-2">
+      <div className="font-bold text-sm text-accent mb-2 flex items-center gap-2">
         <Gamepad2 className="w-4 h-4" /> Juegos Mixtos
       </div>
       {juegos.map((j: any) => {

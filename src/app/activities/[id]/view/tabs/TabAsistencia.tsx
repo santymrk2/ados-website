@@ -2,20 +2,23 @@
 
 import { useState, useMemo } from "react";
 import { getEdad } from "@/lib/constants";
-import { Avatar } from "@/components/Avatar";
+import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { X, Clock, Users } from "lucide-react";
 
-function PlayerPointsModal({ player, act, participants, onClose }) {
+type Actividad = any;
+type Participante = any;
+
+function PlayerPointsModal({ player, act, participants, onClose }: { player: any; act: Actividad; participants: Participante[]; onClose: () => void }) {
   const { total, details } = useMemo(() => {
-    const p = participants.find((x) => x.id === player.id);
+    const p = participants.find((x: any) => x.id === player.id);
     if (!p) return { total: 0, details: [] };
 
-    const a = act;
+    const a = act as Actividad;
     const team = a.equipos?.[player.id];
-    const details = [];
+    const details: { label: string; pts: number }[] = [];
     let total = 0;
 
     if (a.asistentes.includes(player.id)) {
@@ -156,16 +159,17 @@ function PlayerPointsModal({ player, act, participants, onClose }) {
 
 export function TabAsistencia({ act, db }) {
   const participants = db.participants;
-  const [selectedAges, setSelectedAges] = useState([]);
+  const [selectedAges, setSelectedAges] = useState<number[]>([]);
   const [selectedPlayer, setSelectedPlayer] = useState(null);
 
   // Obtener edades únicas de los asistentes
   const availableAges = useMemo(() => {
-    const ages = new Set();
+    const ages = new Set<number>();
     act.asistentes.forEach((pid) => {
       const p = participants.find((x) => x.id === pid);
       if (p && p.fechaNacimiento) {
-        ages.add(getEdad(p.fechaNacimiento));
+        const edad = getEdad(p.fechaNacimiento);
+        if (edad !== null) ages.add(edad);
       }
     });
     return Array.from(ages).sort((a, b) => a - b);
@@ -192,21 +196,21 @@ export function TabAsistencia({ act, db }) {
 
   // Lista de asistentes filtrados
   const filteredAsistentes = useMemo(() => {
-    return act.asistentes
+    const enriched = act.asistentes
       .map((pid) => {
         const p = participants.find((x) => x.id === pid);
         if (!p) return null;
         return { ...p, edad: getEdad(p.fechaNacimiento) };
       })
-      .filter(Boolean)
-      .filter((p) => {
-        if (selectedAges.length > 0 && !selectedAges.includes(p.edad))
-          return false;
+      .filter((p): p is { edad: number } & Omit<NonNullable<typeof p>, "edad"> => {
+        if (!p || p.edad === null) return false;
+        if (selectedAges.length > 0 && !selectedAges.includes(p.edad)) return false;
         return true;
       })
       .sort((a, b) =>
         `${a.apellido} ${a.nombre}`.localeCompare(`${b.apellido} ${b.nombre}`),
       );
+    return enriched;
   }, [act.asistentes, participants, selectedAges]);
 
   const toggleAge = (age) => {

@@ -12,12 +12,12 @@ import {
 } from "lucide-react";
 import { TEAMS } from "@/lib/constants";
 import { actPts, actGoles, calcDayTeamPts } from "@/lib/calc";
-import { Empty } from "@/components/Common";
+import { Empty } from "@/components/ui/Common";
 import { Button } from "@/components/ui/button";
 import { cn, formatDate } from "@/lib/utils";
 import { useApp } from "@/hooks/useApp";
 import { useAuth } from "@/hooks/useAuth";
-import { FloatingNav } from "@/components/FloatingNav";
+import { FloatingNav } from "@/components/ui/FloatingNav";
 import { TabEquipos } from "@/app/activities/[id]/view/tabs/TabEquipos";
 import { TabGoleadores } from "@/app/activities/[id]/view/tabs/TabGoleadores";
 import { TabRanking } from "@/app/activities/[id]/view/tabs/TabRanking";

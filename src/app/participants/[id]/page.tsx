@@ -17,8 +17,8 @@ import {
 } from "lucide-react";
 import { TEAM_COLORS, getTeamBg } from "@/lib/constants";
 import { actPts } from "@/lib/calc";
-import { Empty } from "@/components/Common";
-import { Avatar } from "@/components/Avatar";
+import { Empty } from "@/components/ui/Common";
+import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/button";
 import { formatDate } from "@/lib/utils";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";

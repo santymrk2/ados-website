@@ -1,5 +1,5 @@
 import { toast } from "@/hooks/use-toast";
-import { Modal, Label, Empty } from "@/components/Common";
+import { Modal, Label, Empty } from "@/components/ui/Common";
 import { Button } from "@/components/ui/button";
 import {
   Combobox,

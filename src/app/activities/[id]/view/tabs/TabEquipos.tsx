@@ -3,8 +3,8 @@
 import { useState, useMemo } from "react";
 import { TEAMS, TEAM_COLORS, getTeamBg, PTS } from "@/lib/constants";
 import { actPts, actGoles } from "@/lib/calc";
-import { RankBadge, PodiumBadge } from "@/components/Badges";
-import { Avatar } from "@/components/Avatar";
+import { RankBadge, PodiumBadge } from "@/components/ui/Badges";
+import { Avatar } from "@/components/ui/Avatar";
 import { cn } from "@/lib/utils";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -16,7 +16,7 @@ function getPlayerPoints(pid, act, participants) {
   if (!p) return { total: 0, details: [] };
 
   const team = a.equipos?.[pid];
-  const details = [];
+  const details: { label: string; pts: number }[] = [];
   let total = 0;
 
   if (a.asistentes.includes(pid)) {

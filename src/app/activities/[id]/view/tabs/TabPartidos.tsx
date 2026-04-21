@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { DEPORTES, GENEROS, TEAM_COLORS, getTeamBg } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
-import { Empty } from "@/components/Common";
+import { Empty } from "@/components/ui/Common";
 
 export function TabPartidos({ partidos }) {
   const [filterGenero, setFilterGenero] = useState("all");

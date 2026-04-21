@@ -6,9 +6,9 @@ import { TEAMS, PTS, TEAM_COLORS, getTeamBg } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { Label, Empty } from "@/components/Common";
-import { PodiumBadge } from "@/components/Badges";
-import { SavingOverlay } from "@/components/SavingOverlay";
+import { Label, Empty } from "@/components/ui/Common";
+import { PodiumBadge } from "@/components/ui/Badges";
+import { SavingOverlay } from "@/components/ui/SavingOverlay";
 
 let tempIdCounter = 0;
 const generateTempId = () => -1 - tempIdCounter++;

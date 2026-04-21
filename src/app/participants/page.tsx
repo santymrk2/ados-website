@@ -16,8 +16,8 @@ import {
   Calendar,
 } from "lucide-react";
 import { getEdad } from "@/lib/constants";
-import { PageHeader, Empty } from "@/components/Common";
-import { Avatar } from "@/components/Avatar";
+import { PageHeader, Empty } from "@/components/ui/Common";
+import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { formatDate } from "@/lib/utils";

@@ -5,8 +5,8 @@ import { toast } from "@/hooks/use-toast";
 import { List, Users, Zap, Shuffle } from "lucide-react";
 import { TEAMS, TEAM_COLORS, getTeamBg } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
-import { Avatar } from "@/components/Avatar";
-import { SexBadge } from "@/components/Badges";
+import { Avatar } from "@/components/ui/Avatar";
+import { SexBadge } from "@/components/ui/Badges";
 
 export function TabEquipos({
   act,

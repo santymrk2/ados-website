@@ -19,9 +19,9 @@ import {
   getTeamBg,
   newPart,
 } from "@/lib/constants";
-import { Modal, Label, Empty, PillCheck } from "@/components/Common";
-import { SexBadge } from "@/components/Badges";
-import { Avatar } from "@/components/Avatar";
+import { Modal, Label, Empty, PillCheck } from "@/components/ui/Common";
+import { SexBadge } from "@/components/ui/Badges";
+import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";

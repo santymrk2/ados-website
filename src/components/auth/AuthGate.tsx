@@ -4,12 +4,12 @@ import { useState, useEffect } from "react";
 import { useApp } from "@/hooks/useApp";
 import { LoginScreen } from "./LoginScreen";
 import { Loader } from "./Loader";
-import { BottomNav } from "@/components/BottomNav";
+import { BottomNav } from "@/components/ui/BottomNav";
 import { WifiOff, RefreshCw } from "lucide-react";
 import { checkDbConnection } from "@/store/appStore";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialogWrapper } from "@/lib/confirm";
-import { PWAInstall } from "@/components/PWAInstall";
+import { PWAInstall } from "@/components/ui/PWAInstall";
 import { cn } from "@/lib/utils";
 
 interface DbErrorScreenProps {

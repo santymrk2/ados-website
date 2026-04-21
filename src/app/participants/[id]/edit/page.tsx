@@ -7,11 +7,11 @@ import { useApp } from "@/hooks/useApp";
 import { $role } from "@/store/appStore";
 import { newPart, getEdad } from "@/lib/constants";
 import { toast } from "@/hooks/use-toast";
-import { Modal, Label, SegmentedButtons } from "@/components/Common";
-import { SexBadge } from "@/components/Badges";
+import { Modal, Label, SegmentedButtons } from "@/components/ui/Common";
+import { SexBadge } from "@/components/ui/Badges";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ImageCropModal } from "@/components/ImageCropModal";
+import { ImageCropModal } from "@/components/ui/ImageCropModal";
 import { downloadBase64Image } from "@/lib/imageUtils";
 import { DatePicker } from "@/components/ui/calendar";
 import {

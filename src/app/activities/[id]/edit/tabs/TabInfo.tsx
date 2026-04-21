@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Label, SegmentedButtons } from "@/components/Common";
+import { Label, SegmentedButtons } from "@/components/ui/Common";
 import { Input } from "@/components/ui/input";
-import { HelpInfo } from "@/components/HelpInfo";
+import { HelpInfo } from "@/components/ui/HelpInfo";
 import { DatePicker } from "@/components/ui/calendar";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Switch } from "@/components/ui/switch";

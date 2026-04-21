@@ -3,9 +3,9 @@
 import { useState, useMemo } from "react";
 import { Clock, BookOpen, Trophy, Star, Medal } from "lucide-react";
 import { TEAM_COLORS, getTeamBg } from "@/lib/constants";
-import { Avatar } from "@/components/Avatar";
-import { Empty } from "@/components/Common";
-import { HelpInfo } from "@/components/HelpInfo";
+import { Avatar } from "@/components/ui/Avatar";
+import { Empty } from "@/components/ui/Common";
+import { HelpInfo } from "@/components/ui/HelpInfo";
 import { cn } from "@/lib/utils";
 import {
   Select,

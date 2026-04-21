@@ -2,9 +2,9 @@
 
 import { Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { HelpInfo } from "@/components/HelpInfo";
-import { Empty } from "@/components/Common";
-import { Avatar } from "@/components/Avatar";
+import { HelpInfo } from "@/components/ui/HelpInfo";
+import { Empty } from "@/components/ui/Common";
+import { Avatar } from "@/components/ui/Avatar";
 import { TEAM_COLORS } from "@/lib/constants";
 
 export function TabGoleadores({

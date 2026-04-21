@@ -12,8 +12,8 @@ import {
   Trophy,
   Plus,
 } from "lucide-react";
-import { PageHeader, Empty } from "@/components/Common";
-import { Chip } from "@/components/Badges";
+import { PageHeader, Empty } from "@/components/ui/Common";
+import { Chip } from "@/components/ui/Badges";
 import { Button } from "@/components/ui/button";
 import { formatDate, cn } from "@/lib/utils";
 import { $role } from "@/store/appStore";

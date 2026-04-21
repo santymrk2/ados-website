@@ -10,8 +10,8 @@ import {
   GENEROS,
 } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
-import { Label, Empty, Modal } from "@/components/Common";
-import { SexBadge } from "@/components/Badges";
+import { Label, Empty, Modal } from "@/components/ui/Common";
+import { SexBadge } from "@/components/ui/Badges";
 import { cn } from "@/lib/utils";
 import { confirmDialog } from "@/lib/confirm";
 import {

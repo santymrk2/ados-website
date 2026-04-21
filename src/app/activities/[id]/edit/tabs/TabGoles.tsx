@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import { toast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { Label, Empty } from "@/components/Common";
+import { Label, Empty } from "@/components/ui/Common";
 import {
   Combobox,
   ComboboxInput,

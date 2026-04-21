@@ -26,7 +26,7 @@ import { TabDeportes } from "@/app/activities/[id]/edit/tabs/TabDeportes";
 import { TabInvitados } from "@/app/activities/[id]/edit/tabs/TabInvitados";
 import { TabGoles } from "@/app/activities/[id]/edit/tabs/TabGoles";
 import { TabExtras } from "@/app/activities/[id]/edit/tabs/TabExtras";
-import { FloatingNav } from "@/components/FloatingNav";
+import { FloatingNav } from "@/components/ui/FloatingNav";
 import { formatDate } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 

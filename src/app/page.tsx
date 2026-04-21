@@ -17,10 +17,10 @@ import {
   Circle,
   ClipboardList,
 } from "lucide-react";
-import { Section, Empty } from "@/components/Common";
-import { Avatar } from "@/components/Avatar";
+import { Section, Empty } from "@/components/ui/Common";
+import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/button";
-import { SexBadge, RankBadge, PodiumBadge } from "@/components/Badges";
+import { SexBadge, RankBadge, PodiumBadge } from "@/components/ui/Badges";
 import { cn, formatDate } from "@/lib/utils";
 
 const PODIUM_COLORS = [

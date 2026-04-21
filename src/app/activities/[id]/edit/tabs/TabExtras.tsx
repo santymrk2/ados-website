@@ -6,8 +6,8 @@ import { Plus, Zap } from "lucide-react";
 import { TEAMS, TEAM_COLORS, getTeamBg } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label, Modal, Empty } from "@/components/Common";
-import { Avatar } from "@/components/Avatar";
+import { Label, Modal, Empty } from "@/components/ui/Common";
+import { Avatar } from "@/components/ui/Avatar";
 import { cn } from "@/lib/utils";
 import {
   Combobox,

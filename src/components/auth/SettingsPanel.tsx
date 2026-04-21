@@ -1,7 +1,15 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { LogOut, Palette, Save, Bell, X, ChevronDown, ChevronUp } from "lucide-react";
+import {
+  LogOut,
+  Palette,
+  Save,
+  Bell,
+  X,
+  ChevronDown,
+  ChevronUp,
+} from "lucide-react";
 import {
   TEAMS,
   getTeamColors,
@@ -11,12 +19,7 @@ import {
 import { cn } from "@/lib/utils";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "../ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 import {
   subscribeToPush,
   unsubscribeFromPush,
@@ -47,18 +50,18 @@ function getContrastColor(hex: string) {
   return getLuminance(rgb.r, rgb.g, rgb.b) > 0.5 ? "#000000" : "#ffffff";
 }
 
-function AccordionSection({ 
-  title, 
-  icon: Icon, 
-  isOpen, 
-  onToggle, 
-  children 
-}: { 
-  title: string; 
-  icon: React.ComponentType<any>; 
-  isOpen: boolean; 
-  onToggle: () => void; 
-  children: React.ReactNode; 
+function AccordionSection({
+  title,
+  icon: Icon,
+  isOpen,
+  onToggle,
+  children,
+}: {
+  title: string;
+  icon: React.ComponentType<any>;
+  isOpen: boolean;
+  onToggle: () => void;
+  children: React.ReactNode;
 }) {
   return (
     <div className="border border-border rounded-xl overflow-hidden">
@@ -77,28 +80,29 @@ function AccordionSection({
           <ChevronDown className="w-5 h-5 text-text-muted" />
         )}
       </button>
-      {isOpen && (
-        <div className="p-4 border-t border-border">
-          {children}
-        </div>
-      )}
+      {isOpen && <div className="p-4 border-t border-border">{children}</div>}
     </div>
   );
 }
 
-export function SettingsPanel({ isOpen, onClose, onLogout, role = 'admin' }: { 
-  isOpen: boolean; 
-  onClose: () => void; 
-  onLogout: () => void; 
-  role?: string; 
+export function SettingsPanel({
+  isOpen,
+  onClose,
+  onLogout,
+  role = "admin",
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  onLogout: () => void;
+  role?: string;
 }) {
   const [colors, setColors] = useState<Record<string, string>>({});
   const [saved, setSaved] = useState(false);
-  const isAdmin = role === 'admin';
-  
+  const isAdmin = role === "admin";
+
   // Default all accordions closed
   const [openSections, setOpenSections] = useState<string[]>([]);
-  
+
   // Push notification states
   const [pushAvailable, setPushAvailable] = useState(false);
   const [pushConfigured, setPushConfigured] = useState(false);
@@ -119,26 +123,26 @@ export function SettingsPanel({ isOpen, onClose, onLogout, role = 'admin' }: {
     try {
       const available = await isWebPushAvailable();
       setPushAvailable(available);
-      
+
       if (!available) return;
-      
+
       const configured = await isWebPushConfigured();
       setPushConfigured(configured);
-      
+
       if (configured) {
         const subscribed = await isPushSubscribed();
         setIsSubscribed(subscribed);
       }
     } catch (error) {
-      console.error('Error checking push status:', error);
+      console.error("Error checking push status:", error);
     }
   };
 
   const toggleSection = (section: string) => {
-    setOpenSections(prev => 
-      prev.includes(section) 
-        ? prev.filter(s => s !== section)
-        : [...prev, section]
+    setOpenSections((prev) =>
+      prev.includes(section)
+        ? prev.filter((s) => s !== section)
+        : [...prev, section],
     );
   };
 
@@ -160,50 +164,58 @@ export function SettingsPanel({ isOpen, onClose, onLogout, role = 'admin' }: {
   const handlePushSubscription = async () => {
     setIsSubscribing(true);
     setSubscriptionSaved(false);
-    
+
     try {
       if (isSubscribed) {
-        const stored = localStorage.getItem('push_subscription');
+        const stored = localStorage.getItem("push_subscription");
         if (stored) {
           const sub = JSON.parse(stored);
-          await fetch('/api/push-subscribe', {
-            method: 'DELETE',
-            headers: { 'Content-Type': 'application/json' },
+          await fetch("/api/push-subscribe", {
+            method: "DELETE",
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ endpoint: sub.endpoint }),
           });
         }
         await unsubscribeFromPush();
-        localStorage.removeItem('push_subscription');
+        localStorage.removeItem("push_subscription");
         setIsSubscribed(false);
       } else {
         const subscriptionData = await subscribeToPush();
-        
+
         if (subscriptionData) {
-          const response = await fetch('/api/push-subscribe', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+          const response = await fetch("/api/push-subscribe", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify(subscriptionData),
           });
-          
+
           if (response.ok) {
-            localStorage.setItem('push_subscription', JSON.stringify(subscriptionData));
+            localStorage.setItem(
+              "push_subscription",
+              JSON.stringify(subscriptionData),
+            );
             setIsSubscribed(true);
           }
         }
       }
-      toast.success(isSubscribed ? "Notificaciones desactivadas" : "Notificaciones activadas", {
-          description: isSubscribed 
-            ? "Ya no recibirás notificaciones push" 
+      toast.success(
+        isSubscribed
+          ? "Notificaciones desactivadas"
+          : "Notificaciones activadas",
+        {
+          description: isSubscribed
+            ? "Ya no recibirás notificaciones push"
             : "Recibirás notificaciones cuando haya cumpleños",
-        });
+        },
+      );
       setSubscriptionSaved(true);
     } catch (error) {
-      console.error('Push subscription error:', error);
+      console.error("Push subscription error:", error);
       toast.error("Error al activar notificaciones", {
-          description: "Asegurate de dar permisos en tu navegador",
-        });
+        description: "Asegurate de dar permisos en tu navegador",
+      });
     }
-    
+
     setIsSubscribing(false);
     setTimeout(() => setSubscriptionSaved(false), 2000);
   };
@@ -224,14 +236,14 @@ export function SettingsPanel({ isOpen, onClose, onLogout, role = 'admin' }: {
             <AccordionSection
               title="Colores de Equipos"
               icon={Palette}
-              isOpen={openSections.includes('colors')}
-              onToggle={() => toggleSection('colors')}
+              isOpen={openSections.includes("colors")}
+              onToggle={() => toggleSection("colors")}
             >
               <div className="space-y-3">
                 {TEAMS.map((team) => (
                   <div key={team} className="flex items-center gap-3">
                     <div
-                      className="w-10 h-10 rounded-lg flex items-center justify-center font-black text-sm flex-shrink-0"
+                      className="w-10 h-10 rounded-lg flex items-center justify-center font-black text-sm shrink-0"
                       style={{
                         backgroundColor: colors[team] || "#cccccc",
                         color: getContrastColor(colors[team] || "#cccccc"),
@@ -247,15 +259,21 @@ export function SettingsPanel({ isOpen, onClose, onLogout, role = 'admin' }: {
                         <input
                           type="color"
                           value={colors[team] || "#cccccc"}
-                          onChange={(e) => handleColorChange(team, e.target.value)}
-                          className="w-7 h-7 rounded cursor-pointer border-none flex-shrink-0 p-0"
+                          onChange={(e) =>
+                            handleColorChange(team, e.target.value)
+                          }
+                          className="w-7 h-7 rounded cursor-pointer border-none shrink-0 p-0"
                           readOnly
-                          onClick={(e) => (e.target as HTMLInputElement).showPicker?.()}
+                          onClick={(e) =>
+                            (e.target as HTMLInputElement).showPicker?.()
+                          }
                         />
                         <Input
                           type="text"
                           value={colors[team] || "#cccccc"}
-                          onChange={(e) => handleColorChange(team, e.target.value)}
+                          onChange={(e) =>
+                            handleColorChange(team, e.target.value)
+                          }
                           className="flex-1 font-mono uppercase text-xs h-8"
                         />
                       </div>
@@ -283,13 +301,14 @@ export function SettingsPanel({ isOpen, onClose, onLogout, role = 'admin' }: {
             <AccordionSection
               title="Notificaciones Push"
               icon={Bell}
-              isOpen={openSections.includes('push')}
-              onToggle={() => toggleSection('push')}
+              isOpen={openSections.includes("push")}
+              onToggle={() => toggleSection("push")}
             >
               {!pushConfigured ? (
                 <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
                   <p className="text-sm text-yellow-800">
-                    Las notificaciones push no están configuradas en el servidor.
+                    Las notificaciones push no están configuradas en el
+                    servidor.
                   </p>
                 </div>
               ) : (
@@ -300,8 +319,8 @@ export function SettingsPanel({ isOpen, onClose, onLogout, role = 'admin' }: {
                         {isSubscribed ? "Suscrito" : "No suscrito"}
                       </p>
                       <p className="text-xs text-text-muted">
-                        {isSubscribed 
-                          ? "Recibirás notificaciones" 
+                        {isSubscribed
+                          ? "Recibirás notificaciones"
                           : "Activa para recibir notificaciones"}
                       </p>
                     </div>
@@ -311,8 +330,10 @@ export function SettingsPanel({ isOpen, onClose, onLogout, role = 'admin' }: {
                       size="sm"
                       variant={isSubscribed ? "outline" : "default"}
                       className={cn(
-                        isSubscribed && "border-red-200 text-red-600 hover:bg-red-50",
-                        subscriptionSaved && "bg-green-500 hover:bg-green-600 text-white"
+                        isSubscribed &&
+                          "border-red-200 text-red-600 hover:bg-red-50",
+                        subscriptionSaved &&
+                          "bg-green-500 hover:bg-green-600 text-white",
                       )}
                     >
                       {isSubscribing ? (

@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+
+export const dynamic = 'force-dynamic';
 import { participants, activityParticipants, goles, extras, invitaciones } from "@/lib/schema";
 import { eq, or } from "drizzle-orm";
 import { eventBus } from "@/lib/eventBus";

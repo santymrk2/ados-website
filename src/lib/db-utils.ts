@@ -12,7 +12,7 @@ export async function checkDatabaseConnection() {
 }
 
 export async function getParticipants() {
-  const res = await fetch(`${API_BASE}/participants`, { cache: 'no-store' });
+  const res = await fetch(`${API_BASE}/participants?t=${Date.now()}`, { cache: 'no-store' });
   if (!res.ok) throw new Error('Failed to fetch participants');
   const json = await res.json();
   // Handle both old format (array) and new format ({ success, data })
@@ -20,14 +20,14 @@ export async function getParticipants() {
 }
 
 export async function getParticipant(id: number) {
-  const res = await fetch(`${API_BASE}/participants/${id}`, { cache: 'no-store' });
+  const res = await fetch(`${API_BASE}/participants/${id}?t=${Date.now()}`, { cache: 'no-store' });
   if (!res.ok) throw new Error('Failed to fetch participant');
   const json = await res.json();
   return Array.isArray(json) ? json[0] : json.data ?? json;
 }
 
 export async function getActivities() {
-  const res = await fetch(`${API_BASE}/activities`, { cache: 'no-store' });
+  const res = await fetch(`${API_BASE}/activities?t=${Date.now()}`, { cache: 'no-store' });
   if (!res.ok) throw new Error('Failed to fetch activities');
   const json = await res.json();
   // Handle both old format (array) and new format ({ success, data })

@@ -19,13 +19,13 @@ export async function GET(request: NextRequest) {
         .where(eq(participants.id, Number(id)))
         .limit(1);
       if (result.length === 0)
-        return NextResponse.json({ error: "No encontrado" }, { status: 404 });
-        
+        return NextResponse.json({ success: false, error: "No encontrado" }, { status: 404 });
+
       const p = result[0];
       if (p.foto && !p.foto.startsWith('data:')) p.foto = `/api/images/${p.foto}`;
       if (p.fotoAltaCalidad && !p.fotoAltaCalidad.startsWith('data:')) p.fotoAltaCalidad = `/api/images/${p.fotoAltaCalidad}`;
-        
-      return NextResponse.json(p, { status: 200 });
+
+      return NextResponse.json({ success: true, data: p }, { status: 200 });
     }
 
     const result = await db
@@ -45,9 +45,9 @@ export async function GET(request: NextRequest) {
       return p;
     });
 
-    return NextResponse.json(formatted, { status: 200 });
+    return NextResponse.json({ success: true, data: formatted }, { status: 200 });
   } catch (e) {
-    return NextResponse.json({ error: (e as Error).message }, { status: 500 });
+    return NextResponse.json({ success: false, error: "Error interno" }, { status: 500 });
   }
 }
 

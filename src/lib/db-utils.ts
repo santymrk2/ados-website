@@ -14,19 +14,24 @@ export async function checkDatabaseConnection() {
 export async function getParticipants() {
   const res = await fetch(`${API_BASE}/participants`);
   if (!res.ok) throw new Error('Failed to fetch participants');
-  return res.json();
+  const json = await res.json();
+  // Handle both old format (array) and new format ({ success, data })
+  return Array.isArray(json) ? json : (json.data ?? []);
 }
 
 export async function getParticipant(id: number) {
   const res = await fetch(`${API_BASE}/participants?id=${id}`);
   if (!res.ok) throw new Error('Failed to fetch participant');
-  return res.json();
+  const json = await res.json();
+  return Array.isArray(json) ? json[0] : json.data ?? json;
 }
 
 export async function getActivities() {
   const res = await fetch(`${API_BASE}/activities`);
   if (!res.ok) throw new Error('Failed to fetch activities');
-  return res.json();
+  const json = await res.json();
+  // Handle both old format (array) and new format ({ success, data })
+  return Array.isArray(json) ? json : (json.data ?? []);
 }
 
 export async function saveActivity(activity: any, isNewProvided?: boolean) {

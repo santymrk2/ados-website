@@ -43,7 +43,7 @@ export function useDatabaseInitialization() {
     };
 
     eventSource.onopen = () => {
-      console.log("[SSE] Connection established");
+      // SSE connected - will receive updates automatically
     };
   }, []);
 

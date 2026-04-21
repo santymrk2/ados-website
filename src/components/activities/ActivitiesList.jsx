@@ -118,11 +118,6 @@ export function ActivitiesList({ db, onView, onNew, onEdit, onDelete }) {
                   <Chip icon={Users} val={a.asistentes.length} label="asist." />
                   <Chip icon={Gamepad2} val={a.juegos.length} label="juegos" />
                   <Chip
-                    icon={Award}
-                    val={(a.partidos || []).length}
-                    label="partidos"
-                  />
-                  <Chip
                     icon={Trophy}
                     val={(a.goles || []).reduce((s, g) => s + g.cant, 0)}
                     label="goles"

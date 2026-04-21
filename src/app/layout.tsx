@@ -43,7 +43,7 @@ export default function RootLayout({
     <html lang="es" className={cn("font-sans", inter.variable)}>
       <body className="pb-safe">
         <AuthGate>{children}</AuthGate>
-        <Toaster position="bottom-center" richColors />
+        <Toaster position="top-center" richColors />
       </body>
     </html>
   );

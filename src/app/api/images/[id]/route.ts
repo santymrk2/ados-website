@@ -1,38 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getImageUrl } from "@/services/minio";
+import { GetObjectCommand } from "@aws-sdk/client-s3";
+import { s3Client, minioConfig } from "@/services/minio";
 
 export const dynamic = "force-dynamic";
-
-const MAX_RETRIES = 3;
-const FETCH_TIMEOUT_MS = 10000;
-
-async function fetchWithRetry(url: string, retries = MAX_RETRIES): Promise<Response> {
-  for (let attempt = 1; attempt <= retries; attempt++) {
-    try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
-
-      const response = await fetch(url, { signal: controller.signal });
-      clearTimeout(timeout);
-
-      if (response.ok) return response;
-
-      // If MinIO returns a server error, retry; otherwise return as-is
-      if (response.status >= 500 && attempt < retries) {
-        await new Promise((r) => setTimeout(r, 100 * attempt));
-        continue;
-      }
-
-      return response;
-    } catch (err) {
-      if (attempt === retries) throw err;
-      // Exponential backoff: 100ms, 200ms, 400ms...
-      await new Promise((r) => setTimeout(r, 100 * Math.pow(2, attempt - 1)));
-    }
-  }
-  // Should never reach here, but satisfy TS
-  throw new Error("Max retries exceeded");
-}
 
 export async function GET(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
@@ -42,23 +12,37 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
       return NextResponse.json({ error: "Missing filename" }, { status: 400 });
     }
 
-    // Obtenemos la URL firmada (interna)
-    const signedUrl = await getImageUrl(id);
+    // Obtener el objeto directamente desde MinIO via S3 SDK (conexión interna)
+    const command = new GetObjectCommand({
+      Bucket: minioConfig.bucket,
+      Key: id,
+    });
 
-    if (!signedUrl) {
+    const result = await s3Client.send(command);
+
+    if (!result.Body) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
 
-    // Proxy con retry: el servidor descarga la imagen y la sirve al cliente
-    const response = await fetchWithRetry(signedUrl);
-
-    if (!response.ok) {
-      console.error(`[API Images] Storage returned ${response.status} for key: ${id}`);
-      return NextResponse.json({ error: "Error fetching from storage" }, { status: response.status });
+    // Convertir el readable stream a un buffer
+    const chunks: Uint8Array[] = [];
+    const reader = result.Body.transformToWebStream().getReader();
+    
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      chunks.push(value);
     }
 
-    const contentType = response.headers.get("content-type") || "image/jpeg";
-    const buffer = await response.arrayBuffer();
+    const totalLength = chunks.reduce((acc, chunk) => acc + chunk.length, 0);
+    const buffer = new Uint8Array(totalLength);
+    let offset = 0;
+    for (const chunk of chunks) {
+      buffer.set(chunk, offset);
+      offset += chunk.length;
+    }
+
+    const contentType = result.ContentType || "image/jpeg";
 
     return new NextResponse(buffer, {
       headers: {
@@ -66,7 +50,11 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
         "Cache-Control": "public, max-age=31536000, immutable",
       },
     });
-  } catch (e) {
+  } catch (e: any) {
+    // S3 NoSuchKey = image doesn't exist
+    if (e?.name === "NoSuchKey") {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
     console.error("[API Images] Error proxying image:", e);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }

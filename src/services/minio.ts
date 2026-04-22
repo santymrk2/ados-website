@@ -3,6 +3,7 @@ import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
 // Validate required environment variables - fail fast if not configured
 const MINIO_ENDPOINT = process.env.MINIO_ENDPOINT;
+const MINIO_PUBLIC_URL = process.env.MINIO_PUBLIC_URL; // Public URL for browser access
 const MINIO_ROOT_USER = process.env.MINIO_ROOT_USER;
 const MINIO_ROOT_PASSWORD = process.env.MINIO_ROOT_PASSWORD;
 const BUCKET_NAME = process.env.MINIO_BUCKET_NAME || 'activados';
@@ -15,25 +16,40 @@ if (!MINIO_ENDPOINT || !MINIO_ROOT_USER || !MINIO_ROOT_PASSWORD) {
 // Export config for use in other parts of the app
 export const minioConfig = {
   endpoint: MINIO_ENDPOINT || '',
+  publicUrl: MINIO_PUBLIC_URL || MINIO_ENDPOINT || '',
   bucket: BUCKET_NAME,
   isConfigured: !!(MINIO_ENDPOINT && MINIO_ROOT_USER && MINIO_ROOT_PASSWORD),
 };
 
+// Internal client for server-side operations (uploading)
 export const s3Client = new S3Client({
   endpoint: MINIO_ENDPOINT || 'http://minio:9000',
-  region: 'us-east-1', // MinIO requires a region, us-east-1 is standard default
+  region: 'us-east-1',
   credentials: MINIO_ROOT_USER && MINIO_ROOT_PASSWORD
     ? {
         accessKeyId: MINIO_ROOT_USER,
         secretAccessKey: MINIO_ROOT_PASSWORD,
       }
-    : undefined, // Will fail if not configured
-  forcePathStyle: true, // MUST be true for MinIO
+    : undefined,
+  forcePathStyle: true,
 });
+
+// Signing client for generating browser-reachable URLs
+// If MINIO_PUBLIC_URL is provided, we use it for signing
+const signingClient = MINIO_PUBLIC_URL 
+  ? new S3Client({
+      endpoint: MINIO_PUBLIC_URL,
+      region: 'us-east-1',
+      credentials: {
+        accessKeyId: MINIO_ROOT_USER!,
+        secretAccessKey: MINIO_ROOT_PASSWORD!,
+      },
+      forcePathStyle: true,
+    })
+  : s3Client;
 
 export const getImageUrl = async (key: string | null) => {
   if (!key) return null;
-  // If no prefix, assume it is an S3 key. Otherwise it's already an external URL or Base64 (legacy)
   if (key.startsWith('data:image') || key.startsWith('http')) {
     return key;
   }
@@ -43,8 +59,8 @@ export const getImageUrl = async (key: string | null) => {
       Bucket: BUCKET_NAME,
       Key: key,
     });
-    // Devuelve una URL firmada de 1 hora de validez
-    return await getSignedUrl(s3Client, command, { expiresIn: 3600 });
+    // Use the signingClient which respects the public URL
+    return await getSignedUrl(signingClient, command, { expiresIn: 3600 });
   } catch (error) {
     console.error('Error generating signed URL:', error);
     return null;

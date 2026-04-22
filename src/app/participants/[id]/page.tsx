@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
 import { useApp } from "@/hooks/useApp";
 import { useStore } from "@nanostores/react";
@@ -20,7 +20,7 @@ import { actPts } from "@/lib/calc";
 import { Empty } from "@/components/ui/Common";
 import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/button";
-import { formatDate } from "@/lib/utils";
+import { formatDate, cn } from "@/lib/utils";
 import { ImageExpandModal } from "@/components/ui/ImageExpandModal";
 import { getParticipant } from "@/lib/api-client";
 import type { Activity } from "@/lib/types";
@@ -30,13 +30,14 @@ export const dynamic = "force-dynamic";
 export default function Page({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
   const router = useRouter();
+  const { id } = use(params);
   const { db, isLoading: dbLoading } = useApp();
   const role = useStore($role);
   const isAdmin = role === "admin";
-  const { id } = params;
+// ... (rest of the file stays same until the end)
 
   const initialParticipant = useMemo(() => {
     if (!id || !db?.participants?.length) return null;
@@ -345,8 +346,4 @@ export default function Page({
       />
     </div>
   );
-}
-
-function cn(...classes: any[]) {
-  return classes.filter(Boolean).join(" ");
 }

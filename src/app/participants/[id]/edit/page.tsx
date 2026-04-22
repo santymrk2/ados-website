@@ -1,43 +1,20 @@
 "use client";
 
-import { useMemo, useEffect, useState, useRef } from "react";
+import { useMemo, useEffect, use } from "react";
 import { useStore } from "@nanostores/react";
 import { useRouter } from "next/navigation";
 import { useApp } from "@/hooks/useApp";
 import { $role } from "@/store/appStore";
-import { newPart, getEdad } from "@/lib/constants";
-import { toast } from "@/hooks/use-toast";
-import { Modal, Label, SegmentedButtons } from "@/components/ui/Common";
-import { SexBadge } from "@/components/ui/Badges";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { ImageCropModal } from "@/components/ui/ImageCropModal";
-import { downloadBase64Image } from "@/lib/image-utils";
-import { DatePicker } from "@/components/ui/calendar";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { getParticipant } from "@/lib/api-client";
-import { ChevronLeft, X, Download, Camera } from "lucide-react";
+import { ParticipantForm } from "@/app/participants/components/ParticipantForm";
 
 export const dynamic = "force-dynamic";
-
-import { ParticipantForm } from "@/app/participants/components/ParticipantForm";
 
 export default function Page({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
-  const { id } = params;
+  const { id } = use(params);
   return <ParticipantFormEditWrapper id={id} />;
 }
 

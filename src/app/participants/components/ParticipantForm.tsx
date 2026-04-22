@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { ImageCropModal } from "@/components/ui/ImageCropModal";
 import { downloadBase64Image } from "@/lib/image-utils";
 import { DatePicker } from "@/components/ui/calendar";
+import { getImg } from "@/lib/utils";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -158,7 +159,7 @@ export function ParticipantForm({ db, initial, onClose, onSave }: ParticipantFor
           >
             <div className="w-32 h-32 rounded-full border-4 border-slate-100 overflow-hidden bg-slate-50 flex items-center justify-center shadow-inner">
               {form.foto ? (
-                <img src={form.foto} className="w-full h-full object-cover" alt="" />
+                <img src={getImg(form.foto)} className="w-full h-full object-cover" alt="" />
               ) : (
                 <User className="w-16 h-16 text-slate-300" />
               )}

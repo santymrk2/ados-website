@@ -29,7 +29,7 @@ export function Avatar({ p, size = 36, className = "" }) {
       >
         {p.foto && (
           <AvatarPrimitive.Image
-            src={p.foto}
+            src={getImg(p.foto)}
             alt={`${p.nombre} ${p.apellido}`}
             className="aspect-square h-full w-full object-cover"
           />

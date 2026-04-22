@@ -47,3 +47,10 @@ export function parseLocalDate(dateStr: string | null | undefined): Date | null 
   const [year, month, day] = dateStr.split('-').map(Number);
   return new Date(year, month - 1, day);
 }
+
+export function getImg(photo: string | null | undefined): string {
+  if (!photo) return "";
+  if (photo.startsWith("data:") || photo.startsWith("http")) return photo;
+  // Use our local API proxy to avoid DNS/Mixed Content issues with MinIO
+  return `/api/images/${photo}`;
+}

@@ -57,20 +57,17 @@ export async function GET(request: NextRequest) {
       })
       .from(participants);
 
-    const formatted = await Promise.all(result.map(async p => {
-      if (p.foto && !p.foto.startsWith('data:')) {
-        const key = p.foto.replace(/^\/api\/images\//, '').replace(/\/api\/images\//g, '');
-        p.foto = await getImageUrl(key);
+    const formatted = result.map(p => {
+      if (p.foto && !p.foto.startsWith('data:') && !p.foto.startsWith('http')) {
+        p.foto = `/api/images/${p.foto}`;
       }
       return p;
-    }));
+    });
 
     return NextResponse.json({ success: true, data: formatted }, { 
       status: 200,
       headers: {
-        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
-        'Pragma': 'no-cache',
-        'Expires': '0',
+        'Cache-Control': 'no-store, no-cache, must-revalidate',
       }
     });
   } catch (e) {

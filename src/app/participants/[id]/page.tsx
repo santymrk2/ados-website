@@ -124,7 +124,7 @@ export default function Page({
 
   const handlePhotoClick = () => {
     const imageToShow = player.fotoAltaCalidad || player.foto;
-    if (imageToShow) setExpandedImage(imageToShow);
+    if (imageToShow) setExpandedImage(getImg(imageToShow));
   };
 
   return (

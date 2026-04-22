@@ -40,7 +40,7 @@ services:
       - .:/app
       - /app/node_modules
       - /app/.next
-    command: sh -c "bun run db:push && bun run dev"
+    command: sh -c "bun run db:push && npx next dev"
 
 volumes:
   postgres_data:

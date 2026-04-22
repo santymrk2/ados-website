@@ -40,7 +40,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="es" className={cn("font-sans", inter.variable)}>
+    <html lang="es" className={cn("font-sans", inter.variable)} suppressHydrationWarning>
       <body className="pb-safe">
         <AuthGate>{children}</AuthGate>
         <Toaster position="top-center" richColors />

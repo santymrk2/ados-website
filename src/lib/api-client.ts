@@ -5,8 +5,15 @@ const API_BASE = '/api';
 export async function checkDatabaseConnection() {
   const res = await fetch(`${API_BASE}/health`);
   if (!res.ok) {
-    const data = await res.json();
-    throw new Error(data.message || 'No se puede conectar a la base de datos');
+    let errorMessage = `Error del servidor: ${res.status}`;
+    try {
+      const data = await res.json();
+      if (data && data.message) errorMessage = data.message;
+    } catch (err) {
+      // Si falla el parseo JSON, probablemente sea una página de error HTML (Next.js Error Overlay)
+      console.error("Respuesta no-JSON de /api/health:", await res.text().catch(() => ""));
+    }
+    throw new Error(errorMessage);
   }
   return true;
 }

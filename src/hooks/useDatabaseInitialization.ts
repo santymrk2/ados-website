@@ -26,9 +26,9 @@ export function useDatabaseInitialization() {
     eventSourceRef.current = eventSource;
 
     eventSource.onmessage = (event) => {
-      console.log("[SSE Client] Received message:", event.data);
+
       if (event.data === "update") {
-        console.log("[SSE Client] Triggering refresh in 100ms to allow DB replication...");
+
         setTimeout(() => {
           refreshData(false);
         }, 100);
@@ -47,8 +47,6 @@ export function useDatabaseInitialization() {
       }, 5000);
     };
 
-    eventSource.onopen = () => {
-      console.log("[SSE Client] Connection opened successfully");
     };
 
   }, []);

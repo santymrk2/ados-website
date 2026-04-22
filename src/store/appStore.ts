@@ -82,7 +82,7 @@ export const refreshData = async (forceLoader = false) => {
 async function doRefresh(forceLoader: boolean): Promise<void> {
   let lastError: Error | null = null;
 
-  console.log("[Store] Starting refresh...");
+
 
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     try {
@@ -111,19 +111,10 @@ async function doRefresh(forceLoader: boolean): Promise<void> {
       const rChanged = rData.length !== oldR.length ||
         rData.some((r, i) => r.id !== oldR[i]?.id);
 
-      console.log("[Store] Data comparison:", {
-        participants: { old: oldP.length, new: pData.length, changed: pChanged },
-        activities: { old: oldA.length, new: aData.length, changed: aChanged },
-        rankings: { old: oldR.length, new: rData.length, changed: rChanged }
-      });
+
 
       // Show sample data to verify actual values
-      if (aData.length > 0) {
-        console.log("[Store] Sample activity:", JSON.stringify(aData[0]));
-      }
-      if (oldA.length > 0) {
-        console.log("[Store] Old sample activity:", JSON.stringify(oldA[0]));
-      }
+
 
       // Force new array reference to ensure React re-renders
       const newParticipants = [...pData];
@@ -142,7 +133,7 @@ async function doRefresh(forceLoader: boolean): Promise<void> {
 
       // Success — exit the retry loop
       $dbLoading.set(false);
-      console.log("[Store] Refresh complete");
+
       return;
     } catch (e) {
       lastError = e instanceof Error ? e : new Error(String(e));

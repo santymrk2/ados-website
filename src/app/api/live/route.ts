@@ -4,7 +4,7 @@ import { eventBus } from "@/lib/eventBus";
 const encoder = new TextEncoder();
 
 export async function GET(request: NextRequest) {
-  console.log("[SSE] New SSE connection opened");
+
   let isClosed = false;
   let interval: NodeJS.Timeout;
   let notify: () => void;
@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
       notify = () => {
         if (isClosed) return;
         try {
-          console.log("[SSE] Sending update to client");
+
           controller.enqueue(encoder.encode("data: update\n\n"));
         } catch (e) {
           console.error("[SSE] Error sending update:", e);
@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
 
       // Listen to data-changed events
       eventBus.on("data-changed", notify);
-      console.log("[SSE] Registered listener for data-changed");
+
 
       // Send ping every 5 seconds to keep connection alive
       interval = setInterval(() => {
@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
 
       // Cleanup on disconnect
       request.signal.addEventListener("abort", () => {
-        console.log("[SSE] Connection closed");
+
         isClosed = true;
         eventBus.off("data-changed", notify);
         clearInterval(interval);
@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
       });
     },
     cancel() {
-      console.log("[SSE] Stream cancelled");
+
       isClosed = true;
       eventBus.off("data-changed", notify);
       clearInterval(interval);

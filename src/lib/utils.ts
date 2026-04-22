@@ -51,6 +51,8 @@ export function parseLocalDate(dateStr: string | null | undefined): Date | null 
 export function getImg(photo: string | null | undefined): string {
   if (!photo) return "";
   if (photo.startsWith("data:") || photo.startsWith("http")) return photo;
+  // Already proxied — don't double-prefix
+  if (photo.startsWith("/api/images/")) return photo;
   // Use our local API proxy to avoid DNS/Mixed Content issues with MinIO
   return `/api/images/${photo}`;
 }

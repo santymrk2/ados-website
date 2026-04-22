@@ -60,8 +60,11 @@ function ActivityPageView({
 
   // Fix white background on overscroll/safe areas
   useEffect(() => {
+    document.documentElement.style.backgroundColor = "var(--primary)";
     document.body.style.backgroundColor = "var(--primary)";
+
     return () => {
+      document.documentElement.style.backgroundColor = "";
       document.body.style.backgroundColor = "";
     };
   }, []);

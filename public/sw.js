@@ -31,15 +31,21 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-// Fetch event - Bypass SSE and API requests
+// Fetch event
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
-  // Bypass API and SSE (Live) requests so the browser handles them natively
-  if (url.pathname.startsWith('/api/')) {
-    return;
+  // 1. Solo interceptar peticiones al mismo origen (nuestro dominio)
+  // 2. Ignorar explícitamente las peticiones a la API y SSE
+  if (url.origin !== self.location.origin || url.pathname.startsWith('/api/')) {
+    return; // El navegador gestionará estas peticiones de forma nativa
   }
 
-  // Always bypass - go directly to network
-  event.respondWith(fetch(event.request));
+  // Estrategia: Network First, falling back to cache
+  event.respondWith(
+    fetch(event.request)
+      .catch(() => {
+        return caches.match(event.request);
+      })
+  );
 });

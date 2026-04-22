@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { ConfirmDialogWrapper } from "@/components/ui/confirm-dialog";
 import { PWAInstall } from "@/components/ui/PWAInstall";
 import { cn } from "@/lib/utils";
+import { usePathname } from "next/navigation";
 
 interface DbErrorScreenProps {
   error: { message?: string };
@@ -45,6 +46,10 @@ interface AuthGateProps {
 }
 
 export function AuthGate({ children, showNav = true }: AuthGateProps) {
+
+  const pathname = usePathname();
+  const isViewPage = pathname?.includes("/view");
+
   const {
     isAuthenticated,
     isLoading,
@@ -129,8 +134,8 @@ export function AuthGate({ children, showNav = true }: AuthGateProps) {
       <PWAInstall />
       <div
         className={cn(
-          "min-h-screen text-dark font-clash pt-0",
-          showNav ? "bg-background pb-24" : "bg-primary pb-0",
+          "min-h-screen text-dark font-clash pb-24 pt-0",
+          isViewPage ? "bg-primary" : (showNav ? "bg-background" : "bg-primary")
         )}
       >
         {children}

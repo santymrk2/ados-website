@@ -5,7 +5,7 @@ export const dynamic = 'force-dynamic';
 import { participants, activityParticipants, goles, extras, invitaciones } from "@/lib/schema";
 import { eq, or } from "drizzle-orm";
 import { eventBus } from "@/lib/eventBus";
-import { uploadBase64Image } from "@/services/minio";
+import { uploadBase64Image, getImageUrl } from "@/services/minio";
 
 const generateUniqueFilename = (prefix: string) => `${prefix}_${Date.now()}_${Math.random().toString(36).substring(7)}.jpg`;
 
@@ -24,21 +24,15 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ success: false, error: "No encontrado" }, { status: 404 });
 
       const p = result[0];
-      // Normalize photo URL - remove any existing /api/images/ and rebuild
-      if (p.foto) {
-        // eslint-disable-next-line no-control-regex
-        p.foto = p.foto.replace(/^\/api\/images\//, '');
-        p.foto = p.foto.replace(/\/api\/images\//g, '');
-        if (!p.foto.startsWith('data:')) {
-          p.foto = `/api/images/${p.foto}`;
-        }
+      
+      // Clean and get signed URL from MinIO
+      if (p.foto && !p.foto.startsWith('data:')) {
+        const key = p.foto.replace(/^\/api\/images\//, '').replace(/\/api\/images\//g, '');
+        p.foto = await getImageUrl(key);
       }
-      if (p.fotoAltaCalidad) {
-        p.fotoAltaCalidad = p.fotoAltaCalidad.replace(/^\/api\/images\//, '');
-        p.fotoAltaCalidad = p.fotoAltaCalidad.replace(/\/api\/images\//g, '');
-        if (!p.fotoAltaCalidad.startsWith('data:')) {
-          p.fotoAltaCalidad = `/api/images/${p.fotoAltaCalidad}`;
-        }
+      if (p.fotoAltaCalidad && !p.fotoAltaCalidad.startsWith('data:')) {
+        const key = p.fotoAltaCalidad.replace(/^\/api\/images\//, '').replace(/\/api\/images\//g, '').replace(/\/api\/images\//g, '');
+        p.fotoAltaCalidad = await getImageUrl(key);
       }
 
       return NextResponse.json({ success: true, data: p }, { 
@@ -63,16 +57,13 @@ export async function GET(request: NextRequest) {
       })
       .from(participants);
 
-    const formatted = result.map(p => {
-      if (p.foto) {
-        p.foto = p.foto.replace(/^\/api\/images\//, '');
-        p.foto = p.foto.replace(/\/api\/images\//g, '');
-        if (!p.foto.startsWith('data:')) {
-          p.foto = `/api/images/${p.foto}`;
-        }
+    const formatted = await Promise.all(result.map(async p => {
+      if (p.foto && !p.foto.startsWith('data:')) {
+        const key = p.foto.replace(/^\/api\/images\//, '').replace(/\/api\/images\//g, '');
+        p.foto = await getImageUrl(key);
       }
       return p;
-    });
+    }));
 
     return NextResponse.json({ success: true, data: formatted }, { 
       status: 200,

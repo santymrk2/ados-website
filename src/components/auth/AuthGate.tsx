@@ -129,8 +129,8 @@ export function AuthGate({ children, showNav = true }: AuthGateProps) {
       <PWAInstall />
       <div
         className={cn(
-          "min-h-screen text-dark font-clash pb-24 pt-0",
-          showNav ? "bg-background" : "bg-primary",
+          "min-h-screen text-dark font-clash pt-0",
+          showNav ? "bg-background pb-24" : "bg-primary pb-0",
         )}
       >
         {children}

@@ -147,7 +147,7 @@ function ActivityFormContent({
 
   // Fix white background on overscroll/safe areas
   useEffect(() => {
-    document.body.style.backgroundColor = "var(--primary)";
+    document.body.style.backgroundColor = "var(--background)";
     return () => {
       document.body.style.backgroundColor = "";
     };
@@ -275,8 +275,8 @@ function ActivityFormContent({
   }[saveStatus] ?? { color: "", label: "" };
 
   return (
-    <div className="fixed inset-0 bg-primary z-50 flex flex-col overflow-hidden">
-      <div className="pt-safe sticky top-0 z-10">
+    <div className="fixed inset-0 bg-background z-50 flex flex-col overflow-hidden">
+      <div className="pt-safe sticky top-0 z-10 bg-primary">
         <div className="text-white p-4">
           <div className="flex items-center gap-3 mb-2">
             <Button
@@ -304,7 +304,7 @@ function ActivityFormContent({
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto bg-primary">
+      <div className="flex-1 overflow-y-auto bg-background">
         <div className="w-full">
           <div className="p-4">
             {tab === "info" && (

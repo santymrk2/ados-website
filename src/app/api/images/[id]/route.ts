@@ -12,7 +12,6 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
       return NextResponse.json({ error: "Missing filename" }, { status: 400 });
     }
 
-    // Obtener el objeto directamente desde MinIO via S3 SDK (conexión interna)
     const command = new GetObjectCommand({
       Bucket: minioConfig.bucket,
       Key: id,
@@ -24,24 +23,9 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
 
-    // Convertir el readable stream a un buffer
-    const chunks: Uint8Array[] = [];
-    const reader = result.Body.transformToWebStream().getReader();
-    
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      chunks.push(value);
-    }
-
-    const totalLength = chunks.reduce((acc, chunk) => acc + chunk.length, 0);
-    const buffer = new Uint8Array(totalLength);
-    let offset = 0;
-    for (const chunk of chunks) {
-      buffer.set(chunk, offset);
-      offset += chunk.length;
-    }
-
+    // transformToByteArray es el método más confiable del AWS SDK
+    const bytes = await result.Body.transformToByteArray();
+    const buffer = Buffer.from(bytes);
     const contentType = result.ContentType || "image/jpeg";
 
     return new NextResponse(buffer, {
@@ -51,7 +35,6 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
       },
     });
   } catch (e: any) {
-    // S3 NoSuchKey = image doesn't exist
     if (e?.name === "NoSuchKey") {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
@@ -59,3 +42,4 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }
+

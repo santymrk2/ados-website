@@ -47,7 +47,6 @@ export function useDatabaseInitialization() {
       }, 5000);
     };
 
-    };
 
   }, []);
 

@@ -58,6 +58,14 @@ function ActivityPageView({
   // Validate tab
   const currentTab = VALID_TABS.includes(tab) ? tab : "equipos";
 
+  // Fix white background on overscroll/safe areas
+  useEffect(() => {
+    document.body.style.backgroundColor = "var(--primary)";
+    return () => {
+      document.body.style.backgroundColor = "";
+    };
+  }, []);
+
   const [showScorers, setShowScorers] = useState(true);
 
   const act = useMemo(

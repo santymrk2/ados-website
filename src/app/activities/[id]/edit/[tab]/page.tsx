@@ -144,6 +144,15 @@ function ActivityFormContent({
   const router = useRouter();
   const [act, setAct] = useState({ ...newAct(), ...initial });
   const [tab, setTab] = useState(urlTab);
+
+  // Fix white background on overscroll/safe areas
+  useEffect(() => {
+    document.body.style.backgroundColor = "var(--primary)";
+    return () => {
+      document.body.style.backgroundColor = "";
+    };
+  }, []);
+
   const [saveStatus, setSaveStatus] = useState("saved");
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const actRef = useRef(act);
@@ -295,7 +304,7 @@ function ActivityFormContent({
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto bg-background">
+      <div className="flex-1 overflow-y-auto bg-primary">
         <div className="w-full">
           <div className="p-4">
             {tab === "info" && (

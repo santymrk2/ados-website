@@ -20,7 +20,7 @@ import { actPts } from "@/lib/calc";
 import { Empty } from "@/components/ui/Common";
 import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/button";
-import { formatDate, cn } from "@/lib/utils";
+import { formatDate, cn, getImg } from "@/lib/utils";
 import { ImageExpandModal } from "@/components/ui/ImageExpandModal";
 import { getParticipant } from "@/lib/api-client";
 import type { Activity } from "@/lib/types";

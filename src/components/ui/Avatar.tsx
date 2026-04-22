@@ -2,7 +2,7 @@
 
 import React from "react";
 import * as AvatarPrimitive from "@radix-ui/react-avatar";
-import { cn } from "@/lib/utils";
+import { cn, getImg } from "@/lib/utils";
 
 export function Avatar({ p, size = 36, className = "" }) {
   const initials =

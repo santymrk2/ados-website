@@ -146,13 +146,24 @@ function ActivityFormContent({
   const [tab, setTab] = useState(urlTab);
   const [saveStatus, setSaveStatus] = useState("saved");
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const isFirstRender = useRef(true);
   const actRef = useRef(act);
   actRef.current = act;
-  const skipNextAutoSave = useRef(false);
   const [savingOps, setSavingOps] = useState<Set<string>>(new Set());
 
-  const A = (k: string, v: any) => setAct((a) => ({ ...a, [k]: v }));
+  const A = (k: string, v: any) => {
+    setAct((a) => {
+      const nextAct = { ...a, [k]: v };
+      actRef.current = nextAct;
+      
+      setSaveStatus("saving");
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = setTimeout(() => {
+        doSave(actRef.current);
+      }, nextAct.id ? 3000 : 800);
+      
+      return nextAct;
+    });
+  };
 
   // Handle tab change - update URL like in view mode
   const handleTabChange = (newTab: string) => {
@@ -172,7 +183,6 @@ function ActivityFormContent({
       data.juegoId || data.id || data.participantId || data.pid || "";
     const opKey = `${type}:${opId}`;
 
-    skipNextAutoSave.current = true;
     setSavingOps((prev) => new Set([...prev, opKey]));
     setAct((a) => ({ ...a, [k]: v }));
 
@@ -240,32 +250,7 @@ function ActivityFormContent({
     [db.nextAid, onSave],
   );
 
-  useEffect(() => {
-    if (isFirstRender.current) {
-      isFirstRender.current = false;
-      return;
-    }
 
-    if (skipNextAutoSave.current) {
-      skipNextAutoSave.current = false;
-      setSaveStatus("saved");
-      return;
-    }
-
-    if (!act.id) {
-      setSaveStatus("saving");
-      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-      saveTimerRef.current = setTimeout(() => doSave(actRef.current), 800);
-    } else {
-      setSaveStatus("saving");
-      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-      saveTimerRef.current = setTimeout(() => doSave(actRef.current), 3000);
-    }
-
-    return () => {
-      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-    };
-  }, [act, doSave]);
 
   useEffect(() => {
     if (!initial || !initial.id) return;

@@ -29,9 +29,13 @@ const toast = {
   },
   
   loading: (message: string, props?: { description?: string }) => {
-    sonner.loading(message, {
+    return sonner.loading(message, {
       description: props?.description,
     })
+  },
+  
+  dismiss: (id?: string | number) => {
+    sonner.dismiss(id)
   },
 }
 

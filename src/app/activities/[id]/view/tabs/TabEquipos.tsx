@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { X, Clock, BookOpen, Users } from "lucide-react";
 import type { Activity, ParticipantBasic } from "@/lib/types";
-import { PlayerPointsModal } from "@/components/activities/PlayerPointsModal";
+import { PlayerPointsModal } from "@/app/activities/components/PlayerPointsModal";
 
 interface TeamRankItem {
   team: string;

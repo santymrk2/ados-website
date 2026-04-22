@@ -8,73 +8,49 @@ import { $role } from "@/store/appStore";
 import {
   ChevronLeft,
   Star,
-  X,
-  Phone,
-  Mail,
+  BookOpen,
+  CheckCircle,
   Award,
   Trophy,
   Target,
+  Clock,
 } from "lucide-react";
-import { TEAM_COLORS, getTeamBg } from "@/lib/constants";
+import { TEAM_COLORS, getTeamBg, getEdad } from "@/lib/constants";
 import { actPts } from "@/lib/calc";
 import { Empty } from "@/components/ui/Common";
 import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/button";
 import { formatDate } from "@/lib/utils";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { ImageExpandModal } from "@/components/ui/ImageExpandModal";
 import { getParticipant } from "@/lib/api-client";
-import type { ParticipantBasic, Activity } from "@/lib/types";
+import type { Activity } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
-export default async function Page({
+export default function Page({
   params,
 }: {
-  params: Promise<{ id: string }>;
+  params: { id: string };
 }) {
-  const { id } = await params;
+  const router = useRouter();
   const { db, isLoading: dbLoading } = useApp();
   const role = useStore($role);
-  const router = useRouter();
+  const isAdmin = role === "admin";
+  const { id } = params;
 
-  const participant = useMemo(() => {
+  const initialParticipant = useMemo(() => {
     if (!id || !db?.participants?.length) return null;
     return db.participants.find((p) => p.id === Number(id)) || null;
   }, [id, db?.participants]);
 
-  if (dbLoading || !db || !db.participants) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-text-muted">Cargando...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!participant) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-text-muted">Jugador no encontrado</p>
-          <Button variant="link" onClick={() => router.push("/participants")}>
-            Volver a jugadores
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
-  const { activities, participants, rankings } = db;
-
   const [expandedImage, setExpandedImage] = useState<string | null>(null);
-  const [player, setPlayer] = useState(participant);
+  const [player, setPlayer] = useState(initialParticipant);
   const [isLoadingFull, setIsLoadingFull] = useState(false);
 
   useEffect(() => {
-    if (participant?.id) {
+    if (initialParticipant?.id) {
       setIsLoadingFull(true);
-      getParticipant(participant.id)
+      getParticipant(initialParticipant.id)
         .then((fullData) => {
           setPlayer(fullData);
         })
@@ -82,284 +58,295 @@ export default async function Page({
           setIsLoadingFull(false);
         });
     }
-  }, [participant?.id]);
+  }, [initialParticipant?.id]);
 
   const stats = useMemo(() => {
-    const r = (rankings || []).find((x) => x.id === player.id);
+    if (!player) return { total: 0, gf: 0, gh: 0, gb: 0, acts: 0 };
+    const r = (db?.rankings || []).find((x) => x.id === player.id);
     return r || { total: 0, gf: 0, gh: 0, gb: 0, acts: 0 };
-  }, [player.id, rankings]);
+  }, [player?.id, db?.rankings]);
 
-  const playerActivities = useMemo(
-    () =>
-      activities
-        .filter((a) => a.asistentes.includes(player.id))
-        .sort((a, b) => b.fecha.localeCompare(a.fecha)),
-    [player.id, activities],
-  );
+  const playerActivities = useMemo(() => {
+    if (!player || !db?.activities) return [];
+    return db.activities
+      .filter((a) => a.asistentes.includes(player.id))
+      .sort((a, b) => b.fecha.localeCompare(a.fecha));
+  }, [player?.id, db?.activities]);
 
   const goalsBySport = useMemo(() => {
     const result = { f: 0, h: 0, b: 0 };
-    activities.forEach((a) => {
+    if (!player || !db?.activities) return result;
+    db.activities.forEach((a) => {
       (a.goles || []).forEach((g) => {
         if (g.pid === player.id) {
-          result[g.tipo] = (result[g.tipo] || 0) + g.cant;
+          result[g.tipo as keyof typeof result] = (result[g.tipo as keyof typeof result] || 0) + g.cant;
         }
       });
     });
     return result;
-  }, [player.id, activities]);
+  }, [player?.id, db?.activities]);
 
-  const teamsPlayed = Array.from(
-    new Set(
-      activities.flatMap((a) =>
-        a.asistentes.includes(player.id) && a.equipos?.[player.id]
-          ? [a.equipos[player.id]]
-          : [],
+  const teamsPlayed = useMemo(() => {
+    if (!player || !db?.activities) return [];
+    return Array.from(
+      new Set(
+        db.activities.flatMap((a) =>
+          a.asistentes.includes(player.id) && a.equipos?.[player.id]
+            ? [a.equipos[player.id]]
+            : [],
+        ),
       ),
-    ),
-  );
+    );
+  }, [player?.id, db?.activities]);
+
+  if (dbLoading || !db) {
+    return (
+      <div className="min-h-screen bg-primary flex items-center justify-center">
+        <div className="animate-pulse text-white font-black">Cargando...</div>
+      </div>
+    );
+  }
+
+  if (!player) {
+    return (
+      <div className="min-h-screen bg-white flex flex-col items-center justify-center p-6 text-center">
+        <div className="bg-slate-100 p-6 rounded-full mb-4">
+          <ChevronLeft className="w-12 h-12 text-slate-300" />
+        </div>
+        <h2 className="text-2xl font-black text-slate-900">Jugador no encontrado</h2>
+        <Button variant="link" onClick={() => router.push("/participants")} className="mt-2">
+          Volver a la lista
+        </Button>
+      </div>
+    );
+  }
 
   const handlePhotoClick = () => {
     const imageToShow = player.fotoAltaCalidad || player.foto;
     if (imageToShow) setExpandedImage(imageToShow);
   };
 
-  const getAge = (fechaNacimiento: string | null | undefined) => {
-    if (!fechaNacimiento) return null;
-    const [year, month, day] = fechaNacimiento.split("-").map(Number);
-    const birth = new Date(year, month - 1, day);
-    const today = new Date();
-    let age = today.getFullYear() - birth.getFullYear();
-    const m = today.getMonth() - birth.getMonth();
-    if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) {
-      age--;
-    }
-    return age;
-  };
-
-  const age = getAge(player.fechaNacimiento);
-
   return (
-    <>
-      <div className="min-h-screen bg-background flex flex-col">
-        <div className="bg-primary pt-safe sticky top-0 z-10">
-          <div className="text-white p-4">
-            <div className="flex items-center gap-3">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => router.push("/participants")}
-                className="bg-white/20 text-white"
+    <div className="min-h-screen bg-slate-50 flex flex-col pb-20">
+      {/* Header & Hero */}
+      <div className="bg-primary pt-safe shadow-2xl relative overflow-hidden">
+        {/* Decoración de fondo */}
+        <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl pointer-events-none" />
+        
+        <div className="relative z-10 p-4">
+          <div className="flex items-center gap-3 mb-6">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => router.push("/participants")}
+              className="text-white hover:bg-white/20 rounded-full"
+            >
+              <ChevronLeft className="w-6 h-6" />
+            </Button>
+            <div className="flex-1">
+              <div className="font-black text-white/70 uppercase tracking-widest text-[10px]">Perfil de Jugador</div>
+            </div>
+            {isAdmin && (
+              <Button 
+                onClick={() => router.push(`/participants/${player.id}/edit`)} 
+                variant="secondary" 
+                size="sm"
+                className="rounded-full px-5 font-black h-8"
               >
-                <ChevronLeft className="w-5 h-5" />
+                Editar
               </Button>
-              <div className="flex-1">
-                <div className="font-black text-lg">
-                  {player.nombre} {player.apellido}
+            )}
+          </div>
+
+          <div className="flex items-center gap-5 mb-4">
+            <div
+              onClick={handlePhotoClick}
+              className={cn(
+                "relative",
+                player.foto ? "cursor-pointer hover:scale-105 transition-transform" : ""
+              )}
+            >
+              <div className="border-4 border-white/20 rounded-full p-1">
+                <Avatar p={player} size={80} className="w-20 h-20 shadow-xl" />
+              </div>
+              {isLoadingFull && (
+                <div className="absolute inset-0 bg-black/20 rounded-full flex items-center justify-center">
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent animate-spin rounded-full" />
                 </div>
+              )}
+            </div>
+            
+            <div className="flex-1">
+              <h1 className="font-black text-3xl text-white leading-tight">
+                {player.nombre} {player.apellido}
+              </h1>
+              <div className="flex items-center gap-3 mt-1">
+                <span className="text-white/80 font-bold text-sm bg-white/10 px-2 py-0.5 rounded-full border border-white/10">
+                  {getEdad(player.fechaNacimiento)} años
+                </span>
                 {player.apodo && (
-                  <div className="text-xs opacity-70">"{player.apodo}"</div>
+                  <span className="text-white/60 font-medium italic text-sm">
+                    "{player.apodo}"
+                  </span>
                 )}
               </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="p-4 flex flex-col gap-4">
-          <div className="bg-white rounded-xl p-4 border border-surface-dark flex flex-col items-center">
-            <div className="cursor-pointer" onClick={handlePhotoClick}>
-              {isLoadingFull ? (
-                <div className="w-24 h-24 bg-surface-dark rounded-full animate-pulse" />
-              ) : (
-                <Avatar p={player} size={96} className="w-24 h-24" />
-              )}
-            </div>
-            <div className="text-center mt-3">
-              <div className="font-black text-xl">
-                {player.nombre} {player.apellido}
-              </div>
-              {player.apodo && (
-                <div className="text-sm font-medium text-text-muted">
-                  "{player.apodo}"
-                </div>
-              )}
-              <div className="flex items-center justify-center gap-2 mt-2">
-                <span className="text-sm text-text-muted">
-                  {age !== null ? `${age} años` : "—"}
-                </span>
-                <span className="text-xs text-text-muted">·</span>
-                <span className="text-sm font-bold text-primary">
-                  {player.sexo === "M"
-                    ? "Varón"
-                    : player.sexo === "F"
-                      ? "Mujer"
-                      : "Otro"}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl p-4 border border-surface-dark">
-            <div className="font-bold text-sm mb-3">ESTADÍSTICAS</div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="bg-surface-dark rounded-lg p-3 text-center">
-                <Target className="w-5 h-5 mx-auto text-primary" />
-                <div className="font-black text-xl text-primary">
-                  {stats.total}
-                </div>
-                <div className="text-xs font-bold text-text-muted">PUNTOS</div>
-              </div>
-              <div className="bg-surface-dark rounded-lg p-3 text-center">
-                <Star className="w-5 h-5 mx-auto text-primary" />
-                <div className="font-black text-xl text-primary">
-                  {player.acts}
-                </div>
-                <div className="text-xs font-bold text-text-muted">
-                  ACTIVIDADES
-                </div>
-              </div>
-              <div className="bg-surface-dark rounded-lg p-3 text-center">
-                <Trophy className="w-5 h-5 mx-auto text-cyan-500" />
-                <div className="font-black text-xl text-cyan-500">
-                  {stats.gf + stats.gh + stats.gb}
-                </div>
-                <div className="text-xs font-bold text-text-muted">GOLES</div>
-              </div>
-              <div className="bg-surface-dark rounded-lg p-3 text-center">
-                <Award className="w-5 h-5 mx-auto text-primary" />
-                <div className="font-black text-xl text-primary">
-                  {playerActivities.length}
-                </div>
-                <div className="text-xs font-bold text-text-muted">
-                  ASISTENCIAS
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl p-4 border border-surface-dark">
-            <div className="font-bold text-sm mb-3">GOLES POR DEPORTE</div>
-            <div className="grid grid-cols-3 gap-3 text-center">
-              <div className="bg-cyan-50 rounded-lg p-3">
-                <div className="text-2xl font-black text-cyan-600">
-                  {goalsBySport.f}
-                </div>
-                <div className="text-xs font-bold text-cyan-600">FÚTBOL</div>
-              </div>
-              <div className="bg-orange-50 rounded-lg p-3">
-                <div className="text-2xl font-black text-orange-600">
-                  {goalsBySport.h}
-                </div>
-                <div className="text-xs font-bold text-orange-600">
-                  HANDBALL
-                </div>
-              </div>
-              <div className="bg-purple-50 rounded-lg p-3">
-                <div className="text-2xl font-black text-purple-600">
-                  {goalsBySport.b}
-                </div>
-                <div className="text-xs font-bold text-purple-600">BÁSQUET</div>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl p-4 border border-surface-dark">
-            <div className="font-bold text-sm mb-3">EQUIPOS</div>
-            {teamsPlayed.length === 0 ? (
-              <Empty text="Sin equipos" />
-            ) : (
-              <div className="flex gap-2 flex-wrap">
+              <div className="flex gap-1.5 mt-3 flex-wrap">
                 {teamsPlayed.map((t) => (
                   <span
                     key={t}
-                    className="text-xs font-bold px-2 py-1 rounded"
+                    className="text-[10px] font-black px-2 py-0.5 rounded-md uppercase"
                     style={{
-                      backgroundColor: getTeamBg(t),
-                      color: TEAM_COLORS[t],
+                      backgroundColor: TEAM_COLORS[t] + '30',
+                      color: 'white',
+                      border: `1px solid ${TEAM_COLORS[t]}50`
                     }}
                   >
                     {t}
                   </span>
                 ))}
               </div>
-            )}
-          </div>
-
-          {(player.telefono || player.email) && (
-            <div className="bg-white rounded-xl p-4 border border-surface-dark">
-              <div className="font-bold text-sm mb-3">CONTACTO</div>
-              <div className="flex flex-col gap-2 text-sm">
-                {player.telefono && (
-                  <div className="flex items-center gap-2">
-                    <Phone className="w-4 h-4 text-text-muted" />
-                    <span>{player.telefono}</span>
-                  </div>
-                )}
-                {player.email && (
-                  <div className="flex items-center gap-2">
-                    <Mail className="w-4 h-4 text-text-muted" />
-                    <span>{player.email}</span>
-                  </div>
-                )}
-              </div>
             </div>
-          )}
+          </div>
+        </div>
+      </div>
 
-          <div className="bg-white rounded-xl p-4 border border-surface-dark">
-            <div className="font-bold text-sm mb-3">ÚLTIMAS ACTIVIDADES</div>
-            {playerActivities.length === 0 ? (
-              <Empty text="Sin actividades" />
-            ) : (
-              <div className="flex flex-col gap-2">
-                {playerActivities.slice(0, 5).map((a) => (
-                  <div
-                    key={a.id}
-                    className="flex items-center justify-between p-2 bg-surface-dark rounded-lg"
-                  >
-                    <div>
-                      <div className="font-bold text-sm">
-                        {a.titulo || formatDate(a.fecha)}
-                      </div>
-                      <div className="text-xs text-text-muted">
-                        {formatDate(a.fecha)}
-                      </div>
-                    </div>
-                    <div className="font-black text-primary">
-                      {actPts(player.id, a, participants)}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+      <div className="px-4 -mt-6 relative z-20 space-y-4">
+        {/* Stats Principales */}
+        <div className="grid grid-cols-2 gap-3">
+          <div className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100 flex flex-col items-center">
+            <div className="bg-primary/10 p-2 rounded-2xl mb-2">
+              <Target className="w-6 h-6 text-primary" />
+            </div>
+            <div className="text-3xl font-black text-slate-900 tabular-nums">
+              {stats.total}
+            </div>
+            <div className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">
+              PUNTOS TOTALES
+            </div>
+          </div>
+          <div className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100 flex flex-col items-center">
+            <div className="bg-cyan-100 p-2 rounded-2xl mb-2">
+              <Award className="w-6 h-6 text-cyan-600" />
+            </div>
+            <div className="text-3xl font-black text-slate-900 tabular-nums">
+              {stats.acts}
+            </div>
+            <div className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">
+              ASISTENCIAS
+            </div>
           </div>
         </div>
 
-        {expandedImage && (
-          <Dialog
-            open={!!expandedImage}
-            onOpenChange={() => setExpandedImage(null)}
-          >
-            <DialogContent className="max-w-2xl bg-transparent border-0 p-0">
-              <DialogTitle className="sr-only">Foto</DialogTitle>
-              <div className="relative">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setExpandedImage(null)}
-                  className="absolute top-2 right-2 bg-white/80 rounded-full z-10"
-                >
-                  <X className="w-5 h-5" />
-                </Button>
-                <img
-                  src={expandedImage}
-                  alt="Foto"
-                  className="w-full h-auto rounded-xl"
-                />
+        {/* Goles Breakdown */}
+        <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100">
+          <div className="flex items-center justify-between mb-4">
+            <h4 className="font-black text-xs uppercase tracking-widest text-slate-400">Goles por deporte</h4>
+            <Trophy className="w-4 h-4 text-slate-300" />
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            <div className="text-center p-3 bg-slate-50 rounded-2xl border border-slate-100">
+              <div className="font-black text-2xl text-slate-900">{goalsBySport.f}</div>
+              <div className="text-[10px] font-bold text-slate-400">Fútbol</div>
+            </div>
+            <div className="text-center p-3 bg-slate-50 rounded-2xl border border-slate-100">
+              <div className="font-black text-2xl text-slate-900">{goalsBySport.h}</div>
+              <div className="text-[10px] font-bold text-slate-400">Handball</div>
+            </div>
+            <div className="text-center p-3 bg-slate-50 rounded-2xl border border-slate-100">
+              <div className="font-black text-2xl text-slate-900">{goalsBySport.b}</div>
+              <div className="text-[10px] font-bold text-slate-400">Básquet</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Historial de Actividades */}
+        <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 overflow-hidden">
+          <div className="flex items-center justify-between mb-4">
+            <h4 className="font-black text-xs uppercase tracking-widest text-slate-400">Historial Reciente</h4>
+            <Clock className="w-4 h-4 text-slate-300" />
+          </div>
+          
+          {playerActivities.length === 0 ? (
+            <div className="py-8 text-center bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+              <div className="text-slate-400 font-bold text-sm">Sin actividades registradas</div>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {playerActivities.slice(0, 10).map((a) => {
+                const pts = actPts(player.id, a, db.participants);
+                const team = a.equipos?.[player.id];
+                return (
+                  <div
+                    key={a.id}
+                    className="flex items-center gap-3 p-3 bg-slate-50 hover:bg-slate-100 transition-colors rounded-2xl border border-slate-100"
+                  >
+                    <div className="flex flex-col">
+                      <span className="text-[10px] font-black text-slate-400 leading-none mb-1">
+                        {formatDate(a.fecha)}
+                      </span>
+                      <span className="font-bold text-sm text-slate-800 line-clamp-1">
+                        {a.titulo || "Actividad"}
+                      </span>
+                    </div>
+                    <div className="flex-1" />
+                    {team && (
+                      <span
+                        className="text-[10px] font-black px-2 py-0.5 rounded bg-white shadow-sm"
+                        style={{ color: TEAM_COLORS[team] }}
+                      >
+                        {team}
+                      </span>
+                    )}
+                    <div className="font-black text-primary text-sm whitespace-nowrap bg-primary/10 px-3 py-1 rounded-full">
+                      {pts} pts
+                    </div>
+                  </div>
+                );
+              })}
+              {playerActivities.length > 10 && (
+                <div className="text-center text-[10px] font-black text-slate-400 pt-2 uppercase tracking-widest">
+                  +{playerActivities.length - 10} actividades más
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Badges / Achievements Placeholder */}
+        <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100">
+          <h4 className="font-black text-xs uppercase tracking-widest text-slate-400 mb-4">Atributos</h4>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="flex items-center gap-3">
+              <div className={cn("p-2 rounded-xl", stats.acts > 5 ? "bg-primary/10 text-primary" : "bg-slate-100 text-slate-300")}>
+                <Star className="w-5 h-5" />
               </div>
-            </DialogContent>
-          </Dialog>
-        )}
+              <div className="flex flex-col">
+                <span className="text-xs font-black text-slate-700">Fidelidad</span>
+                <span className="text-[10px] font-medium text-slate-400">{stats.acts > 5 ? "Frecuente" : "Iniciado"}</span>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className={cn("p-2 rounded-xl", goalsBySport.f + goalsBySport.h + goalsBySport.b > 5 ? "bg-primary/10 text-primary" : "bg-slate-100 text-slate-300")}>
+                <CheckCircle className="w-5 h-5" />
+              </div>
+              <div className="flex flex-col">
+                <span className="text-xs font-black text-slate-700">Goleador</span>
+                <span className="text-[10px] font-medium text-slate-400">{goalsBySport.f + goalsBySport.h + goalsBySport.b > 5 ? "Efectivo" : "En progreso"}</span>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
-    </>
+
+      <ImageExpandModal
+        image={expandedImage}
+        playerName={`${player.nombre} ${player.apellido}`}
+        onClose={() => setExpandedImage(null)}
+      />
+    </div>
   );
+}
+
+function cn(...classes: any[]) {
+  return classes.filter(Boolean).join(" ");
 }

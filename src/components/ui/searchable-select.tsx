@@ -8,8 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   Popover,
-  PopoverAnchor,
   PopoverContent,
+  PopoverTrigger,
 } from "@/components/ui/popover";
 import {
   Command,
@@ -66,16 +66,24 @@ export function SearchableSelect({
     [onValueChange]
   );
 
-  const handleOpenChange = React.useCallback((isOpen: boolean) => {
-    setOpen(isOpen);
-    if (!isOpen) {
-      setSearch("");
-    }
+  const handleOpenChange = React.useCallback(
+    (isOpen: boolean) => {
+      setOpen(isOpen);
+      if (!isOpen) {
+        setSearch("");
+      }
+    },
+    []
+  );
+
+  const handleClose = React.useCallback(() => {
+    setOpen(false);
+    setSearch("");
   }, []);
 
   return (
     <Popover open={open} onOpenChange={handleOpenChange}>
-      <PopoverAnchor asChild>
+      <PopoverTrigger asChild>
         <Button
           type="button"
           variant="outline"
@@ -87,6 +95,7 @@ export function SearchableSelect({
             className
           )}
           disabled={disabled}
+          onClick={() => !disabled && setOpen(true)}
         >
           {selectedItem ? selectedItem.label : placeholder}
           {selectedItem && !disabled ? (
@@ -101,12 +110,19 @@ export function SearchableSelect({
             <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           )}
         </Button>
-      </PopoverAnchor>
+      </PopoverTrigger>
       <PopoverContent
         className="w-[--radix-popover-trigger-width] p-0"
         side="bottom"
         align="start"
         sideOffset={4}
+        onInteractOutside={(e) => {
+          // Don't close when clicking inside the popover content
+          const target = e.target as HTMLElement;
+          if (target.closest('[data-slot="popover-content"]')) {
+            e.preventDefault();
+          }
+        }}
       >
         <Command shouldFilter={false}>
           <div className="p-1">
@@ -116,9 +132,10 @@ export function SearchableSelect({
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Buscar..."
               className="h-8"
+              autoFocus
             />
           </div>
-          <CommandList>
+          <CommandList className="max-h-60 overflow-auto">
             {filteredItems.length === 0 ? (
               <CommandEmpty>{emptyMessage}</CommandEmpty>
             ) : (

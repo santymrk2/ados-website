@@ -2,7 +2,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useMemo, useState, use } from "react";
-import { useRouter, useSearchParams, useParams } from "next/navigation";
+import { useRouter, useSearchParams, useParams, usePathname } from "next/navigation";
 import {
   LayoutGrid,
   Award,
@@ -68,8 +68,16 @@ export default function ViewLayout({
     params.then(setResolvedParams);
   }, [params]);
 
-  // Get tab from URL (pathname or searchParams)
-  const currentTab = (paramsAll?.tab as string) || searchParams.get("tab") || "equipos";
+  const pathname = usePathname();
+  
+  // Get tab from URL pathname
+  const currentTab = useMemo(() => {
+    const parts = pathname.split("/").filter(Boolean);
+    const lastPart = parts[parts.length - 1];
+    if (lastPart === "view" || !lastPart) return "equipos";
+    return lastPart;
+  }, [pathname]);
+
   const id = resolvedParams?.id;
 
   // Fix white background
@@ -134,9 +142,7 @@ export default function ViewLayout({
     href: `/activities/${id}/view/${tab.value}`,
   }));
 
-  const handleTabChange = (href: string) => {
-    router.push(href);
-  };
+
 
   if (isLoading || !db || !db.activities || !resolvedParams) {
     return (
@@ -200,7 +206,7 @@ export default function ViewLayout({
           {children}
         </div>
 
-        <FloatingNav value={currentTab} onValueChange={handleTabChange} items={TABS} />
+        <FloatingNav value={currentTab} items={TABS} />
       </div>
     </ViewContext.Provider>
   );

@@ -37,20 +37,23 @@ export default function EquiposPage() {
   );
 
   const setTeam = async (pid: number, team: string) => {
-    const eq = { ...(act.equipos || {}) };
-    let finalTeam: string | null = team;
-    if (eq[pid] === team) {
-      delete eq[pid];
-      finalTeam = null;
-    } else {
-      eq[pid] = team;
-    }
+    const updateFn = (prev: any) => {
+      const next = { ...(prev || {}) };
+      if (next[pid] === team) {
+        delete next[pid];
+      } else {
+        next[pid] = team;
+      }
+      return next;
+    };
 
     // Actualizar local primero (optimistic update)
-    setLocal("equipos", eq);
+    setLocal("equipos", updateFn);
 
     try {
-      await syncWithServer("team", { participantId: pid, team: finalTeam }, "equipos", eq);
+      const currentTeam = act.equipos?.[pid];
+      const finalTeam = currentTeam === team ? null : team;
+      await syncWithServer("team", { participantId: pid, team: finalTeam }, "equipos", updateFn);
       toast.success("Equipo actualizado");
     } catch (e) {
       const err = e as Error;
@@ -59,12 +62,14 @@ export default function EquiposPage() {
   };
 
   const autoBalance = (resetAll = false) => {
-    const eq = resetAll ? {} : { ...(act.equipos || {}) };
-    const counts: Record<string, { M: number; F: number; total: number }> = {};
-    activeTeams.forEach((t) => {
-      counts[t] = { M: 0, F: 0, total: 0 };
-    });
-    if (!resetAll) {
+    setLocal("equipos", (prev: any) => {
+      const eq = resetAll ? {} : { ...(prev || {}) };
+      const counts: Record<string, { M: number; F: number; total: number }> = {};
+      activeTeams.forEach((t) => {
+        counts[t] = { M: 0, F: 0, total: 0 };
+      });
+      
+      // Re-calculate counts from current state to be accurate
       present.forEach((p) => {
         const t = eq[p.id];
         if (t && activeTeams.includes(t)) {
@@ -72,23 +77,23 @@ export default function EquiposPage() {
           counts[t].total++;
         }
       });
-    }
-    const unassigned = present.filter((p) => !eq[p.id]);
-    const masc = unassigned.filter((p) => p.sexo === "M");
-    const fem = unassigned.filter((p) => p.sexo === "F");
 
-    [...masc, ...fem].forEach((p: ParticipantBasic) => {
-      const best = [...activeTeams].sort(
-        (a, b) =>
-          counts[a][p.sexo] - counts[b][p.sexo] ||
-          counts[a].total - counts[b].total,
-      )[0];
-      eq[p.id] = best;
-      counts[best][p.sexo]++;
-      counts[best].total++;
+      const unassigned = present.filter((p) => !eq[p.id]);
+      const masc = unassigned.filter((p) => p.sexo === "M");
+      const fem = unassigned.filter((p) => p.sexo === "F");
+
+      [...masc, ...fem].forEach((p: ParticipantBasic) => {
+        const best = [...activeTeams].sort(
+          (a, b) =>
+            counts[a][p.sexo] - counts[b][p.sexo] ||
+            counts[a].total - counts[b].total,
+        )[0];
+        eq[p.id] = best;
+        counts[best][p.sexo]++;
+        counts[best].total++;
+      });
+      return eq;
     });
-    
-    setLocal("equipos", eq);
     toast.success(resetAll ? "Equipos redistribuidos" : "Equipos completados");
   };
 

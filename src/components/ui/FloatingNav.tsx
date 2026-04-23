@@ -21,10 +21,9 @@ interface FloatingNavProps {
 }
 
 // Dimensiones fijas para cada estado
-const COLLAPSED_WIDTH = 90;
-const COLLAPSED_HEIGHT = 80;
+const COLLAPSED_WIDTH = 100;
+const COLLAPSED_HEIGHT = 56;
 const EXPANDED_WIDTH = 320;
-const EXPANDED_HEIGHT = 220;
 
 export function FloatingNav({
   value,
@@ -34,6 +33,9 @@ export function FloatingNav({
 }: FloatingNavProps) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  const rows = Math.ceil(items.length / 3);
+  const expandedHeight = rows * 72 + 16; // 72px per row + 16px vertical padding
 
   const currentItem = items.find((item) => item.value === value) || items[0];
   const CurrentIcon = currentItem.icon;
@@ -82,7 +84,7 @@ export function FloatingNav({
         )}
         animate={{
           width: isOpen ? EXPANDED_WIDTH : COLLAPSED_WIDTH,
-          height: isOpen ? EXPANDED_HEIGHT : COLLAPSED_HEIGHT,
+          height: isOpen ? expandedHeight : COLLAPSED_HEIGHT,
         }}
         transition={{
           width: { duration: 0.2, ease: "easeOut" },
@@ -109,7 +111,7 @@ export function FloatingNav({
                 },
               }}
             >
-              <div className="flex flex-col items-center justify-center gap-1 p-2">
+              <div className="flex flex-col items-center justify-center gap-0.5 p-1.5">
                 <CurrentIcon className="size-5 text-foreground" />
                 <span className="text-[10px] text-center leading-tight">
                   {currentItem.label}
@@ -141,7 +143,7 @@ export function FloatingNav({
                       <button
                         key={item.value}
                         disabled
-                        className="flex flex-col items-center justify-center gap-1 rounded-2xl border border-border p-3 text-sm font-medium text-muted-foreground/50 cursor-not-allowed"
+                        className="flex flex-col items-center justify-center gap-1 rounded-2xl border border-border py-2 px-3 text-sm font-medium text-muted-foreground/50 cursor-not-allowed"
                       >
                         <Icon className="size-5" />
                         <span className="text-[10px] text-center leading-tight">
@@ -164,7 +166,7 @@ export function FloatingNav({
                           handleSelect(item);
                         }}
                         className={cn(
-                          "flex flex-col items-center justify-center gap-1 rounded-2xl border border-border p-3 text-sm font-medium transition-colors",
+                          "flex flex-col items-center justify-center gap-1 rounded-2xl border border-border py-2 px-3 text-sm font-medium transition-colors",
                           isActive
                             ? "bg-primary text-white border-primary"
                             : "hover:bg-muted",
@@ -187,7 +189,7 @@ export function FloatingNav({
                         setIsOpen(false);
                       }}
                       className={cn(
-                        "flex flex-col items-center justify-center gap-1 rounded-2xl border border-border p-3 text-sm font-medium transition-colors",
+                        "flex flex-col items-center justify-center gap-1 rounded-2xl border border-border py-2 px-3 text-sm font-medium transition-colors",
                         isActive
                           ? "bg-primary text-white border-primary"
                           : "hover:bg-muted",

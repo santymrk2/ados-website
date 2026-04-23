@@ -35,8 +35,8 @@ import type { Activity, Participant } from "@/lib/types";
 type DbType = any;
 
 // Tipos exports para los tabs
-export type LocalSetter = (key: string, value: unknown, skipSave?: boolean) => void;
-export type ServerSync = (operation: string, data: unknown, field: string, newValue: unknown) => Promise<unknown>;
+export type LocalSetter = (key: string, value: unknown | ((prev: any) => unknown), skipSave?: boolean) => void;
+export type ServerSync = (operation: string, data: unknown, field: string, newValue: unknown | ((prev: any) => unknown)) => Promise<unknown>;
 export type SaveStatus = "saved" | "saving" | "error";
 
 // Constantes
@@ -70,7 +70,7 @@ export function useEditContext() {
   if (!ctx) {
     throw new Error("useEditContext debe usarse dentro de EditLayout");
   }
-return ctx;
+  return ctx;
 }
 
 interface EditLayoutProps {
@@ -83,10 +83,10 @@ export default function EditLayout({ children, mode = "edit" }: EditLayoutProps)
   const searchParams = useSearchParams();
   const params = useParams();
   const pathname = usePathname();
-  
+
   const [resolvedId, setResolvedId] = useState<string | null>(null);
   const [currentTab, setCurrentTab] = useState<string>("");
-  
+
   // Resolve tab from URL pathname (more reliable than params)
   useEffect(() => {
     const pathParts = pathname.split("/").filter(Boolean);
@@ -96,13 +96,13 @@ export default function EditLayout({ children, mode = "edit" }: EditLayoutProps)
     const tabValue = editIndex >= 0 && editIndex + 1 < pathParts.length ? pathParts[editIndex + 1] : "";
     setCurrentTab(tabValue);
   }, [pathname]);
-  
+
   // Also resolve id from params
   useEffect(() => {
     const id = params?.id as string | undefined;
     if (id) setResolvedId(id);
   }, [params?.id]);
-  
+
   const { db, saveActivity, quickUpdate, saveParticipant, isLoading: dbLoading } = useApp();
   const role = useStore($role);
   const isAdmin = role === "admin";
@@ -112,7 +112,7 @@ export default function EditLayout({ children, mode = "edit" }: EditLayoutProps)
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("saved");
   const [pendingOps, setPendingOps] = useState<Set<string>>(new Set());
   const [locked, setLocked] = useState<boolean>(false);
-  
+
   const activityRef = useRef(activity);
   activityRef.current = activity;
 
@@ -143,27 +143,36 @@ export default function EditLayout({ children, mode = "edit" }: EditLayoutProps)
   // === FUNCIONES COMPARTIDAS ===
 
   // Actualiza solo estado local (sin llamada al servidor)
-  const setLocal: LocalSetter = useCallback((key: string, value: unknown, skipSave = false) => {
-    setActivity((prev) => ({ ...prev, [key]: value }));
+  const setLocal: LocalSetter = useCallback((key: string, value: unknown | ((prev: any) => unknown), skipSave = false) => {
+    setActivity((prev) => {
+      const nextValue = typeof value === "function" ? value(prev[key as keyof Activity]) : value;
+      return { ...prev, [key]: nextValue };
+    });
     if (!skipSave) {
       setSaveStatus("saving");
     }
     if (key === "locked") {
-      setLocked(value as boolean);
+      setLocked(typeof value === "function" ? value(locked) as boolean : value as boolean);
     }
-  }, []);
+  }, [locked]);
 
   // Sincroniza cambio al servidor (PATCH atómico)
-  const syncWithServer: ServerSync = useCallback(async (operationType: string, data: unknown, field: string, newValue: unknown) => {
+  const syncWithServer: ServerSync = useCallback(async (operationType: string, data: unknown, field: string, newValue: unknown | ((prev: any) => unknown)) => {
     const opId = (data as any)?.juegoId || (data as any)?.id || (data as any)?.participantId || (data as any)?.pid || "";
     const opKey = `${operationType}:${opId}`;
 
     setPendingOps((prev) => new Set([...prev, opKey]));
-    setActivity((prev) => ({ ...prev, [field]: newValue }));
     
+    // Resolve newValue using functional update if needed
+    let resolvedValue: unknown;
+    setActivity((prev) => {
+      resolvedValue = typeof newValue === "function" ? newValue(prev[field as keyof Activity]) : newValue;
+      return { ...prev, [field]: resolvedValue };
+    });
+
     // Also update locked state if field is "locked"
     if (field === "locked") {
-      setLocked(newValue as boolean);
+      setLocked(typeof newValue === "function" ? newValue(locked) as boolean : newValue as boolean);
     }
 
     // Usar activityRef para evitar closure stale
@@ -171,6 +180,8 @@ export default function EditLayout({ children, mode = "edit" }: EditLayoutProps)
     if (currentActivity.id) {
       try {
         const skipRefresh = ["game_pos", "game_add", "game_delete"].includes(operationType);
+        // We pass the resolved value to quickUpdate if needed, but quickUpdate doesn't seem to use it?
+        // Actually quickUpdate only takes operationType and data.
         const result = await quickUpdate(currentActivity.id, operationType, data, skipRefresh);
         toast.success("Cambios sincronizados");
         return result;
@@ -192,7 +203,7 @@ export default function EditLayout({ children, mode = "edit" }: EditLayoutProps)
         return next;
       });
     }
-  }, [quickUpdate]);
+  }, [quickUpdate, locked]);
 
   // Provider value con los nuevos nombres
   const contextValue = {
@@ -262,7 +273,7 @@ export default function EditLayout({ children, mode = "edit" }: EditLayoutProps)
 
   const handleClose = () => {
     if (mode === "edit" && activity.id) {
-      router.push(`/activities/${activity.id}/view/info`);
+      router.push(`/activities/${activity.id}/view/equipos`);
     } else {
       router.push("/activities");
     }
@@ -325,7 +336,7 @@ export default function EditLayout({ children, mode = "edit" }: EditLayoutProps)
                 {activity.cantEquipos && ` • ${activity.cantEquipos} equipos`}
               </div>
             </div>
-<Button
+            <Button
               onClick={doSave}
               variant="ghost"
               size="sm"
@@ -347,8 +358,8 @@ export default function EditLayout({ children, mode = "edit" }: EditLayoutProps)
       <FloatingNav
         value={currentTab}
         items={TABS.map((tab) => {
-          const base = mode === "edit" && resolvedId 
-            ? `/activities/${resolvedId}/edit` 
+          const base = mode === "edit" && resolvedId
+            ? `/activities/${resolvedId}/edit`
             : `/activities/new`;
           return {
             value: tab.value,
@@ -359,7 +370,7 @@ export default function EditLayout({ children, mode = "edit" }: EditLayoutProps)
         })}
       />
 
-{/* Contenido del tab */}
+      {/* Contenido del tab */}
       <div className="flex-1 overflow-y-auto p-4 pb-20">
         {/* Proveer contexto a los children */}
         <EditContext.Provider value={contextValue}>

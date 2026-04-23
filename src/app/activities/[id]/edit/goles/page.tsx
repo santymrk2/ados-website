@@ -208,20 +208,19 @@ export default function GolesPage() {
 
   const add = () => {
     const ng = { id: generateTempId(), pid: null, tipo: "f", cant: 1 };
-    setLocal("goles", [...(act.goles || []), ng], true);
+    setLocal("goles", (prev: any[]) => [...(prev || []), ng], true);
     toast.success("Fila de gol agregada");
   };
 
   const del = async (id: number) => {
-    const currentList = (act.goles || []) as Gol[];
-    const newList = currentList.filter((g) => g.id !== id);
+    const updateFn = (prev: any[]) => (prev || []).filter((g) => g.id !== id);
     if (id < 0) {
-      setLocal("goles", newList, true);
+      setLocal("goles", updateFn, true);
       return;
     }
 
     try {
-      await syncWithServer("goal_remove", { id }, "goles", newList);
+      await syncWithServer("goal_remove", { id }, "goles", updateFn);
       toast.success("Gol eliminado");
     } catch (e) {
       const err = e as Error;
@@ -230,16 +229,15 @@ export default function GolesPage() {
   };
 
   const upd = async (id: number, k: string, v: unknown) => {
-    const currentList = (act.goles || []) as Gol[];
-    const newList = currentList.map((g) => (g.id === id ? { ...g, [k]: v } : g));
+    const updateFn = (prev: any[]) => (prev || []).map((g) => (g.id === id ? { ...g, [k]: v } : g));
     
     // Optimistic update
-    setLocal("goles", newList, true);
+    setLocal("goles", updateFn, true);
 
     if (id < 0) return;
 
     try {
-      await syncWithServer("goal_update", { id, [k]: v }, "goles", newList);
+      await syncWithServer("goal_update", { id, [k]: v }, "goles", updateFn);
     } catch (e) {
       const err = e as Error;
       toast.error("Error al actualizar: " + err.message);
@@ -248,13 +246,12 @@ export default function GolesPage() {
 
   const createOnServer = async (tempId: number, goal: Gol) => {
     if (!goal.pid) return;
-    const currentList = (act.goles || []) as Gol[];
-    const newList = currentList.map(g => g.id === tempId ? goal : g);
+    const updateFn = (prev: any[]) => (prev || []).map(g => g.id === tempId ? goal : g);
     
     try {
-      const result = await syncWithServer("goal_add", { pid: goal.pid, tipo: goal.tipo, cant: goal.cant }, "goles", newList);
+      const result = await syncWithServer("goal_add", { pid: goal.pid, tipo: goal.tipo, cant: goal.cant }, "goles", updateFn);
       const realId = (result as { id: number }).id;
-      setLocal("goles", newList.map(g => g.id === tempId ? { ...g, id: realId } : g), true);
+      setLocal("goles", (prev: any[]) => (prev || []).map(g => g.id === tempId ? { ...g, id: realId } : g), true);
     } catch (e) {
       const err = e as Error;
       toast.error("Error al guardar gol: " + err.message);

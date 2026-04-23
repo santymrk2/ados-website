@@ -112,13 +112,13 @@ function NewPlayerModal({ act, db, onClose, onSave, setLocal, syncWithServer }: 
       const newId = await onSave(participantData, true, invitadorId);
       const playerId = newId || p.id;
 
-const newAsistentes = Array.from(new Set([...act.asistentes, playerId]));
-      setLocal("asistentes", newAsistentes);
+      const updateAsistentes = (prev: any[]) => Array.from(new Set([...(prev || []), playerId]));
+      setLocal("asistentes", updateAsistentes);
       syncWithServer(
         "attendance",
         { participantId: playerId, value: true },
         "asistentes",
-        newAsistentes,
+        updateAsistentes,
       );
 
       if (newPlayer.invitadorId && act.id) {
@@ -126,11 +126,11 @@ const newAsistentes = Array.from(new Set([...act.asistentes, playerId]));
           "invitacion_add",
           { invitador: Number(newPlayer.invitadorId), invitadoId: playerId },
           "invitaciones",
-          [...(act.invitaciones || []), { id: -Date.now(), invitador: newPlayer.invitadorId, invitadoId: playerId }],
+          (prev: any[]) => [...(prev || []), { id: -Date.now(), invitador: newPlayer.invitadorId, invitadoId: playerId }],
         );
       } else {
-        setLocal("invitaciones", [
-          ...(act.invitaciones || []),
+        setLocal("invitaciones", (prev: any[]) => [
+          ...(prev || []),
           {
             id: generateTempId(),
             invitador: newPlayer.invitadorId,
@@ -294,32 +294,49 @@ export default function AsistenciaPage() {
     const newValue = isIncluded ? c.filter((x) => x !== id) : [...c, id];
 
     if (key === "asistentes") {
-      setLocal("asistentes", newValue);
-      syncWithServer("attendance", { participantId: id, value: !isIncluded }, "asistentes", newValue);
+      const updateFn = (prev: any[]) => {
+        const c = prev || [];
+        return c.includes(id) ? c.filter((x) => x !== id) : [...c, id];
+      };
+      setLocal("asistentes", updateFn);
+      syncWithServer("attendance", { participantId: id, value: !isIncluded }, "asistentes", updateFn);
+      
       if (isIncluded) {
-        setLocal("socials", (act.socials || []).filter((x) => x !== id));
-        setLocal("puntuales", (act.puntuales || []).filter((x) => x !== id));
-        setLocal("biblias", (act.biblias || []).filter((x) => x !== id));
-        const newEq = { ...act.equipos };
-        delete newEq[id];
-        setLocal("equipos", newEq);
+        setLocal("socials", (prev: any[]) => (prev || []).filter((x) => x !== id));
+        setLocal("puntuales", (prev: any[]) => (prev || []).filter((x) => x !== id));
+        setLocal("biblias", (prev: any[]) => (prev || []).filter((x) => x !== id));
+        setLocal("equipos", (prev: any) => {
+          const next = { ...(prev || {}) };
+          delete next[id];
+          return next;
+        });
       }
     } else if (key === "socials") {
-      setLocal("socials", newValue);
-      syncWithServer("socials", { participantId: id, value: !isIncluded }, "socials", newValue);
+      const updateFn = (prev: any[]) => {
+        const c = prev || [];
+        return c.includes(id) ? c.filter((x) => x !== id) : [...c, id];
+      };
+      setLocal("socials", updateFn);
+      syncWithServer("socials", { participantId: id, value: !isIncluded }, "socials", updateFn);
       if (!isIncluded) {
-        const newEq = { ...act.equipos };
-        delete newEq[id];
-        setLocal("equipos", newEq);
+        setLocal("equipos", (prev: any) => {
+          const next = { ...(prev || {}) };
+          delete next[id];
+          return next;
+        });
       }
-    } else if (key === "puntuales") {
-      setLocal("puntuales", newValue);
-      syncWithServer("puntuales", { participantId: id, value: !isIncluded }, "puntuales", newValue);
-    } else if (key === "biblias") {
-      setLocal("biblias", newValue);
-      syncWithServer("biblias", { participantId: id, value: !isIncluded }, "biblias", newValue);
+    } else if (key === "puntuales" || key === "biblias") {
+      const updateFn = (prev: any[]) => {
+        const c = prev || [];
+        return c.includes(id) ? c.filter((x) => x !== id) : [...c, id];
+      };
+      setLocal(key, updateFn);
+      syncWithServer(key === "puntuales" ? "puntuales" : "biblias", { participantId: id, value: !isIncluded }, key, updateFn);
     } else {
-      setLocal(key, newValue);
+      setLocal(key, (prev: any[]) => {
+        const c = prev || [];
+        return c.includes(id) ? c.filter((x) => x !== id) : [...c, id];
+      });
     }
   };
 

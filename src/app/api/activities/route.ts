@@ -585,6 +585,39 @@ export async function PATCH(request: NextRequest) {
         }
         break;
       }
+      case "extra_add": {
+        const [newExtra] = await db
+          .insert(schema.extras)
+          .values({
+            activityId,
+            participantId: data.pid || null,
+            team: data.team || null,
+            tipo: data.tipo || "extra",
+            puntos: data.puntos || 0,
+            motivo: data.motivo || "",
+          })
+          .returning();
+        return NextResponse.json(newExtra);
+      }
+      case "extra_update": {
+        const { id, pid, team, puntos, motivo } = data;
+        const updateData: any = {};
+        if (pid !== undefined) updateData.participantId = pid;
+        if (team !== undefined) updateData.team = team;
+        if (puntos !== undefined) updateData.puntos = puntos;
+        if (motivo !== undefined) updateData.motivo = motivo;
+
+        await db
+          .update(schema.extras)
+          .set(updateData)
+          .where(eq(schema.extras.id, id));
+        break;
+      }
+      case "extra_delete": {
+        const { id } = data;
+        await db.delete(schema.extras).where(eq(schema.extras.id, id));
+        break;
+      }
       case "game_add": {
         const gameResult = await db
           .insert(schema.juegos)
@@ -597,6 +630,14 @@ export async function PATCH(request: NextRequest) {
           { success: true, id: gameResult[0].id },
           { status: 200 },
         );
+      }
+      case "game_update": {
+        const { id, nombre } = data;
+        await db
+          .update(schema.juegos)
+          .set({ nombre })
+          .where(eq(schema.juegos.id, id));
+        break;
       }
       case "game_delete": {
         await db

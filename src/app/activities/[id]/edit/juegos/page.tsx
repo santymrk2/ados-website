@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useEditContext } from "../layout";
-import { Plus } from "lucide-react";
+import { Plus, X } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { TEAMS, PTS, TEAM_COLORS, getTeamBg } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
@@ -11,10 +11,10 @@ import { cn } from "@/lib/utils";
 import { Label, Empty } from "@/components/ui/Common";
 import { PodiumBadge } from "@/components/ui/Badges";
 import { SavingOverlay } from "@/components/ui/SavingOverlay";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import type { Activity, Juego } from "@/lib/types";
 
-let tempIdCounter = 0;
-const generateTempId = () => -1 - tempIdCounter++;
+const generateTempId = () => -(Date.now() + Math.floor(Math.random() * 1000));
 
 export default function JuegosPage() {
   const { activity: act, setLocal, syncWithServer, locked, pendingOps } = useEditContext();
@@ -24,62 +24,40 @@ export default function JuegosPage() {
     Array.from(pendingOps).some((op) =>
       op.startsWith("game_add"),
     );
-  const noDuplicateTeams = useMemo(() => {
-    for (const j of act.juegos || []) {
-      const placed: string[] = [];
-      Object.values(j.pos || {}).forEach((equipos) => {
-        if (Array.isArray(equipos)) {
-          placed.push(...(equipos as string[]));
-        }
-      });
-      const seen = new Set<string>();
-      for (const t of placed) {
-        if (seen.has(t)) {
-          return false;
-        }
-        seen.add(t);
-      }
-    }
-    return true;
-  }, [act.juegos]);
-
-  const validateGames = () => true;
 
   const add = async () => {
     const tempId = generateTempId();
     const nj: Juego = { id: tempId, nombre: "", pos: {} };
-    // Agregar local primero como temporal
-    setLocal("juegos", [...(act.juegos || []), nj]);
+    const addFn = (prev: any[]) => [...(prev || []), nj];
+    
+    setLocal("juegos", addFn, true);
 
     try {
-      const result = await syncWithServer("game_add", nj, "juegos", [
-        ...(act.juegos || []),
-        nj,
-      ]);
+      const result = await syncWithServer("game_add", nj, "juegos", addFn);
       if (result && typeof result === "object" && "id" in result) {
-        // Actualizar con el ID real del server
-        setLocal("juegos", (act.juegos || []).map((j) =>
-          j.id === tempId ? { ...j, id: (result as { id: number }).id } : j,
-        ));
+        const finalId = (result as { id: number }).id;
+        setLocal("juegos", (prev: any[]) => (prev || []).map((j) =>
+          j.id === tempId ? { ...j, id: finalId } : j,
+        ), true);
         toast.success("Juego agregado");
       }
     } catch (e) {
-      // Si falla, revertir el temporal
-      setLocal("juegos", (act.juegos || []).filter((j) => j.id !== tempId));
+      setLocal("juegos", (prev: any[]) => (prev || []).filter((j) => j.id !== tempId), true);
       const err = e as Error;
       toast.error("Error al agregar: " + err.message);
     }
   };
 
   const del = async (id: number) => {
+    const updateFn = (prev: any[]) => (prev || []).filter((j) => j.id !== id);
+    
     if (id < 0) {
-      setLocal("juegos", (act.juegos || []).filter((j) => j.id !== id));
-      toast.success("Juego eliminado");
+      setLocal("juegos", updateFn, true);
       return;
     }
 
     try {
-      await syncWithServer("game_delete", { id }, "juegos", (act.juegos || []).filter((j) => j.id !== id));
+      await syncWithServer("game_delete", { id }, "juegos", updateFn);
       toast.success("Juego eliminado");
     } catch (e) {
       const err = e as Error;
@@ -88,13 +66,13 @@ export default function JuegosPage() {
   };
 
   const updN = async (id: number, v: string) => {
-    if (id < 0) {
-      setLocal("juegos", (act.juegos || []).map((j) => (j.id === id ? { ...j, nombre: v } : j)));
-      return;
-    }
+    const updateFn = (prev: any[]) => (prev || []).map((j) => (j.id === id ? { ...j, nombre: v } : j));
+    
+    setLocal("juegos", updateFn, true);
+    if (id < 0) return;
 
     try {
-      await syncWithServer("game_update", { id, nombre: v }, "juegos", (act.juegos || []).map((j) => (j.id === id ? { ...j, nombre: v } : j)));
+      await syncWithServer("game_update", { id, nombre: v }, "juegos", updateFn);
     } catch (e) {
       const err = e as Error;
       toast.error("Error al actualizar: " + err.message);
@@ -102,43 +80,65 @@ export default function JuegosPage() {
   };
 
   const updPos = async (jid: number, team: string, pos: string) => {
-    const game = (act.juegos || []).find((j: Juego) => j.id === jid);
-    if (!game) return;
+    const updateFn = (prevList: any[]) => {
+      return (prevList || []).map((game: Juego) => {
+        if (game.id !== jid) return game;
 
-    const newPos: Record<string, string[]> = {};
-    Object.entries(game.pos || {}).forEach(([k, v]) => {
-      if (Array.isArray(v)) {
-        newPos[k] = [...(v as string[])];
-      }
-    });
+        const newPos: Record<string, string[]> = {};
+        Object.entries(game.pos || {}).forEach(([k, v]) => {
+          if (Array.isArray(v)) {
+            newPos[k] = [...(v as string[])];
+          }
+        });
 
-    const isToggleOff =
-      Array.isArray(newPos[pos]) && newPos[pos].includes(team);
+        const isToggleOff = Array.isArray(newPos[pos]) && newPos[pos].includes(team);
 
-    Object.keys(newPos).forEach((p) => {
-      if (Array.isArray(newPos[p])) {
-        newPos[p] = newPos[p].filter((t) => t !== team);
-        if (newPos[p].length === 0) {
-          delete newPos[p];
+        Object.keys(newPos).forEach((p) => {
+          if (Array.isArray(newPos[p])) {
+            newPos[p] = newPos[p].filter((t) => t !== team);
+            if (newPos[p].length === 0) {
+              delete newPos[p];
+            }
+          }
+        });
+
+        if (!isToggleOff) {
+          const posArray = newPos[pos] ? [...newPos[pos]] : [];
+          newPos[pos] = [...posArray, team].sort();
         }
-      }
-    });
 
-    if (!isToggleOff) {
-      const posArray = newPos[pos] ? [...newPos[pos]] : [];
-      newPos[pos] = [...posArray, team].sort();
-    }
+        return { ...game, pos: newPos };
+      });
+    };
 
-    const newList = (act.juegos || []).map((g: Juego) =>
-      g.id === jid ? { ...g, pos: newPos } : g,
-    );
-
-    // Actualizar local primero
-    setLocal("juegos", newList);
+    setLocal("juegos", updateFn, true);
 
     if (jid > 0) {
       try {
-        await syncWithServer("game_pos", { juegoId: jid, pos: newPos }, "juegos", newList);
+        // We need the newPos for the server call, but we can re-calculate it or find it in the new list
+        // For simplicity and accuracy, let's re-calculate it or use a simpler approach
+        const game = (act.juegos || []).find((j: Juego) => j.id === jid);
+        if (!game) return;
+
+        const newPos: Record<string, string[]> = {};
+        Object.entries(game.pos || {}).forEach(([k, v]) => {
+          if (Array.isArray(v)) {
+            newPos[k] = [...(v as string[])];
+          }
+        });
+        const isToggleOff = Array.isArray(newPos[pos]) && newPos[pos].includes(team);
+        Object.keys(newPos).forEach((p) => {
+          if (Array.isArray(newPos[p])) {
+            newPos[p] = newPos[p].filter((t) => t !== team);
+            if (newPos[p].length === 0) delete newPos[p];
+          }
+        });
+        if (!isToggleOff) {
+          const posArray = newPos[pos] ? [...newPos[pos]] : [];
+          newPos[pos] = [...posArray, team].sort();
+        }
+
+        await syncWithServer("game_pos", { juegoId: jid, pos: newPos }, "juegos", updateFn);
       } catch (e) {
         const err = e as Error;
         toast.error("Error al actualizar posición: " + err.message);
@@ -154,10 +154,10 @@ export default function JuegosPage() {
           onClick={add}
           variant="ghost"
           size="sm"
-          disabled={locked || !validateGames() || isAddingSaving}
-          className="bg-indigo-50 text-primary"
+          disabled={locked || isAddingSaving}
+          className="bg-indigo-50 text-primary font-black px-4"
         >
-          + Juego
+          <Plus className="w-4 h-4 mr-1" /> Juego
         </Button>
       </div>
       <div className="flex flex-col gap-4">
@@ -203,8 +203,21 @@ function JuegoCard({
   locked?: boolean;
   saving?: boolean;
 }) {
-  const posToTeams = j.pos || {};
+  const [localNombre, setLocalNombre] = useState(j.nombre || "");
 
+  useEffect(() => {
+    if (localNombre === (j.nombre || "")) return;
+    const timer = setTimeout(() => {
+      onNombre(localNombre);
+    }, 800);
+    return () => clearTimeout(timer);
+  }, [localNombre, j.id, j.nombre, onNombre]);
+
+  useEffect(() => {
+    setLocalNombre(j.nombre || "");
+  }, [j.nombre]);
+
+  const posToTeams = j.pos || {};
   const placed: string[] = [];
   Object.values(posToTeams).forEach((equipos) => {
     if (Array.isArray(equipos)) {
@@ -230,124 +243,120 @@ function JuegoCard({
             {gi + 1}
           </div>
           <Input
-            value={j.nombre || ""}
-            onChange={(e) => onNombre(e.target.value)}
+            value={localNombre}
+            onChange={(e) => setLocalNombre(e.target.value)}
             placeholder="Nombre del juego..."
-            className="flex-1 bg-white"
+            className="flex-1 bg-white h-9"
             disabled={isDisabled}
           />
           <Button
             onClick={onDel}
-            variant="destructive"
+            variant="ghost"
             size="icon"
             disabled={isDisabled}
+            className="h-9 w-9 text-text-muted hover:bg-red-50 hover:text-red-500"
           >
-            ✕
+            <X className="w-5 h-5" />
           </Button>
         </div>
-        <div className="p-3">
-          <div className="flex flex-col gap-2 mb-3">
+        
+        <div className="p-3 bg-surface-light/30">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {posArray.map((pos) => {
               const teamsInPos = (posToTeams[String(pos)]) || [];
+              const hasTeams = Array.isArray(teamsInPos) && teamsInPos.length > 0;
+
               return (
                 <div
                   key={pos}
-                  className="flex flex-col p-2 rounded-xl min-h-12 bg-surface-dark/10 border border-surface-dark/30"
+                  className={cn(
+                    "flex flex-col p-2.5 rounded-xl transition-all border",
+                    hasTeams 
+                      ? "bg-white border-surface-dark shadow-sm" 
+                      : "bg-transparent border-dashed border-surface-dark/50"
+                  )}
                 >
-                  <div className="flex items-center gap-2 mb-2 px-1">
-                    <PodiumBadge pos={Number(pos) as number} />
-                    <span className="text-[10px] text-text-muted font-bold tracking-wider">
-                      +{(PTS.rec as Record<string, number>)[pos] ?? 0} PTS
-                    </span>
+                  <div className="flex items-center justify-between gap-2 mb-2">
+                    <div className="flex items-center gap-2">
+                      <PodiumBadge pos={Number(pos) as number} />
+                      <span className="text-[10px] text-text-muted font-bold tracking-wider">
+                        +{(PTS.rec as Record<string, number>)[pos] ?? 0} PTS
+                      </span>
+                    </div>
+
+                    {unplaced.length > 0 && !isDisabled && (
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="h-6 px-2 text-[10px] font-black uppercase tracking-tight text-primary hover:bg-primary/5"
+                          >
+                            <Plus className="w-3 h-3 mr-1" /> Agregar
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent align="end" className="w-48 p-1 shadow-xl">
+                          <div className="text-[9px] font-black text-text-muted uppercase px-2 py-1.5 border-b border-surface-dark mb-1">
+                            Seleccionar Equipo
+                          </div>
+                          <div className="grid grid-cols-1 gap-0.5">
+                            {unplaced.map((t) => (
+                              <button
+                                key={t}
+                                onClick={() => onPos(t, String(pos))}
+                                className="flex items-center justify-between px-2 py-2 rounded-lg hover:bg-surface-light transition-colors text-left"
+                              >
+                                <div className="flex items-center gap-2">
+                                  <div 
+                                    className="w-5 h-5 rounded flex items-center justify-center font-black text-white text-[10px]"
+                                    style={{ backgroundColor: TEAM_COLORS[t] }}
+                                  >
+                                    {t}
+                                  </div>
+                                  <span className="text-xs font-bold" style={{ color: TEAM_COLORS[t] }}>Equipo {t}</span>
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        </PopoverContent>
+                      </Popover>
+                    )}
                   </div>
-                  {Array.isArray(teamsInPos) && teamsInPos.length > 0 ? (
-                    <div className="flex gap-2 flex-wrap">
-                      {teamsInPos.map((team) => (
+
+                  <div className="flex gap-2 flex-wrap min-h-[32px]">
+                    {hasTeams ? (
+                      teamsInPos.map((team) => (
                         <div
                           key={team}
-                          onClick={() => !isDisabled && onPos(team, String(pos))}
-                          className={cn(
-                            "flex items-center justify-between px-3 py-1.5 rounded-lg flex-1 min-w-[100px]",
-                            !isDisabled && "cursor-pointer",
-                          )}
+                          className="flex items-center gap-2 pl-3 pr-1 py-1 rounded-lg border shadow-sm group animate-in zoom-in-95 duration-200"
                           style={{
                             backgroundColor: getTeamBg(team),
-                            border: `2px solid ${TEAM_COLORS[team]}`,
-                            boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
+                            borderColor: TEAM_COLORS[team],
                           }}
                         >
-                          <span
-                            className="font-black text-sm"
-                            style={{ color: TEAM_COLORS[team] }}
-                          >
+                          <span className="font-black text-xs" style={{ color: TEAM_COLORS[team] }}>
                             {team}
                           </span>
-                          {!isDisabled && (
-                            <span
-                              className="text-[9px] opacity-70 uppercase font-black"
-                              style={{ color: TEAM_COLORS[team] }}
-                            >
-                              quitar
-                            </span>
-                          )}
+                          <button
+                            onClick={() => !isDisabled && onPos(team, String(pos))}
+                            disabled={isDisabled}
+                            className="p-1 rounded-md hover:bg-black/10 transition-colors text-current/60 hover:text-current"
+                            style={{ color: TEAM_COLORS[team] }}
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
                         </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-text-muted text-xs px-1 opacity-60">
-                      — Vacío
-                    </div>
-                  )}
+                      ))
+                    ) : (
+                      <div className="flex-1 flex items-center justify-center py-2 opacity-30">
+                        <span className="text-[9px] font-bold uppercase tracking-tighter text-text-muted">Sin asignar</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
               );
             })}
           </div>
-
-          {unplaced.length > 0 && (
-            <div className="bg-background rounded-xl p-3 border border-surface-dark">
-              <div className="text-[10px] text-text-muted font-bold mb-3 uppercase tracking-wide text-center">
-                Asignar equipos sin posición
-              </div>
-              <div className="flex gap-2 flex-wrap justify-center">
-                {unplaced.map((t) => (
-                  <div
-                    key={t}
-                    className="flex flex-col items-center gap-1.5 rounded-xl p-2 border-2 shadow-sm"
-                    style={{
-                      borderColor: TEAM_COLORS[t],
-                      backgroundColor: getTeamBg(t),
-                    }}
-                  >
-                    <span
-                      className="font-black text-sm"
-                      style={{ color: TEAM_COLORS[t] }}
-                    >
-                      {t}
-                    </span>
-                    <div className="flex flex-wrap justify-center gap-1 bg-white/60 rounded-lg p-1 w-full min-w-[120px]">
-                      {posArray.map((p) => (
-                        <Button
-                          key={p}
-                          onClick={() => onPos(t, p)}
-                          variant="outline"
-                          size="sm"
-                          disabled={isDisabled}
-                          className="flex-1 min-w-6 h-7 rounded-md font-bold text-[11px]"
-                        >
-                          {p}°
-                        </Button>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-          {unplaced.length === 0 && (
-            <div className="text-xs text-green-600 font-bold bg-green-50 p-2 rounded-lg border border-green-100 text-center">
-              ✓ Todos posicionados
-            </div>
-          )}
         </div>
       </div>
     </SavingOverlay>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useEditContext } from "../layout";
 import { Plus } from "lucide-react";
 import { TEAMS, PTS, TEAM_COLORS, getTeamBg } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
@@ -9,34 +10,17 @@ import { cn } from "@/lib/utils";
 import { Label, Empty } from "@/components/ui/Common";
 import { PodiumBadge } from "@/components/ui/Badges";
 import { SavingOverlay } from "@/components/ui/SavingOverlay";
-import type { Activity, Juego, AppState } from "@/lib/types";
+import type { Activity, Juego } from "@/lib/types";
 
 let tempIdCounter = 0;
 const generateTempId = () => -1 - tempIdCounter++;
 
-type ActionFn = (key: string, value: unknown) => void;
-type QueryFn = (key: string, data: unknown, target: string, value: unknown) => Promise<unknown>;
-
-export function TabJuegos({
-  act,
-  A,
-  Q,
-  locked = false,
-  savingOps = new Set<string>(),
-  db,
-  onSaveParticipant,
-}: {
-  act: Activity;
-  A: ActionFn;
-  Q: QueryFn;
-  locked?: boolean;
-  savingOps?: Set<string>;
-  db?: AppState;
-  onSaveParticipant?: (data: unknown, isNew: boolean, invitadorId?: string | null) => Promise<number>;
-}) {
+export default function JuegosPage() {
+  const { activity: act, A, Q, locked, pendingOps } = useEditContext();
+  
   const isAddingSaving =
-    savingOps.size > 0 &&
-    Array.from(savingOps).some((op) =>
+    pendingOps.size > 0 &&
+    Array.from(pendingOps).some((op) =>
       op.startsWith("game_add"),
     );
   const noDuplicateTeams = useMemo(() => {
@@ -58,12 +42,7 @@ export function TabJuegos({
     return true;
   }, [act.juegos]);
 
-  // Validar que todos los juegos tengan al menos 2 equipos asignados
-  // REMOVED: Esta validación的限制 estaba causando problemas
-  const validateGames = () => {
-    // Ya no restringimos la creación de nuevos juegos por falta de posiciones
-    return true;
-  };
+  const validateGames = () => true;
 
   const add = async () => {
     const tempId = generateTempId();
@@ -102,7 +81,6 @@ export function TabJuegos({
     const isToggleOff =
       Array.isArray(newPos[pos]) && newPos[pos].includes(team);
 
-    // Primero: remover el equipo de TODAS las posiciones
     Object.keys(newPos).forEach((p) => {
       if (Array.isArray(newPos[p])) {
         newPos[p] = newPos[p].filter((t) => t !== team);
@@ -133,11 +111,6 @@ export function TabJuegos({
           size="sm"
           disabled={locked || !validateGames() || isAddingSaving}
           className="bg-indigo-50 text-primary"
-          title={
-            !validateGames()
-              ? "Completa los juegos actuales antes de agregar uno nuevo"
-              : ""
-          }
         >
           + Juego
         </Button>
@@ -153,7 +126,7 @@ export function TabJuegos({
             onDel={() => del(j.id)}
             onPos={(team: string, pos: string) => updPos(j.id, team, pos)}
             locked={locked}
-            saving={[...savingOps].some(
+            saving={[...pendingOps].some(
               (op) => op === `game_pos:${j.id}` || op === `game_delete:${j.id}`,
             )}
           />

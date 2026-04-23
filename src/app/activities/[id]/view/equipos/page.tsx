@@ -1,48 +1,30 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useViewContext } from "../layout";
 import { TEAMS, TEAM_COLORS, getTeamBg, PTS } from "@/lib/constants";
-import { actPts, actGoles } from "@/lib/calc";
 import { RankBadge, PodiumBadge } from "@/components/ui/Badges";
 import { Avatar } from "@/components/ui/Avatar";
-import { cn } from "@/lib/utils";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { X, Clock, BookOpen, Users } from "lucide-react";
-import type { Activity, ParticipantBasic } from "@/lib/types";
-import { PlayerPointsModal } from "@/app/activities/components/PlayerPointsModal";
+import { PlayerPointsModal } from "@/app/activities/_components/PlayerPointsModal";
+import type { ParticipantBasic } from "@/lib/types";
 
-interface TeamRankItem {
-  team: string;
-  pts: number;
-}
-
-interface PlayerRankItem extends ParticipantBasic {
-  pts: number;
-}
-
-
-
-interface TabEquiposProps {
-  act: Activity;
-  db: { participants: ParticipantBasic[] };
-  teamRank: TeamRankItem[];
-  maxTeamPts: number;
-  playerRank: PlayerRankItem[];
-}
-
-export function TabEquipos({ act, db, teamRank, maxTeamPts, playerRank }: TabEquiposProps) {
+export default function EquiposPage() {
+  const { act, db, teamRank, maxTeamPts, playerRank } = useViewContext();
   const participants = db.participants;
   const [selectedTeam, setSelectedTeam] = useState<string | null>(null);
   const [selectedPlayer, setSelectedPlayer] = useState<ParticipantBasic | null>(null);
 
-  const activeTeams = TEAMS.slice(0, act.cantEquipos || 4);
+  const activeTeams = TEAMS.slice(0, act?.cantEquipos || 4);
 
   const selectedTeamData = useMemo(() => {
-    if (!selectedTeam) return null;
+    if (!selectedTeam || !act) return null;
     const present = act.asistentes
       .map((pid) => participants.find((p) => p.id === pid))
-      .filter((p): p is ParticipantBasic => !!p && act.equipos?.[p.id] === selectedTeam);
+      .filter(
+        (p): p is ParticipantBasic =>
+          !!p && act.equipos?.[p.id] === selectedTeam,
+      );
 
     return {
       team: selectedTeam,
@@ -56,8 +38,8 @@ export function TabEquipos({ act, db, teamRank, maxTeamPts, playerRank }: TabEqu
       men: present
         .filter((p) => p.sexo === "M")
         .sort((a, b) =>
-          `${a.apellido} ${a.nombre}`.localeCompare(
-            `${b.apellido} ${b.nombre}`,
+          `${b.apellido} ${b.nombre}`.localeCompare(
+            `${a.apellido} ${a.nombre}`,
           ),
         ),
     };
@@ -111,7 +93,7 @@ export function TabEquipos({ act, db, teamRank, maxTeamPts, playerRank }: TabEqu
               variant="ghost"
               size="sm"
               onClick={() => setSelectedTeam(null)}
-              className="text-xs text-accent hover:text-muted"
+              className="text-xs text-accent hover:text-primary"
             >
               Cerrar
             </Button>
@@ -183,7 +165,7 @@ export function TabEquipos({ act, db, teamRank, maxTeamPts, playerRank }: TabEqu
         </div>
       )}
 
-      {selectedPlayer && (
+      {selectedPlayer && act && (
         <PlayerPointsModal
           player={selectedPlayer}
           act={act}

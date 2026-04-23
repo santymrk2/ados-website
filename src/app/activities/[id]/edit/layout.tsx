@@ -1,0 +1,384 @@
+// Edit Layout - Maneja toda la lógica compartida del formulario de edición
+// Cada tab es un page independiente que usa este contexto
+
+"use client";
+
+import { createContext, useContext, useMemo, useEffect, useState, useRef, useCallback } from "react";
+import { useStore } from "@nanostores/react";
+import { useRouter, useSearchParams, useParams } from "next/navigation";
+import { useApp } from "@/hooks/useApp";
+import { $role } from "@/store/appStore";
+import { newAct } from "@/lib/constants";
+import { cn, formatDate } from "@/lib/utils";
+
+import {
+  FileText,
+  Users,
+  LayoutGrid,
+  Gamepad2,
+  Mail,
+  Trophy,
+  Plus,
+  ChevronLeft,
+  Save,
+  Loader2,
+  Check,
+  AlertCircle,
+} from "lucide-react";
+import Link from "next/link";
+import { toast } from "@/hooks/use-toast";
+
+import { Button } from "@/components/ui/button";
+
+import type { Activity, Participant } from "@/lib/types";
+
+type DbType = any;
+
+// Tipos exports para los tabs
+export type LocalSetter = (key: string, value: unknown) => void;
+export type ServerSync = (operation: string, data: unknown, field: string, newValue: unknown) => Promise<unknown>;
+export type SaveStatus = "saved" | "saving" | "error";
+
+// Constantes
+const EDIT_TABS = [
+  { value: "", label: "General", icon: FileText },
+  { value: "asistencia", label: "Asistencia", icon: Users },
+  { value: "equipos", label: "Equipos", icon: LayoutGrid },
+  { value: "juegos", label: "Juegos", icon: Gamepad2 },
+  { value: "invitados", label: "Invitados", icon: Mail },
+  { value: "goles", label: "Goles", icon: Trophy },
+  { value: "extras", label: "Extras", icon: Plus },
+] as const;
+
+// Referencia para compatibilidad
+const TABS = EDIT_TABS;
+
+// Contexto compartido
+export interface EditContextValue {
+  activity: Activity;
+  A: LocalSetter;
+  Q: ServerSync;
+  db: DbType;
+  locked: boolean;
+  pendingOps: Set<string>;
+}
+
+const EditContext = createContext<EditContextValue | null>(null);
+
+export function useEditContext() {
+  const ctx = useContext(EditContext);
+  if (!ctx) {
+    throw new Error("useEditContext debe usarse dentro de EditLayout");
+  }
+return ctx;
+}
+
+interface EditLayoutProps {
+  children: React.ReactNode;
+  mode?: "new" | "edit";
+}
+
+export default function EditLayout({ children, mode = "edit" }: EditLayoutProps) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const params = useParams();
+  
+  const [resolvedId, setResolvedId] = useState<string | null>(null);
+  const [currentTab, setCurrentTab] = useState<string>("");
+  
+  // Resolve params from URL - both id and tab from route params
+  useEffect(() => {
+    const id = params?.id as string | undefined;
+    const tab = params?.tab as string | undefined;
+    if (id) setResolvedId(id);
+    if (tab) setCurrentTab(tab);
+  }, [params?.id, params?.tab]);
+  
+  // Also sync with searchParams for query string tabs
+  useEffect(() => {
+    const tab = searchParams.get("tab");
+    if (tab && tab !== currentTab) {
+      setCurrentTab(tab);
+    }
+  }, [searchParams]);
+  
+  const { db, saveActivity, quickUpdate, saveParticipant, isLoading: dbLoading } = useApp();
+  const role = useStore($role);
+  const isAdmin = role === "admin";
+
+  // Estado de la actividad
+  const [activity, setActivity] = useState<Activity>(() => ({ ...newAct(), id: 0 }));
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>("saved");
+  const [pendingOps, setPendingOps] = useState<Set<string>>(new Set());
+  const [locked, setLocked] = useState<boolean>(false);
+  
+  const activityRef = useRef(activity);
+  activityRef.current = activity;
+
+  // Cargar actividad inicial
+  useEffect(() => {
+    if (mode === "edit" && resolvedId && db?.activities?.length) {
+      const act = db.activities.find((a) => a.id === Number(resolvedId));
+      if (act) {
+        setActivity(act);
+        setLocked(act.locked || false);
+      }
+    }
+  }, [mode, resolvedId, db?.activities]);
+
+  // Redireccionar si no es admin
+  useEffect(() => {
+    if (!isAdmin && mode === "edit" && resolvedId) {
+      router.push(`/activities/${resolvedId}`);
+    }
+  }, [isAdmin, mode, resolvedId, router]);
+
+  // Fix blanco al hacer scroll
+  useEffect(() => {
+    document.body.style.backgroundColor = "var(--background)";
+    return () => { document.body.style.backgroundColor = ""; };
+  }, []);
+
+  // === FUNCIONES COMPARTIDAS ===
+
+  // Actualiza solo estado local (sin llamada al servidor)
+  const setLocalField: LocalSetter = useCallback((key: string, value: unknown) => {
+    setActivity((prev) => ({ ...prev, [key]: value }));
+    setSaveStatus("saving");
+    if (key === "locked") {
+      setLocked(value as boolean);
+    }
+  }, []);
+
+  // Alias para compatibilidad
+  const A = setLocalField;
+
+  // Sincroniza cambio al servidor (PATCH atómico)
+  const syncAtomic: ServerSync = useCallback(async (operationType: string, data: unknown, field: string, newValue: unknown) => {
+    const opId = (data as any)?.juegoId || (data as any)?.id || (data as any)?.participantId || (data as any)?.pid || "";
+    const opKey = `${operationType}:${opId}`;
+
+    setPendingOps((prev) => new Set([...prev, opKey]));
+    setActivity((prev) => ({ ...prev, [field]: newValue }));
+    
+    // Also update locked state if field is "locked"
+    if (field === "locked") {
+      setLocked(newValue as boolean);
+    }
+
+    // Usar activityRef para evitar closure stale
+    const currentActivity = activityRef.current;
+    if (currentActivity.id) {
+      try {
+        const skipRefresh = ["game_pos", "game_add", "game_delete"].includes(operationType);
+        await quickUpdate(currentActivity.id, operationType, data, skipRefresh);
+        toast.success("Cambios sincronizados");
+      } catch (e) {
+        const err = e as Error;
+        toast.error("Error al sincronizar: " + err.message);
+      } finally {
+        setPendingOps((prev) => {
+          const next = new Set(prev);
+          next.delete(opKey);
+          return next;
+        });
+      }
+    } else {
+      setPendingOps((prev) => {
+        const next = new Set(prev);
+        next.delete(opKey);
+        return next;
+      });
+    }
+  }, [quickUpdate]);
+
+  // Alias para compatibilidad
+  const Q = syncAtomic;
+
+  // Guardar toda la actividad (POST completo)
+  const doSave = useCallback(async () => {
+    if (!activity.fecha) return;
+    setSaveStatus("saving");
+    try {
+      const isNew = !activity.id;
+      const saved = isNew ? { ...activity, id: db.nextAid } : activity;
+      const realId = await saveActivity(saved, isNew);
+      if (isNew && realId) {
+        setActivity((prev) => ({ ...prev, id: realId }));
+        // Redireccionar a la URL con el ID correcto
+        router.replace(`/activities/${realId}/edit/info`);
+      }
+      setSaveStatus("saved");
+    } catch (e) {
+      setSaveStatus("error");
+      const err = e as Error;
+      if (err.message.startsWith("VERSION_CONFLICT:")) {
+        const serverVersion = err.message.split(":")[1];
+        toast.error(`⚠️ Alguien más modificó esta actividad (v${serverVersion}). Recargá la página.`);
+      } else {
+        toast.error("Error al guardar: " + err.message);
+      }
+    }
+  }, [activity, db.nextAid, saveActivity, router]);
+
+  // Guardado automático en cambios
+  useEffect(() => {
+    if (saveStatus !== "saved" && activity.id) {
+      const timer = setTimeout(doSave, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [activity, saveStatus, doSave]);
+
+  // Sincronizar con datos del servidor
+  useEffect(() => {
+    if (!activity.id || saveStatus !== "saved") return;
+    const initialActivity = db?.activities?.find((a: Activity) => a.id === activity.id);
+    if (initialActivity) {
+      setActivity(initialActivity);
+    }
+  }, [db?.activities, activity.id, saveStatus]);
+
+  // Cambio de tab
+  const handleTabChange = (newTab: string) => {
+    if (mode === "edit" && resolvedId) {
+      // Base path sin subtab para "General" (empty string)
+      const base = `/activities/${resolvedId}/edit`;
+      router.push(newTab ? `${base}/${newTab}` : base);
+    } else if (mode === "new") {
+      router.push(`/activities/new${newTab ? `/${newTab}` : ""}`);
+    } else {
+      router.push(`/activities/new${newTab ? `/${newTab}` : ""}`);
+    }
+  };
+
+  const handleClose = () => {
+    if (mode === "edit" && activity.id) {
+      router.push(`/activities/${activity.id}/view/info`);
+    } else {
+      router.push("/activities");
+    }
+  };
+
+  // Loading state - esperar a que resolvingId esté disponible
+  if (dbLoading || !db || (mode === "edit" && !resolvedId)) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-text-muted">Cargando...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAdmin && mode === "edit") {
+    return null;
+  }
+
+  if (mode === "edit" && !activity.id) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-text-muted">Actividad no encontrada</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Status indicator - siempre color secondary
+  const statusConfig = {
+    saved: { label: "Guardado", icon: Check, animate: false },
+    saving: { label: "Guardando...", icon: Loader2, animate: true },
+    error: { label: "Error", icon: AlertCircle, animate: false },
+  }[saveStatus] ?? { label: "", icon: Check, animate: false };
+
+  const StatusIcon = statusConfig.icon;
+
+  return (
+    <div className="fixed inset-0 bg-background z-50 flex flex-col overflow-hidden">
+      {/* Header */}
+      <div className="pt-safe sticky top-0 z-10 bg-primary">
+        <div className="text-white p-4">
+          <div className="flex items-center gap-3 mb-2">
+            <Button
+              onClick={handleClose}
+              variant="ghost"
+              size="icon"
+              className="bg-white/20 text-white"
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </Button>
+            <div className="flex-1">
+              <h1 className="font-black text-lg truncate">
+                {mode === "new" ? "Nueva Actividad" : activity.titulo || "Sin título"}
+              </h1>
+              <div className="flex items-center gap-2 text-xs text-white/70">
+                {activity.fecha && formatDate(activity.fecha)}
+                {activity.cantEquipos && ` • ${activity.cantEquipos} equipos`}
+              </div>
+            </div>
+            <Button
+              onClick={doSave}
+              variant="ghost"
+              size="sm"
+              disabled={saveStatus === "saving"}
+              className={cn(
+                "gap-1.5 bg-secondary/20 text-secondary hover:bg-secondary/30"
+              )}
+            >
+              <StatusIcon className={cn("w-4 h-4", statusConfig.animate && "animate-spin")} />
+              <span className="text-xs font-medium text-secondary-foreground">
+                {statusConfig.label}
+              </span>
+            </Button>
+          </div>
+          
+          {/* Tab Navigation */}
+          <div className="flex gap-1 overflow-x-auto pb-2 scrollbar-hide">
+            {TABS.map((tab) => {
+              const Icon = tab.icon;
+              const isActive = tab.value === "" 
+                ? currentTab === "" 
+                : currentTab === tab.value;
+              const base = mode === "edit" && resolvedId 
+                ? `/activities/${resolvedId}/edit` 
+                : `/activities/new`;
+              const href = tab.value ? `${base}/${tab.value}` : base;
+              return (
+                <Link
+                  key={tab.value}
+                  href={href}
+                  className={cn(
+                    "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all",
+                    isActive
+                      ? "bg-white text-primary"
+                      : "bg-white/20 text-white/80 hover:bg-white/30"
+                  )}
+                >
+                  <Icon className="w-3.5 h-3.5" />
+                  {tab.label}
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+{/* Contenido del tab */}
+      <div className="flex-1 overflow-y-auto p-4 pb-20">
+        {/* Proveer contexto a los children */}
+        <EditContext.Provider
+          value={{
+            activity,
+            A,
+            Q,
+            db,
+            locked,
+            pendingOps,
+          }}
+        >
+          {children}
+        </EditContext.Provider>
+      </div>
+    </div>
+  );
+}

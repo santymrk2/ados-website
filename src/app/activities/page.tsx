@@ -15,6 +15,7 @@ import {
 import { PageHeader, Empty } from "@/components/ui/Common";
 import { Chip } from "@/components/ui/Badges";
 import { Button } from "@/components/ui/button";
+import { NewActivityModal } from "./_components/NewActivityModal";
 import { formatDate, cn } from "@/lib/utils";
 import { $role } from "@/store/appStore";
 import { deleteActivity as dbDeleteActivity } from "@/lib/api-client";
@@ -41,6 +42,7 @@ export default function ActivitiesPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [actAEliminar, setActAEliminar] = useState<Activity | null>(null);
   const [confirmText, setConfirmText] = useState("");
+  const [newActivityOpen, setNewActivityOpen] = useState(false);
 
   const sorted = useMemo(
     () => [...db.activities].sort((a, b) => b.fecha.localeCompare(a.fecha)),
@@ -52,7 +54,7 @@ export default function ActivitiesPage() {
   };
 
   const handleNew = () => {
-    router.push(`/activities/new`);
+    setNewActivityOpen(true);
   };
 
   const handleEdit = (activity: Activity, e: React.MouseEvent) => {
@@ -182,6 +184,8 @@ export default function ActivitiesPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <NewActivityModal open={newActivityOpen} onOpenChange={setNewActivityOpen} />
     </div>
   );
 }

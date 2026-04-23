@@ -158,9 +158,19 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { data, isNew } = body;
 
+    // DEBUG: Log incoming request
+    console.log("[POST /activities] isNew:", isNew, "data.id:", data?.id, "keys:", Object.keys(data || {}));
+
+    // Validar que tenemos data
+    if (!data) {
+      console.error("[POST /activities] Error: data es undefined");
+      return clientError("Datos inválidos");
+    }
+
     let currentActId = data.id;
 
     if (isNew) {
+      console.log("[POST /activities] Creating new activity");
       const result = await db
         .insert(schema.activities)
         .values({
@@ -173,14 +183,28 @@ export async function POST(request: NextRequest) {
         .returning({ id: schema.activities.id });
       currentActId = result[0].id;
     } else {
+      // Validar que tenemos ID
+      if (!currentActId) {
+        console.error("[POST /activities] Error: update sin ID, data:", data);
+        return clientError("ID de actividad requerido");
+      }
+      console.log("[POST /activities] Updating activity:", currentActId, "version:", data.version);
+
       // Validar versión para optimistic locking
-      const currentAct = await db.select()
-        .from(schema.activities)
-        .where(eq(schema.activities.id, currentActId));
-      const dbVersion = currentAct[0]?.version || 1;
+      let dbVersion = 1;
+      try {
+        const currentAct = await db.select()
+          .from(schema.activities)
+          .where(eq(schema.activities.id, currentActId));
+        dbVersion = currentAct[0]?.version || 1;
+      } catch (e) {
+        console.error("[POST /activities] Error getting version:", e);
+      }
+
       const clientVersion = data.version || 1;
 
       if (clientVersion !== dbVersion) {
+        console.log("[POST /activities] Version mismatch! client:", clientVersion, "server:", dbVersion);
         return new Response(JSON.stringify({
           error: "Versión desactualizada",
           currentVersion: dbVersion,

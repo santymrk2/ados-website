@@ -1,10 +1,18 @@
 "use client";
 
 import { useMemo } from "react";
+import { useEditContext } from "../layout";
 import { toast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Label, Empty } from "@/components/ui/Common";
-import { SearchableSelect } from "@/components/ui/searchable-select";
+import {
+  Combobox,
+  ComboboxInput,
+  ComboboxContent,
+  ComboboxList,
+  ComboboxItem,
+  ComboboxValue,
+} from "@/components/ui/combobox";
 import {
   Select,
   SelectTrigger,
@@ -12,31 +20,14 @@ import {
   SelectContent,
   SelectItem,
 } from "@/components/ui/select";
-import type { Activity, Gol, ParticipantBasic, AppState } from "@/lib/types";
+import type { Gol, ParticipantBasic } from "@/lib/types";
 
 let tempIdCounter = 0;
 const generateTempId = () => -1 - tempIdCounter++;
 
-type ActionFn = (key: string, value: unknown) => void;
-type QueryFn = (key: string, data: unknown, target: string, value: unknown) => Promise<unknown>;
-
-export function TabGoles({
-  act,
-  A,
-  Q,
-  db,
-  locked = false,
-  savingOps,
-  onSaveParticipant,
-}: {
-  act: Activity;
-  A: ActionFn;
-  Q: QueryFn;
-  db: AppState;
-  locked?: boolean;
-  savingOps?: Set<string>;
-  onSaveParticipant?: (data: unknown, isNew: boolean, invitadorId?: string | null) => Promise<number>;
-}) {
+export default function GolesPage() {
+  const { activity: act, A, Q, db, locked, pendingOps } = useEditContext();
+  
   const availablePlayers = useMemo(() => {
     return db.participants
       .filter(
@@ -60,7 +51,7 @@ export function TabGoles({
     Q("goal_add", ng, "goles", [...(act.goles || []), ng]);
     toast.success("Gol agregado");
   };
-  const del = (id) => {
+  const del = (id: number) => {
     Q(
       "goal_remove",
       { id },
@@ -69,7 +60,7 @@ export function TabGoles({
     );
     toast.success("Gol eliminado");
   };
-  const upd = (id, k, v) =>
+  const upd = (id: number, k: string, v: unknown) =>
     Q(
       "goal_update",
       { id, [k]: v },
@@ -100,20 +91,31 @@ export function TabGoles({
               className="bg-white rounded-xl p-3 border border-surface-dark flex gap-2 items-center shadow-sm"
             >
               <div className="flex-1">
-                <SearchableSelect
+                <Combobox
+                  value={g.pid?.toString() || ""}
+                  onValueChange={(val) => g.id !== undefined && upd(g.id, "pid", val ? Number(val) : null)}
                   items={availablePlayers}
-                  value={g.pid?.toString() || null}
-                  onValueChange={(val) =>
-                    upd(g.id, "pid", val ? Number(val) : null)
-                  }
                   disabled={locked}
-                  placeholder="Seleccionar jugador..."
-                />
+                >
+                  <ComboboxInput placeholder="Seleccionar jugador..." />
+                  <ComboboxValue>
+                    {({ value }) => value ? getParticipantLabel(Number(value)) : "Seleccionar jugador..."}
+                  </ComboboxValue>
+                  <ComboboxContent>
+                    <ComboboxList>
+                      {availablePlayers.map((p) => (
+                        <ComboboxItem key={p.value} value={p.value}>
+                          {p.label}
+                        </ComboboxItem>
+                      ))}
+                    </ComboboxList>
+                  </ComboboxContent>
+                </Combobox>
               </div>
               <div className="w-28">
                 <Select
                   value={g.tipo}
-                  onValueChange={(val) => upd(g.id, "tipo", val)}
+                  onValueChange={(val) => g.id !== undefined && upd(g.id, "tipo", val)}
                   disabled={locked}
                 >
                   <SelectTrigger className="h-8 text-xs">
@@ -127,7 +129,7 @@ export function TabGoles({
                 </Select>
               </div>
               <Button
-                onClick={() => del(g.id)}
+                onClick={() => g.id !== undefined && del(g.id)}
                 variant="destructive"
                 size="icon"
                 disabled={locked}

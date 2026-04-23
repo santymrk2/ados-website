@@ -1,8 +1,16 @@
+import { useEditContext } from "../layout";
 import { toast } from "@/hooks/use-toast";
 import { Label, Empty } from "@/components/ui/Common";
 import { Button } from "@/components/ui/button";
-import { SearchableSelect } from "@/components/ui/searchable-select";
-import type { Activity, ParticipantBasic, AppState } from "@/lib/types";
+import {
+  Combobox,
+  ComboboxInput,
+  ComboboxContent,
+  ComboboxList,
+  ComboboxItem,
+  ComboboxValue,
+} from "@/components/ui/combobox";
+import type { ParticipantBasic } from "@/lib/types";
 
 interface InvitacionWithId {
   id: number;
@@ -11,26 +19,9 @@ interface InvitacionWithId {
   invitadoId: number | null;
 }
 
-type ActionFn = (key: string, value: unknown) => void;
-type QueryFn = (key: string, data: unknown, target?: string, value?: unknown) => Promise<unknown>;
-
-export function TabInvitados({
-  act,
-  A,
-  Q,
-  db,
-  locked = false,
-  savingOps,
-  onSaveParticipant,
-}: {
-  act: Activity;
-  A: ActionFn;
-  Q?: QueryFn;
-  db: AppState;
-  locked?: boolean;
-  savingOps?: Set<string>;
-  onSaveParticipant?: (data: unknown, isNew: boolean, invitadorId?: string | null) => Promise<number>;
-}) {
+export default function InvitadosPage() {
+  const { activity: act, A, Q, db, locked, pendingOps } = useEditContext();
+  
   const invitacionesList = (act.invitaciones || []) as InvitacionWithId[];
 
   const getParticipantLabel = (id: number) => {
@@ -73,7 +64,7 @@ export function TabInvitados({
     }
 
     try {
-      await Q?.(
+      await Q(
         "invitacion_delete",
         { id },
         "invitaciones",
@@ -92,10 +83,10 @@ export function TabInvitados({
 
     if (id < 0 && k === "invitadoId" && v) {
       try {
-        const result = await Q?.("invitacion_add", {
+        const result = await Q("invitacion_add", {
           invitador: inv.invitador,
           invitadoId: v as number,
-        });
+        }, "invitaciones", invitacionesList);
         A(
           "invitaciones",
           invitacionesList.map((i) =>
@@ -110,19 +101,20 @@ export function TabInvitados({
       return;
     }
 
-    if (id > 0) {
+if (id > 0) {
       try {
-        await Q?.("invitacion_update", {
+        await Q("invitacion_update", {
           id,
           invitador: k === "invitador" ? v : inv.invitador,
           invitadoId: k === "invitadoId" ? v : inv.invitadoId,
-        });
+        }, "invitaciones", invitacionesList);
         A(
           "invitaciones",
           invitacionesList.map((i) =>
             i.id === id ? { ...i, [k]: v } : i,
           ),
         );
+        toast.success("Invitación actualizada");
       } catch (e) {
         const err = e as Error;
         toast.error("Error al actualizar invitación: " + err.message);
@@ -170,27 +162,49 @@ export function TabInvitados({
             </div>
             <Label>¿Quién invitó?</Label>
             <div className="mb-3">
-              <SearchableSelect
+              <Combobox
+                value={inv.invitador?.toString() || ""}
+                onValueChange={(val) => upd(inv.id, "invitador", val ? Number(val) : null)}
                 items={getAvailableParticipants()}
-                value={inv.invitador?.toString() || null}
-                onValueChange={(val) =>
-                  upd(inv.id, "invitador", val ? Number(val) : null)
-                }
                 disabled={locked}
-                placeholder="— Seleccionar —"
-              />
+              >
+                <ComboboxInput placeholder="— Seleccionar —" />
+                <ComboboxValue>
+                  {({ value }) => value ? getParticipantLabel(Number(value)) : "— Seleccionar —"}
+                </ComboboxValue>
+                <ComboboxContent>
+                  <ComboboxList>
+                    {getAvailableParticipants().map((p) => (
+                      <ComboboxItem key={p.value} value={p.value}>
+                        {p.label}
+                      </ComboboxItem>
+                    ))}
+                  </ComboboxList>
+                </ComboboxContent>
+              </Combobox>
             </div>
             <Label>Invitado</Label>
             <div className="mb-3">
-              <SearchableSelect
+              <Combobox
+                value={inv.invitadoId?.toString() || ""}
+                onValueChange={(val) => upd(inv.id, "invitadoId", val ? Number(val) : null)}
                 items={getAllParticipants()}
-                value={inv.invitadoId?.toString() || null}
-                onValueChange={(val) =>
-                  upd(inv.id, "invitadoId", val ? Number(val) : null)
-                }
                 disabled={locked}
-                placeholder="— Seleccionar —"
-              />
+              >
+                <ComboboxInput placeholder="— Seleccionar —" />
+                <ComboboxValue>
+                  {({ value }) => value ? getParticipantLabel(Number(value)) : "— Seleccionar —"}
+                </ComboboxValue>
+                <ComboboxContent>
+                  <ComboboxList>
+                    {getAllParticipants().map((p) => (
+                      <ComboboxItem key={p.value} value={p.value}>
+                        {p.label}
+                      </ComboboxItem>
+                    ))}
+                  </ComboboxList>
+                </ComboboxContent>
+              </Combobox>
             </div>
           </div>
         ))}

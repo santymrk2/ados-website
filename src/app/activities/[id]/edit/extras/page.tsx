@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useEditContext } from "../layout";
 import { toast } from "@/hooks/use-toast";
 import { Plus, Zap } from "lucide-react";
 import { TEAMS, TEAM_COLORS, getTeamBg } from "@/lib/constants";
@@ -9,7 +10,14 @@ import { Input } from "@/components/ui/input";
 import { Label, Modal, Empty } from "@/components/ui/Common";
 import { Avatar } from "@/components/ui/Avatar";
 import { cn } from "@/lib/utils";
-import { SearchableSelect } from "@/components/ui/searchable-select";
+import {
+  Combobox,
+  ComboboxInput,
+  ComboboxContent,
+  ComboboxList,
+  ComboboxItem,
+  ComboboxValue,
+} from "@/components/ui/combobox";
 import {
   Select,
   SelectTrigger,
@@ -17,35 +25,17 @@ import {
   SelectContent,
   SelectItem,
 } from "@/components/ui/select";
-import type { Activity, Extra, ParticipantBasic, AppState } from "@/lib/types";
+import type { Extra, ParticipantBasic } from "@/lib/types";
 
 let tempIdCounter = 0;
 const generateTempId = () => -1 - tempIdCounter++;
-
-type ActionFn = (key: string, value: unknown) => void;
-type QueryFn = (key: string, data: unknown, target: string, value: unknown) => Promise<unknown>;
 
 interface ExtraWithId extends Extra {
   id: number;
 }
 
-export function TabExtras({
-  act,
-  A,
-  Q,
-  db,
-  locked = false,
-  savingOps,
-  onSaveParticipant,
-}: {
-  act: Activity;
-  A: ActionFn;
-  Q?: QueryFn;
-  db: AppState;
-  locked?: boolean;
-  savingOps?: Set<string>;
-  onSaveParticipant?: (data: unknown, isNew: boolean, invitadorId?: string | null) => Promise<number>;
-}) {
+export default function ExtrasPage() {
+  const { activity: act, A, Q, db, locked, pendingOps } = useEditContext();
   const [view, setView] = useState("ind");
   const [showAdd, setShowAdd] = useState(false);
 
@@ -56,7 +46,7 @@ export function TabExtras({
 
     if (id > 0) {
       try {
-        await Q?.(
+        await Q(
           "extra_update",
           {
             id,
@@ -85,7 +75,7 @@ export function TabExtras({
 
     if (id > 0) {
       try {
-        await Q?.(
+        await Q(
           "extra_update",
           {
             id,
@@ -129,7 +119,6 @@ export function TabExtras({
       team: view === "team" ? (target as string) : undefined,
     };
 
-    // Agregar al estado local inmediatamente
     A(listKey, [...(act[listKey] || []), newItem]);
     setShowAdd(false);
     toast.success(`${type === "extra" ? "Puntos extra" : "Sanción"} aplicada`);
@@ -243,8 +232,8 @@ function ExtraAddModal({
   locked,
 }: {
   view: string;
-  db: AppState;
-  act: Activity;
+  db: any;
+  act: any;
   onClose: () => void;
   onAdd: (type: string, target: ParticipantBasic | string, pts: number, motivo: string) => Promise<void>;
   locked?: boolean;
@@ -278,27 +267,44 @@ function ExtraAddModal({
       onClose={onClose}
     >
       <div className="flex flex-col gap-4">
-{view === "ind" ? (
-            <div>
-              <Label>1. Buscar Persona</Label>
-              <div className="mb-3">
-                <SearchableSelect
-                  items={availablePlayers}
-                  value={selected && typeof selected === "object" && "id" in selected ? (selected as ParticipantBasic).id?.toString() || null : null}
-                  onValueChange={(val) => {
-                    if (val) {
-                      const p = db.participants.find((p) => p.id === Number(val));
-                      setSelected(p ?? null);
-                    } else {
-                      setSelected(null);
-                    }
-                  }}
-                  disabled={locked}
-                  placeholder="Seleccionar jugador..."
-                />
-              </div>
+        {view === "ind" ? (
+          <div>
+            <Label>1. Buscar Persona</Label>
+            <div className="mb-3">
+              <Combobox
+                value={selected && typeof selected === "object" && "id" in selected ? (selected as ParticipantBasic).id?.toString() || "" : ""}
+                onValueChange={(val) => {
+                  if (val) {
+                    const p = db.participants.find((p) => p.id === Number(val));
+                    setSelected(p ?? null);
+                  } else {
+                    setSelected(null);
+                  }
+                }}
+                items={availablePlayers}
+                disabled={locked}
+              >
+                <ComboboxInput placeholder="Seleccionar jugador..." />
+                <ComboboxValue>
+                  {({ value }) =>
+                    value
+                      ? getParticipantLabel(Number(value))
+                      : "Seleccionar jugador..."
+                  }
+                </ComboboxValue>
+                <ComboboxContent>
+                  <ComboboxList>
+                    {availablePlayers.map((p) => (
+                      <ComboboxItem key={p.value} value={p.value}>
+                        {p.label}
+                      </ComboboxItem>
+                    ))}
+                  </ComboboxList>
+                </ComboboxContent>
+              </Combobox>
             </div>
-          ) : (
+          </div>
+        ) : (
           <div>
             <Label>1. Seleccionar Equipo</Label>
             <div className="grid grid-cols-3 gap-3 p-1">
@@ -381,7 +387,7 @@ function ExtraRow({ item, color, onDel, db, isTeam, locked = false }: {
   item: ExtraWithId;
   color: string;
   onDel: (id: number) => void;
-  db: AppState;
+  db: any;
   isTeam: boolean;
   locked?: boolean;
 }) {

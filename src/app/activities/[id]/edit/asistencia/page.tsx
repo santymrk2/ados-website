@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useEditContext } from "../layout";
+import { useApp } from "@/hooks/useApp";
 import { toast } from "@/hooks/use-toast";
 import {
   Search,
@@ -29,7 +31,6 @@ import { confirmDialog } from "@/components/ui/confirm-dialog";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { DatePicker } from "@/components/ui/calendar";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Check } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -41,35 +42,32 @@ import {
   AlertDialogAction,
 } from "@/components/ui/alert-dialog";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { SearchableSelect } from "@/components/ui/searchable-select";
-import type { Activity, ParticipantBasic, AppState, Genero } from "@/lib/types";
+  Combobox,
+  ComboboxInput,
+  ComboboxContent,
+  ComboboxList,
+  ComboboxItem,
+  ComboboxValue,
+} from "@/components/ui/combobox";
+import type { Activity, ParticipantBasic, AppState } from "@/lib/types";
 
 let tempIdCounter = 0;
 const generateTempId = () => -1 - tempIdCounter++;
 
-type ActionFn = (key: string, value: unknown) => void;
-type QueryFn = (key: string, data: unknown, target: string, value: unknown) => Promise<unknown>;
-
 function NewPlayerModal({ act, db, onClose, onSave, A, Q }: {
   act: Activity;
-  db: AppState;
+  db: any;
   onClose: () => void;
-  onSave: (data: unknown, isNew: boolean, invitadorId?: string | null) => Promise<number>;
-  A: ActionFn;
-  Q: QueryFn;
+  onSave: (data: unknown, isNew: boolean, invitadorId?: number | null) => Promise<number>;
+  A: (key: string, value: unknown) => void;
+  Q: (key: string, data: unknown, target: string, value: unknown) => Promise<unknown>;
 }) {
   const [newPlayer, setNewPlayer] = useState<{
     nombre: string;
     apellido: string;
     sexo: string;
     fechaNacimiento: string;
-    invitadorId: string | null;
+    invitadorId: number | null;
   }>({
     nombre: "",
     apellido: "",
@@ -122,7 +120,14 @@ function NewPlayerModal({ act, db, onClose, onSave, A, Q }: {
         newAsistentes,
       );
 
-      if (newPlayer.invitadorId) {
+      if (newPlayer.invitadorId && act.id) {
+        Q(
+          "invitacion_add",
+          { invitador: Number(newPlayer.invitadorId), invitedId: playerId },
+          "invitaciones",
+          [...(act.invitaciones || []), { id: -Date.now(), invitador: newPlayer.invitadorId, invitado_id: playerId }],
+        );
+      } else {
         A("invitaciones", [
           ...(act.invitaciones || []),
           {
@@ -229,17 +234,35 @@ function NewPlayerModal({ act, db, onClose, onSave, A, Q }: {
 
         <div className="mb-4">
           <Label className="mb-1">¿Quién lo invitó?</Label>
-          <SearchableSelect
+          <Combobox
+            value={newPlayer.invitadorId?.toString() || ""}
+            onValueChange={(val) => setNewPlayer((p) => ({ ...p, invitadorId: val ? Number(val) : null }))}
             items={availableInvitados.map((p) => ({
               value: p.id.toString(),
               label: `${p.nombre} ${p.apellido}`,
             }))}
-            value={newPlayer.invitadorId}
-            onValueChange={(val) =>
-              setNewPlayer((p) => ({ ...p, invitadorId: val }))
-            }
-            placeholder="Seleccionar invitador..."
-          />
+          >
+            <ComboboxInput placeholder="Seleccionar invitador..." />
+            <ComboboxValue>
+              {({ value }) =>
+                value
+                  ? (() => {
+                      const parts = db.participants.find((p) => p.id === Number(value));
+                      return parts ? `${parts.nombre} ${parts.apellido}` : "Seleccionar invitador...";
+                    })()
+                  : "Seleccionar invitador..."
+              }
+            </ComboboxValue>
+            <ComboboxContent>
+              <ComboboxList>
+                {availableInvitados.map((p) => (
+                  <ComboboxItem key={p.id.toString()} value={p.id.toString()}>
+                    {p.nombre} {p.apellido}
+                  </ComboboxItem>
+                ))}
+              </ComboboxList>
+            </ComboboxContent>
+          </Combobox>
         </div>
 
         <Button
@@ -255,23 +278,9 @@ function NewPlayerModal({ act, db, onClose, onSave, A, Q }: {
   );
 }
 
-export function TabAsistencia({
-  act,
-  A,
-  Q,
-  db,
-  onSaveParticipant,
-  locked = false,
-  savingOps,
-}: {
-  act: Activity;
-  A: ActionFn;
-  Q: QueryFn;
-  db: AppState;
-  onSaveParticipant: (data: unknown, isNew: boolean, invitadorId?: string | null) => Promise<number>;
-  locked?: boolean;
-  savingOps?: Set<string>;
-}) {
+export default function AsistenciaPage() {
+  const { activity: act, A, Q, db, locked, pendingOps } = useEditContext();
+  const { saveParticipant } = useApp();
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
   const [search, setSearch] = useState("");
   const [showNewPlayer, setShowNewPlayer] = useState(false);
@@ -286,18 +295,9 @@ export function TabAsistencia({
     if (key === "asistentes") {
       Q("attendance", { participantId: id, value: !isIncluded }, key, newValue);
       if (isIncluded) {
-        A(
-          "socials",
-          (act.socials || []).filter((x) => x !== id),
-        );
-        A(
-          "puntuales",
-          (act.puntuales || []).filter((x) => x !== id),
-        );
-        A(
-          "biblias",
-          (act.biblias || []).filter((x) => x !== id),
-        );
+        A("socials", (act.socials || []).filter((x) => x !== id));
+        A("puntuales", (act.puntuales || []).filter((x) => x !== id));
+        A("biblias", (act.biblias || []).filter((x) => x !== id));
         const newEq = { ...act.equipos };
         delete newEq[id];
         A("equipos", newEq);
@@ -339,6 +339,8 @@ export function TabAsistencia({
     return arr;
   }, [db.participants, sortOrder, search]);
 
+  const isPending = (key: string) => pendingOps.has(key);
+
   return (
     <div>
       {showNewPlayer && (
@@ -346,7 +348,7 @@ export function TabAsistencia({
           act={act}
           db={db}
           onClose={() => setShowNewPlayer(false)}
-          onSave={onSaveParticipant}
+          onSave={saveParticipant}
           A={A}
           Q={Q}
         />
@@ -484,14 +486,12 @@ export function TabAsistencia({
         })}
       </div>
 
-      {/* AlertDialog para limpiar asistencia */}
       <AlertDialog open={confirmClearOpen} onOpenChange={setConfirmClearOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Limpiar asistencia</AlertDialogTitle>
             <AlertDialogDescription>
-              ¿Estás seguro que querés quitar la asistencia de todos los
-              jugadores? Esta acción no se puede deshacer.
+              ¿Estás seguro que querés quitar la asistencia de todos los jugadores?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -509,24 +509,19 @@ export function TabAsistencia({
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* AlertDialog para seleccionar todos */}
       <AlertDialog open={confirmAllOpen} onOpenChange={setConfirmAllOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Seleccionar todos</AlertDialogTitle>
             <AlertDialogDescription>
-              ¿Estás seguro que querés marcar a todos los {sorted.length}{" "}
-              jugadores como presentes?
+              ¿Estás seguro que querés marcar a todos los {sorted.length} jugadores como presentes?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => {
-                A(
-                  "asistentes",
-                  sorted.map((p) => p.id),
-                );
+                A("asistentes", sorted.map((p) => p.id));
                 toast.success("Todos presentes");
               }}
             >

@@ -1,28 +1,45 @@
 "use client";
 
+import { useState, useMemo } from "react";
+import { useViewContext } from "../layout";
 import { Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { HelpInfo } from "@/components/ui/HelpInfo";
 import { Empty } from "@/components/ui/Common";
 import { Avatar } from "@/components/ui/Avatar";
 import { TEAM_COLORS } from "@/lib/constants";
-import type { Activity, ParticipantBasic } from "@/lib/types";
+import type { ParticipantBasic } from "@/lib/types";
 
 interface ScorerItem extends ParticipantBasic {
   goles: number;
 }
 
-export function TabGoleadores({
-  act,
-  showScorers,
-  setShowScorers,
-  scorersByDeporte,
-}: {
-  act: Pick<Activity, 'equipos'>;
-  showScorers: boolean;
-  setShowScorers: (v: boolean) => void;
-  scorersByDeporte: Record<string, ScorerItem[]>;
-}) {
+export default function GoleadoresPage() {
+  const { act, db } = useViewContext();
+  const [showScorers, setShowScorers] = useState(true);
+
+  // Calcular scorersByDeporte desde el contexto
+  const scorersByDeporte = useMemo(() => {
+    if (!act?.asistentes) return { f: [], h: [], b: [] };
+    const res: Record<"f" | "h" | "b", ScorerItem[]> = { f: [], h: [], b: [] };
+    act.asistentes.forEach((pid: number) => {
+      const p = db.participants.find((x) => x.id === pid);
+      if (!p) return;
+      (["f", "h", "b"] as const).forEach((tipo) => {
+        const cant = (act.goles || [])
+          .filter((g: any) => g.pid === pid && g.tipo === tipo)
+          .reduce((s: number, g: any) => s + g.cant, 0);
+        if (cant > 0) res[tipo].push({ ...p, goles: cant });
+      });
+    });
+    (["f", "h", "b"] as const).forEach((k) =>
+      res[k].sort((a, b) => b.goles - a.goles),
+    );
+    return res;
+  }, [act, db.participants]);
+
+  if (!act) return null;
+
   return (
     <div>
       <div className="flex justify-between items-center mb-4">

@@ -1,26 +1,22 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useViewContext } from "../layout";
 import { getEdad } from "@/lib/constants";
 import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
-import { X, Clock, Users } from "lucide-react";
-import type { Activity, ParticipantBasic } from "@/lib/types";
-import { PlayerPointsModal } from "@/app/activities/components/PlayerPointsModal";
+import { Users as PlayersIcon, Clock } from "lucide-react";
+import type { ParticipantBasic } from "@/lib/types";
+import { PlayerPointsModal } from "@/app/activities/_components/PlayerPointsModal";
 
-interface PlayerPointsDetail {
-  label: string;
-  pts: number;
-}
-
-
-
-export function TabAsistencia({ act, db }) {
+export default function AsistenciaPage() {
+  const { act, db } = useViewContext();
   const participants = db.participants;
   const [selectedAges, setSelectedAges] = useState<number[]>([]);
-  const [selectedPlayer, setSelectedPlayer] = useState(null);
+  const [selectedPlayer, setSelectedPlayer] = useState<ParticipantBasic | null>(null);
+
+  if (!act) return null;
 
   // Obtener edades únicas de los asistentes
   const availableAges = useMemo(() => {
@@ -56,24 +52,22 @@ export function TabAsistencia({ act, db }) {
 
   // Lista de asistentes filtrados
   const filteredAsistentes = useMemo(() => {
-    const enriched = act.asistentes
-      .map((pid) => {
-        const p = participants.find((x) => x.id === pid);
-        if (!p) return null;
-        return { ...p, edad: getEdad(p.fechaNacimiento) };
-      })
-      .filter((p): p is { edad: number } & Omit<NonNullable<typeof p>, "edad"> => {
-        if (!p || p.edad === null) return false;
-        if (selectedAges.length > 0 && !selectedAges.includes(p.edad)) return false;
-        return true;
-      })
-      .sort((a, b) =>
-        `${a.apellido} ${a.nombre}`.localeCompare(`${b.apellido} ${b.nombre}`),
-      );
+    const enriched: (ParticipantBasic & { edad: number })[] = [];
+    for (const pid of act.asistentes) {
+      const p = participants.find((x) => x.id === pid);
+      if (!p) continue;
+      const edad = getEdad(p.fechaNacimiento);
+      if (edad === null) continue;
+      if (selectedAges.length > 0 && !selectedAges.includes(edad)) continue;
+      enriched.push({ ...p, edad });
+    }
+    enriched.sort((a, b) =>
+      `${a.apellido} ${a.nombre}`.localeCompare(`${b.apellido} ${b.nombre}`),
+    );
     return enriched;
   }, [act.asistentes, participants, selectedAges]);
 
-  const toggleAge = (age) => {
+  const toggleAge = (age: number) => {
     setSelectedAges((prev) =>
       prev.includes(age) ? prev.filter((a) => a !== age) : [...prev, age],
     );
@@ -88,7 +82,7 @@ export function TabAsistencia({ act, db }) {
         <div className="bg-white/20 rounded-xl p-3 text-center border border-white/20">
           <div className="text-2xl font-black text-accent">{stats.total}</div>
           <div className="text-xs font-bold opacity-60 text-accent flex items-center justify-center gap-1">
-            <Users className="w-3 h-3" />
+            <PlayersIcon className="w-3 h-3" />
             Total
           </div>
         </div>

@@ -1,36 +1,20 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useEditContext } from "../layout";
 import { toast } from "@/hooks/use-toast";
 import { List, Users, Zap, Shuffle } from "lucide-react";
 import { TEAMS, TEAM_COLORS, getTeamBg } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import { Avatar } from "@/components/ui/Avatar";
 import { SexBadge } from "@/components/ui/Badges";
-import type { Activity, ParticipantBasic, AppState } from "@/lib/types";
+import type { Activity, ParticipantBasic } from "@/lib/types";
 
-type ActionFn = (key: string, value: unknown) => void;
-type QueryFn = (key: string, data: unknown, target: string, value: unknown) => Promise<unknown>;
-
-export function TabEquipos({
-  act,
-  A,
-  Q,
-  db,
-  locked = false,
-  savingOps,
-  onSaveParticipant,
-}: {
-  act: Activity;
-  A: ActionFn;
-  Q: QueryFn;
-  db: AppState;
-  locked?: boolean;
-  savingOps?: Set<string>;
-  onSaveParticipant?: (data: unknown, isNew: boolean, invitadorId?: string | null) => Promise<number>;
-}) {
+export default function EquiposPage() {
+  const { activity: act, A, Q, db, locked, pendingOps } = useEditContext();
   const [viewMode, setViewMode] = useState<"cards" | "list">("cards");
   const [selectedTeam, setSelectedTeam] = useState<string | null>(null);
+  
   const activeTeams = useMemo(
     () => TEAMS.slice(0, act.cantEquipos || 4),
     [act.cantEquipos],
@@ -94,6 +78,7 @@ export function TabEquipos({
       counts[best][p.sexo]++;
       counts[best].total++;
     });
+    
     A("equipos", eq);
     toast.success(resetAll ? "Equipos redistribuidos" : "Equipos completados");
   };
@@ -101,10 +86,8 @@ export function TabEquipos({
   const teamStats = activeTeams.map((t) => ({
     team: t,
     total: present.filter((p) => act.equipos?.[p.id] === t).length,
-    m: present.filter((p) => act.equipos?.[p.id] === t && p.sexo === "M")
-      .length,
-    f: present.filter((p) => act.equipos?.[p.id] === t && p.sexo === "F")
-      .length,
+    m: present.filter((p) => act.equipos?.[p.id] === t && p.sexo === "M").length,
+    f: present.filter((p) => act.equipos?.[p.id] === t && p.sexo === "F").length,
   }));
   const unassignedCount = present.filter((p) => !act.equipos?.[p.id]).length;
 

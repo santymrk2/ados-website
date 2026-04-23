@@ -55,10 +55,12 @@ function ComboboxInput({
   disabled = false,
   showTrigger = true,
   showClear = false,
+  onClear,
   ...props
 }: ComboboxPrimitive.Input.Props & {
   showTrigger?: boolean
   showClear?: boolean
+  onClear?: () => void
 }) {
   return (
     <InputGroup className={cn("w-auto", className)}>
@@ -79,7 +81,12 @@ function ComboboxInput({
             <ComboboxTrigger />
           </InputGroupButton>
         )}
-        {showClear && <ComboboxClear disabled={disabled} />}
+        {showClear && onClear && (
+          <ComboboxClear
+            disabled={disabled}
+            onClick={onClear}
+          />
+        )}
       </InputGroupAddon>
       {children}
     </InputGroup>

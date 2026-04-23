@@ -137,7 +137,7 @@ function InvitationRow({
                       className={cn(
                         "flex items-center gap-2 w-full px-3 py-2 text-left",
                         "hover:bg-surface-light transition-colors",
-                        p.id === invitador?.id && "bg-teal-50"
+                        p.id === (invitador as ParticipantBasic | null)?.id && "bg-teal-50"
                       )}
                     >
                       <Avatar p={p} size={24} />
@@ -183,7 +183,7 @@ function InvitationRow({
                     className={cn(
                       "flex items-center gap-2 w-full px-3 py-2 text-left",
                       "hover:bg-surface-light transition-colors",
-                      p.id === invitador?.id && "bg-teal-50"
+                      false && "bg-teal-50"
                     )}
                   >
                     <Avatar p={p} size={24} />
@@ -253,7 +253,7 @@ function InvitationRow({
                       className={cn(
                         "flex items-center gap-2 w-full px-3 py-2 text-left",
                         "hover:bg-surface-light transition-colors",
-                        p.id === invitado?.id && "bg-teal-50"
+                        p.id === (invitado as ParticipantBasic | null)?.id && "bg-teal-50"
                       )}
                     >
                       <Avatar p={p} size={24} />
@@ -306,7 +306,7 @@ function InvitationRow({
                       className={cn(
                         "flex items-center gap-2 w-full px-3 py-2 text-left",
                         "hover:bg-surface-light transition-colors",
-                        p.id === invitado?.id && "bg-teal-50"
+                        false && "bg-teal-50"
                       )}
                     >
                       <Avatar p={p} size={24} />

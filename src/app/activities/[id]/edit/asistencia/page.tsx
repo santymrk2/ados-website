@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { useEditContext } from "../layout";
+import { useEditContext, LocalSetter, ServerSync } from "../layout";
 import { useApp } from "@/hooks/useApp";
 import { toast } from "@/hooks/use-toast";
 import {
@@ -59,8 +59,8 @@ function NewPlayerModal({ act, db, onClose, onSave, setLocal, syncWithServer }: 
   db: any;
   onClose: () => void;
   onSave: (data: unknown, isNew: boolean, invitadorId?: number | null) => Promise<number>;
-  setLocal: (key: string, value: unknown) => void;
-  syncWithServer: (key: string, data: unknown, target: string, value: unknown) => Promise<unknown>;
+  setLocal: LocalSetter;
+  syncWithServer: ServerSync;
 }) {
   const [newPlayer, setNewPlayer] = useState<{
     nombre: string;

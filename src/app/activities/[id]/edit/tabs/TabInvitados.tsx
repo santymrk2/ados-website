@@ -1,14 +1,7 @@
 import { toast } from "@/hooks/use-toast";
 import { Label, Empty } from "@/components/ui/Common";
 import { Button } from "@/components/ui/button";
-import {
-  Combobox,
-  ComboboxInput,
-  ComboboxContent,
-  ComboboxList,
-  ComboboxItem,
-  ComboboxValue,
-} from "@/components/ui/combobox";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import type { Activity, ParticipantBasic, AppState } from "@/lib/types";
 
 interface InvitacionWithId {
@@ -177,61 +170,27 @@ export function TabInvitados({
             </div>
             <Label>¿Quién invitó?</Label>
             <div className="mb-3">
-              <Combobox
-                value={inv.invitador?.toString() || ""}
+              <SearchableSelect
+                items={getAvailableParticipants()}
+                value={inv.invitador?.toString() || null}
                 onValueChange={(val) =>
                   upd(inv.id, "invitador", val ? Number(val) : null)
                 }
-                items={getAvailableParticipants()}
                 disabled={locked}
-              >
-                <ComboboxInput placeholder="— Seleccionar —" />
-                <ComboboxValue>
-                  {({ value }) =>
-                    value
-                      ? getParticipantLabel(Number(value))
-                      : "— Seleccionar —"
-                  }
-                </ComboboxValue>
-                <ComboboxContent>
-                  <ComboboxList>
-                    {getAvailableParticipants().map((p) => (
-                      <ComboboxItem key={p.value} value={p.value}>
-                        {p.label}
-                      </ComboboxItem>
-                    ))}
-                  </ComboboxList>
-                </ComboboxContent>
-              </Combobox>
+                placeholder="— Seleccionar —"
+              />
             </div>
             <Label>Invitado</Label>
             <div className="mb-3">
-              <Combobox
-                value={inv.invitadoId?.toString() || ""}
+              <SearchableSelect
+                items={getAllParticipants()}
+                value={inv.invitadoId?.toString() || null}
                 onValueChange={(val) =>
                   upd(inv.id, "invitadoId", val ? Number(val) : null)
                 }
-                items={getAllParticipants()}
                 disabled={locked}
-              >
-                <ComboboxInput placeholder="— Seleccionar —" />
-                <ComboboxValue>
-                  {({ value }) =>
-                    value
-                      ? getParticipantLabel(Number(value))
-                      : "— Seleccionar —"
-                  }
-                </ComboboxValue>
-                <ComboboxContent>
-                  <ComboboxList>
-                    {getAllParticipants().map((p) => (
-                      <ComboboxItem key={p.value} value={p.value}>
-                        {p.label}
-                      </ComboboxItem>
-                    ))}
-                  </ComboboxList>
-                </ComboboxContent>
-              </Combobox>
+                placeholder="— Seleccionar —"
+              />
             </div>
           </div>
         ))}

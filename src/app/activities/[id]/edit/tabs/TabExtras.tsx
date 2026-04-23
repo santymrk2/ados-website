@@ -9,14 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label, Modal, Empty } from "@/components/ui/Common";
 import { Avatar } from "@/components/ui/Avatar";
 import { cn } from "@/lib/utils";
-import {
-  Combobox,
-  ComboboxInput,
-  ComboboxContent,
-  ComboboxList,
-  ComboboxItem,
-  ComboboxValue,
-} from "@/components/ui/combobox";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import {
   Select,
   SelectTrigger,
@@ -289,8 +282,9 @@ function ExtraAddModal({
             <div>
               <Label>1. Buscar Persona</Label>
               <div className="mb-3">
-                <Combobox
-                  value={selected && typeof selected === "object" && "id" in selected ? (selected as ParticipantBasic).id?.toString() || "" : ""}
+                <SearchableSelect
+                  items={availablePlayers}
+                  value={selected && typeof selected === "object" && "id" in selected ? (selected as ParticipantBasic).id?.toString() || null : null}
                   onValueChange={(val) => {
                     if (val) {
                       const p = db.participants.find((p) => p.id === Number(val));
@@ -299,30 +293,12 @@ function ExtraAddModal({
                       setSelected(null);
                     }
                   }}
-                items={availablePlayers}
-                disabled={locked}
-              >
-                <ComboboxInput placeholder="Seleccionar jugador..." />
-                <ComboboxValue>
-                  {({ value }) =>
-                    value
-                      ? getParticipantLabel(Number(value))
-                      : "Seleccionar jugador..."
-                  }
-                </ComboboxValue>
-                <ComboboxContent>
-                  <ComboboxList>
-{availablePlayers.map((p: { value: string; label: string }) => (
-                    <ComboboxItem key={p.value} value={p.value}>
-                      {p.label}
-                    </ComboboxItem>
-                  ))}
-                  </ComboboxList>
-                </ComboboxContent>
-              </Combobox>
+                  disabled={locked}
+                  placeholder="Seleccionar jugador..."
+                />
+              </div>
             </div>
-          </div>
-        ) : (
+          ) : (
           <div>
             <Label>1. Seleccionar Equipo</Label>
             <div className="grid grid-cols-3 gap-3 p-1">

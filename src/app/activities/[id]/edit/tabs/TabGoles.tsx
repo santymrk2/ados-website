@@ -4,14 +4,7 @@ import { useMemo } from "react";
 import { toast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Label, Empty } from "@/components/ui/Common";
-import {
-  Combobox,
-  ComboboxInput,
-  ComboboxContent,
-  ComboboxList,
-  ComboboxItem,
-  ComboboxValue,
-} from "@/components/ui/combobox";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import {
   Select,
   SelectTrigger,
@@ -107,32 +100,15 @@ export function TabGoles({
               className="bg-white rounded-xl p-3 border border-surface-dark flex gap-2 items-center shadow-sm"
             >
               <div className="flex-1">
-                <Combobox
-                  value={g.pid?.toString() || ""}
+                <SearchableSelect
+                  items={availablePlayers}
+                  value={g.pid?.toString() || null}
                   onValueChange={(val) =>
                     upd(g.id, "pid", val ? Number(val) : null)
                   }
-                  items={availablePlayers}
                   disabled={locked}
-                >
-                  <ComboboxInput placeholder="Seleccionar jugador..." />
-                  <ComboboxValue>
-                    {({ value }) =>
-                      value
-                        ? getParticipantLabel(Number(value))
-                        : "Seleccionar jugador..."
-                    }
-                  </ComboboxValue>
-                  <ComboboxContent>
-                    <ComboboxList>
-                      {availablePlayers.map((p: { value: string; label: string }) => (
-                        <ComboboxItem key={p.value} value={p.value}>
-                          {p.label}
-                        </ComboboxItem>
-                      ))}
-                    </ComboboxList>
-                  </ComboboxContent>
-                </Combobox>
+                  placeholder="Seleccionar jugador..."
+                />
               </div>
               <div className="w-28">
                 <Select

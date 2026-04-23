@@ -47,13 +47,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Combobox,
-  ComboboxInput,
-  ComboboxContent,
-  ComboboxList,
-  ComboboxItem,
-} from "@/components/ui/combobox";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import type { Activity, ParticipantBasic, AppState, Genero } from "@/lib/types";
 
 let tempIdCounter = 0;
@@ -235,27 +229,17 @@ function NewPlayerModal({ act, db, onClose, onSave, A, Q }: {
 
         <div className="mb-4">
           <Label className="mb-1">¿Quién lo invitó?</Label>
-          <Combobox
-            value={newPlayer.invitadorId || ""}
-            onValueChange={(val) =>
-              setNewPlayer((p) => ({ ...p, invitadorId: val }))
-            }
+          <SearchableSelect
             items={availableInvitados.map((p) => ({
               value: p.id.toString(),
               label: `${p.nombre} ${p.apellido}`,
             }))}
-          >
-            <ComboboxInput placeholder="Seleccionar invitador..." />
-            <ComboboxContent>
-              <ComboboxList>
-{availableInvitados.map((p: ParticipantBasic) => (
-                <ComboboxItem key={p.id.toString()} value={p.id.toString()}>
-                  {p.nombre} {p.apellido}
-                </ComboboxItem>
-              ))}
-              </ComboboxList>
-            </ComboboxContent>
-          </Combobox>
+            value={newPlayer.invitadorId}
+            onValueChange={(val) =>
+              setNewPlayer((p) => ({ ...p, invitadorId: val }))
+            }
+            placeholder="Seleccionar invitador..."
+          />
         </div>
 
         <Button

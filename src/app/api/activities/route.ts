@@ -134,8 +134,9 @@ export async function GET(request: NextRequest) {
         invitaciones: inv
           .filter((x) => x.activityId === a.id)
           .map((x) => ({
+            id: x.id,
             invitador: x.invitadorId,
-            invitado_id: x.invitadoId,
+            invitadoId: x.invitadoId,
           })),
       };
     });
@@ -392,7 +393,7 @@ export async function POST(request: NextRequest) {
         const invData = data.invitaciones.map((i: any) => ({
           activityId: currentActId,
           invitadorId: i.invitador,
-          invitadoId: i.invitado_id,
+          invitadoId: i.invitadoId || i.invitado_id, // Soporte ambos temporalmente durante migración
         }));
         await tx.insert(schema.invitaciones).values(invData);
       }
@@ -550,10 +551,15 @@ export async function PATCH(request: NextRequest) {
         break;
       }
       case "goal_update": {
-        const { id, pid } = data;
+        const { id, pid, tipo, cant } = data;
+        const updateData: any = {};
+        if (pid !== undefined) updateData.participantId = pid;
+        if (tipo !== undefined) updateData.tipo = tipo;
+        if (cant !== undefined) updateData.cant = cant;
+
         await db
           .update(schema.goles)
-          .set({ participantId: pid })
+          .set(updateData)
           .where(eq(schema.goles.id, id));
         break;
       }
@@ -677,9 +683,9 @@ export async function PATCH(request: NextRequest) {
       }
       // === INVITACIONES (operaciones atómicas) ===
       case "invitacion_add": {
-        const { invitador, invitado_id } = data;
-        // Validar que tenga invitado_id
-        if (!invitado_id) {
+        const { invitador, invitadoId } = data;
+        // Validar que tenga invitadoId
+        if (!invitadoId) {
           throw new Error("La invitación debe tener un invitado seleccionado");
         }
         const result = await db
@@ -687,7 +693,7 @@ export async function PATCH(request: NextRequest) {
           .values({
             activityId,
             invitadorId: invitador || null,
-            invitadoId: Number(invitado_id),
+            invitadoId: Number(invitadoId),
           })
           .returning({ id: schema.invitaciones.id });
         return NextResponse.json(
@@ -696,16 +702,16 @@ export async function PATCH(request: NextRequest) {
         );
       }
       case "invitacion_update": {
-        const { id, invitador, invitado_id } = data;
+        const { id, invitador, invitadoId } = data;
         if (!id) throw new Error("ID de invitación requerido");
-        if (!invitado_id) {
+        if (!invitadoId) {
           throw new Error("La invitación debe tener un invitado seleccionado");
         }
         await db
           .update(schema.invitaciones)
           .set({
             invitadorId: invitador ? Number(invitador) : null,
-            invitadoId: Number(invitado_id),
+            invitadoId: Number(invitadoId),
           })
           .where(eq(schema.invitaciones.id, id));
         break;

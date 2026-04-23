@@ -24,6 +24,7 @@ import {
 import { getParticipant } from "@/lib/api-client";
 import { Avatar } from "@/components/ui/Avatar";
 import { cn } from "@/lib/utils";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface ParticipantFormProps {
   db: any;
@@ -240,16 +241,6 @@ export function ParticipantForm({ db, initial, onClose, onSave }: ParticipantFor
           </div>
 
           <div className="space-y-2">
-            <Label className="text-slate-600 font-bold ml-1">Apodo (opcional)</Label>
-            <Input
-              value={form.apodo}
-              onChange={(e) => F("apodo", e.target.value)}
-              placeholder="Ej. El Rayo"
-              className="rounded-xl border-slate-200 focus:ring-primary"
-            />
-          </div>
-
-          <div className="space-y-2">
             <Label className="text-slate-600 font-bold ml-1">Fecha de Nacimiento</Label>
             <DatePicker
               value={form.fechaNacimiento}
@@ -260,28 +251,22 @@ export function ParticipantForm({ db, initial, onClose, onSave }: ParticipantFor
 
           <div className="space-y-2">
             <Label className="text-slate-600 font-bold ml-1">Sexo</Label>
-            <div className="flex gap-3">
-              <Button
-                variant={form.sexo === "M" ? "default" : "outline"}
-                onClick={() => F("sexo", "M")}
-                className={cn(
-                  "flex-1 rounded-xl font-bold h-12 transition-all",
-                  form.sexo === "M" ? "bg-cyan-600 hover:bg-cyan-700 shadow-md shadow-cyan-200" : "text-slate-500"
-                )}
-              >
-                Varón
-              </Button>
-              <Button
-                variant={form.sexo === "F" ? "default" : "outline"}
-                onClick={() => F("sexo", "F")}
-                className={cn(
-                  "flex-1 rounded-xl font-bold h-12 transition-all",
-                  form.sexo === "F" ? "bg-pink-500 hover:bg-pink-600 shadow-md shadow-pink-200" : "text-slate-500"
-                )}
-              >
-                Mujer
-              </Button>
-            </div>
+            <Tabs value={form.sexo} onValueChange={(v) => F("sexo", v)} className="w-full">
+              <TabsList className="grid w-full grid-cols-2 h-12 bg-slate-100">
+                <TabsTrigger 
+                  value="M" 
+                  className="data-[state=active]:bg-cyan-600 data-[state=active]:text-white data-[state=active]:shadow-md font-bold"
+                >
+                  Varón
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="F"
+                  className="data-[state=active]:bg-pink-500 data-[state=active]:text-white data-[state=active]:shadow-md font-bold"
+                >
+                  Mujer
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
           </div>
         </div>
 

@@ -124,9 +124,9 @@ const newAsistentes = Array.from(new Set([...act.asistentes, playerId]));
       if (newPlayer.invitadorId && act.id) {
         syncWithServer(
           "invitacion_add",
-          { invitador: Number(newPlayer.invitadorId), invitedId: playerId },
+          { invitador: Number(newPlayer.invitadorId), invitadoId: playerId },
           "invitaciones",
-          [...(act.invitaciones || []), { id: -Date.now(), invitador: newPlayer.invitadorId, invitado_id: playerId }],
+          [...(act.invitaciones || []), { id: -Date.now(), invitador: newPlayer.invitadorId, invitadoId: playerId }],
         );
       } else {
         setLocal("invitaciones", [
@@ -134,9 +134,9 @@ const newAsistentes = Array.from(new Set([...act.asistentes, playerId]));
           {
             id: generateTempId(),
             invitador: newPlayer.invitadorId,
-            invitado_id: playerId,
+            invitadoId: playerId,
           },
-        ]);
+        ], true);
       }
 
       onClose();

@@ -35,7 +35,7 @@ import type { Activity, Participant } from "@/lib/types";
 type DbType = any;
 
 // Tipos exports para los tabs
-export type LocalSetter = (key: string, value: unknown) => void;
+export type LocalSetter = (key: string, value: unknown, skipSave?: boolean) => void;
 export type ServerSync = (operation: string, data: unknown, field: string, newValue: unknown) => Promise<unknown>;
 export type SaveStatus = "saved" | "saving" | "error";
 
@@ -143,9 +143,11 @@ export default function EditLayout({ children, mode = "edit" }: EditLayoutProps)
   // === FUNCIONES COMPARTIDAS ===
 
   // Actualiza solo estado local (sin llamada al servidor)
-  const setLocal: LocalSetter = useCallback((key: string, value: unknown) => {
+  const setLocal: LocalSetter = useCallback((key: string, value: unknown, skipSave = false) => {
     setActivity((prev) => ({ ...prev, [key]: value }));
-    setSaveStatus("saving");
+    if (!skipSave) {
+      setSaveStatus("saving");
+    }
     if (key === "locked") {
       setLocked(value as boolean);
     }
@@ -169,11 +171,13 @@ export default function EditLayout({ children, mode = "edit" }: EditLayoutProps)
     if (currentActivity.id) {
       try {
         const skipRefresh = ["game_pos", "game_add", "game_delete"].includes(operationType);
-        await quickUpdate(currentActivity.id, operationType, data, skipRefresh);
+        const result = await quickUpdate(currentActivity.id, operationType, data, skipRefresh);
         toast.success("Cambios sincronizados");
+        return result;
       } catch (e) {
         const err = e as Error;
         toast.error("Error al sincronizar: " + err.message);
+        throw err;
       } finally {
         setPendingOps((prev) => {
           const next = new Set(prev);

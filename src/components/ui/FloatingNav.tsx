@@ -109,18 +109,7 @@ export function FloatingNav({
                 },
               }}
             >
-              {/*
-                exit={{ opacity: 0, scale: 0.9 }}
-                transition={{
-                  opacity: { duration: 0.1 },
-                  scale: { duration: 0.1 },
-                  exit: {
-                    opacity: { duration: 0.1, delay: 0.12 },
-                    scale: { duration: 0.1, delay: 0.12 },
-                  },
-                }}
-                */}
-              <div className="flex flex-col items-center justify-center gap-1 p-3">
+              <div className="flex flex-col items-center justify-center gap-1 p-2">
                 <CurrentIcon className="size-5 text-foreground" />
                 <span className="text-[10px] text-center leading-tight">
                   {currentItem.label}

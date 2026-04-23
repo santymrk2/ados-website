@@ -22,7 +22,13 @@ import {
 } from "@/components/ui/alert-dialog";
 
 export default function EditPage() {
-  const { activity: act, setLocal, syncWithServer, locked, pendingOps } = useEditContext();
+  const {
+    activity: act,
+    setLocal,
+    syncWithServer,
+    locked,
+    pendingOps,
+  } = useEditContext();
   const [showUnlockDialog, setShowUnlockDialog] = useState(false);
 
   const handleLockToggle = (checked: boolean) => {
@@ -69,7 +75,7 @@ export default function EditPage() {
             )}
             <div>
               <Label style={{ margin: 0 }} className="text-sm font-bold">
-                {locked ? "setLocalctividad bloqueada" : "setLocalctividad desbloqueada"}
+                {locked ? "Actividad bloqueada" : "Actividad desbloqueada"}
               </Label>
               <p className="text-[10px] text-text-muted mt-0.5">
                 {locked
@@ -130,7 +136,12 @@ export default function EditPage() {
               onValueChange={(v) => {
                 const val = Number(v);
                 if (act.id)
-                  syncWithServer("config", { k: "cantEquipos", v: val }, "cantEquipos", val);
+                  syncWithServer(
+                    "config",
+                    { k: "cantEquipos", v: val },
+                    "cantEquipos",
+                    val,
+                  );
                 else setLocal("cantEquipos", val);
               }}
               className="flex gap-4 mt-2"
@@ -138,13 +149,19 @@ export default function EditPage() {
             >
               <div className="flex items-center gap-2">
                 <RadioGroupItem value="4" id="eq-4" disabled={locked} />
-                <label htmlFor="eq-4" className="text-sm font-bold cursor-pointer">
+                <label
+                  htmlFor="eq-4"
+                  className="text-sm font-bold cursor-pointer"
+                >
                   4 Equipos
                 </label>
               </div>
               <div className="flex items-center gap-2">
                 <RadioGroupItem value="6" id="eq-6" disabled={locked} />
-                <label htmlFor="eq-6" className="text-sm font-bold cursor-pointer">
+                <label
+                  htmlFor="eq-6"
+                  className="text-sm font-bold cursor-pointer"
+                >
                   6 Equipos
                 </label>
               </div>

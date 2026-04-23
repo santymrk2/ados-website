@@ -5,7 +5,7 @@
 
 import { createContext, useContext, useMemo, useEffect, useState, useRef, useCallback } from "react";
 import { useStore } from "@nanostores/react";
-import { useRouter, useSearchParams, useParams } from "next/navigation";
+import { useRouter, useSearchParams, useParams, usePathname } from "next/navigation";
 import { useApp } from "@/hooks/useApp";
 import { $role } from "@/store/appStore";
 import { newAct } from "@/lib/constants";
@@ -25,7 +25,7 @@ import {
   Check,
   AlertCircle,
 } from "lucide-react";
-import Link from "next/link";
+import { FloatingNav } from "@/components/ui/FloatingNav";
 import { toast } from "@/hooks/use-toast";
 
 import { Button } from "@/components/ui/button";
@@ -56,8 +56,8 @@ const TABS = EDIT_TABS;
 // Contexto compartido
 export interface EditContextValue {
   activity: Activity;
-  A: LocalSetter;
-  Q: ServerSync;
+  setLocal: LocalSetter;
+  syncWithServer: ServerSync;
   db: DbType;
   locked: boolean;
   pendingOps: Set<string>;
@@ -82,25 +82,26 @@ export default function EditLayout({ children, mode = "edit" }: EditLayoutProps)
   const router = useRouter();
   const searchParams = useSearchParams();
   const params = useParams();
+  const pathname = usePathname();
   
   const [resolvedId, setResolvedId] = useState<string | null>(null);
   const [currentTab, setCurrentTab] = useState<string>("");
   
-  // Resolve params from URL - both id and tab from route params
+  // Resolve tab from URL pathname (more reliable than params)
+  useEffect(() => {
+    const pathParts = pathname.split("/").filter(Boolean);
+    // pathname format: activities, [id], edit, [tab]
+    // Find where we are in the path
+    const editIndex = pathParts.indexOf("edit");
+    const tabValue = editIndex >= 0 && editIndex + 1 < pathParts.length ? pathParts[editIndex + 1] : "";
+    setCurrentTab(tabValue);
+  }, [pathname]);
+  
+  // Also resolve id from params
   useEffect(() => {
     const id = params?.id as string | undefined;
-    const tab = params?.tab as string | undefined;
     if (id) setResolvedId(id);
-    if (tab) setCurrentTab(tab);
-  }, [params?.id, params?.tab]);
-  
-  // Also sync with searchParams for query string tabs
-  useEffect(() => {
-    const tab = searchParams.get("tab");
-    if (tab && tab !== currentTab) {
-      setCurrentTab(tab);
-    }
-  }, [searchParams]);
+  }, [params?.id]);
   
   const { db, saveActivity, quickUpdate, saveParticipant, isLoading: dbLoading } = useApp();
   const role = useStore($role);
@@ -142,7 +143,7 @@ export default function EditLayout({ children, mode = "edit" }: EditLayoutProps)
   // === FUNCIONES COMPARTIDAS ===
 
   // Actualiza solo estado local (sin llamada al servidor)
-  const setLocalField: LocalSetter = useCallback((key: string, value: unknown) => {
+  const setLocal: LocalSetter = useCallback((key: string, value: unknown) => {
     setActivity((prev) => ({ ...prev, [key]: value }));
     setSaveStatus("saving");
     if (key === "locked") {
@@ -150,11 +151,8 @@ export default function EditLayout({ children, mode = "edit" }: EditLayoutProps)
     }
   }, []);
 
-  // Alias para compatibilidad
-  const A = setLocalField;
-
   // Sincroniza cambio al servidor (PATCH atómico)
-  const syncAtomic: ServerSync = useCallback(async (operationType: string, data: unknown, field: string, newValue: unknown) => {
+  const syncWithServer: ServerSync = useCallback(async (operationType: string, data: unknown, field: string, newValue: unknown) => {
     const opId = (data as any)?.juegoId || (data as any)?.id || (data as any)?.participantId || (data as any)?.pid || "";
     const opKey = `${operationType}:${opId}`;
 
@@ -192,8 +190,15 @@ export default function EditLayout({ children, mode = "edit" }: EditLayoutProps)
     }
   }, [quickUpdate]);
 
-  // Alias para compatibilidad
-  const Q = syncAtomic;
+  // Provider value con los nuevos nombres
+  const contextValue = {
+    activity,
+    setLocal,
+    syncWithServer,
+    db,
+    locked,
+    pendingOps,
+  };
 
   // Guardar toda la actividad (POST completo)
   const doSave = useCallback(async () => {
@@ -316,66 +321,44 @@ export default function EditLayout({ children, mode = "edit" }: EditLayoutProps)
                 {activity.cantEquipos && ` • ${activity.cantEquipos} equipos`}
               </div>
             </div>
-            <Button
+<Button
               onClick={doSave}
               variant="ghost"
               size="sm"
               disabled={saveStatus === "saving"}
               className={cn(
-                "gap-1.5 bg-secondary/20 text-secondary hover:bg-secondary/30"
+                "gap-1.5 bg-secondary/20 text-secondary hover:bg-secondary/30 group"
               )}
             >
-              <StatusIcon className={cn("w-4 h-4", statusConfig.animate && "animate-spin")} />
-              <span className="text-xs font-medium text-secondary-foreground">
+              <StatusIcon className={cn("w-4 h-4 text-secondary group-hover:text-secondary", statusConfig.animate && "animate-spin")} />
+              <span className="text-xs font-medium text-secondary group-hover:text-secondary">
                 {statusConfig.label}
               </span>
             </Button>
           </div>
-          
-          {/* Tab Navigation */}
-          <div className="flex gap-1 overflow-x-auto pb-2 scrollbar-hide">
-            {TABS.map((tab) => {
-              const Icon = tab.icon;
-              const isActive = tab.value === "" 
-                ? currentTab === "" 
-                : currentTab === tab.value;
-              const base = mode === "edit" && resolvedId 
-                ? `/activities/${resolvedId}/edit` 
-                : `/activities/new`;
-              const href = tab.value ? `${base}/${tab.value}` : base;
-              return (
-                <Link
-                  key={tab.value}
-                  href={href}
-                  className={cn(
-                    "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all",
-                    isActive
-                      ? "bg-white text-primary"
-                      : "bg-white/20 text-white/80 hover:bg-white/30"
-                  )}
-                >
-                  <Icon className="w-3.5 h-3.5" />
-                  {tab.label}
-                </Link>
-              );
-            })}
-          </div>
         </div>
       </div>
+
+      {/* FloatingNav en la parte inferior */}
+      <FloatingNav
+        value={currentTab}
+        items={TABS.map((tab) => {
+          const base = mode === "edit" && resolvedId 
+            ? `/activities/${resolvedId}/edit` 
+            : `/activities/new`;
+          return {
+            value: tab.value,
+            label: tab.label,
+            icon: tab.icon,
+            href: tab.value ? `${base}/${tab.value}` : base,
+          };
+        })}
+      />
 
 {/* Contenido del tab */}
       <div className="flex-1 overflow-y-auto p-4 pb-20">
         {/* Proveer contexto a los children */}
-        <EditContext.Provider
-          value={{
-            activity,
-            A,
-            Q,
-            db,
-            locked,
-            pendingOps,
-          }}
-        >
+        <EditContext.Provider value={contextValue}>
           {children}
         </EditContext.Provider>
       </div>

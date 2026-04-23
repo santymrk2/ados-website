@@ -26,7 +26,7 @@ let tempIdCounter = 0;
 const generateTempId = () => -1 - tempIdCounter++;
 
 export default function GolesPage() {
-  const { activity: act, A, Q, db, locked, pendingOps } = useEditContext();
+  const { activity: act, setLocal, syncWithServer, db, locked, pendingOps } = useEditContext();
   
   const availablePlayers = useMemo(() => {
     return db.participants
@@ -48,25 +48,37 @@ export default function GolesPage() {
 
   const add = () => {
     const ng = { id: generateTempId(), pid: null, tipo: "f", cant: 1 };
-    Q("goal_add", ng, "goles", [...(act.goles || []), ng]);
+    setLocal("goles", [...(act.goles || []), ng]);
     toast.success("Gol agregado");
   };
-  const del = (id: number) => {
-    Q(
-      "goal_remove",
-      { id },
-      "goles",
-      (act.goles || []).filter((g) => g.id !== id),
-    );
-    toast.success("Gol eliminado");
+  const del = async (id: number) => {
+    if (id < 0) {
+      setLocal("goles", (act.goles || []).filter((g) => g.id !== id));
+      toast.success("Gol eliminado");
+      return;
+    }
+
+    try {
+      await syncWithServer("goal_remove", { id }, "goles", (act.goles || []).filter((g) => g.id !== id));
+      toast.success("Gol eliminado");
+    } catch (e) {
+      const err = e as Error;
+      toast.error("Error al eliminar: " + err.message);
+    }
   };
-  const upd = (id: number, k: string, v: unknown) =>
-    Q(
-      "goal_update",
-      { id, [k]: v },
-      "goles",
-      (act.goles || []).map((g) => (g.id === id ? { ...g, [k]: v } : g)),
-    );
+  const upd = async (id: number, k: string, v: unknown) => {
+    if (id < 0) {
+      setLocal("goles", (act.goles || []).map((g) => (g.id === id ? { ...g, [k]: v } : g)));
+      return;
+    }
+
+    try {
+      await syncWithServer("goal_update", { id, [k]: v }, "goles", (act.goles || []).map((g) => (g.id === id ? { ...g, [k]: v } : g)));
+    } catch (e) {
+      const err = e as Error;
+      toast.error("Error al actualizar: " + err.message);
+    }
+  };
 
   return (
     <div>

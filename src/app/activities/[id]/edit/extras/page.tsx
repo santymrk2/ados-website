@@ -35,7 +35,7 @@ interface ExtraWithId extends Extra {
 }
 
 export default function ExtrasPage() {
-  const { activity: act, A, Q, db, locked, pendingOps } = useEditContext();
+  const { activity: act, setLocal, syncWithServer, db, locked, pendingOps } = useEditContext();
   const [view, setView] = useState("ind");
   const [showAdd, setShowAdd] = useState(false);
 
@@ -46,25 +46,18 @@ export default function ExtrasPage() {
 
     if (id > 0) {
       try {
-        await Q(
-          "extra_update",
-          {
-            id,
-            puntos: k === "puntos" ? v : item.puntos,
-            motivo: k === "motivo" ? v : item.motivo,
-          },
-          "extras",
-          extras.map((e) => (e.id === id ? { ...e, [k]: v } : e)),
-        );
+        await syncWithServer("extra_update", {
+          id,
+          puntos: k === "puntos" ? v : item.puntos,
+          motivo: k === "motivo" ? v : item.motivo,
+        }, "extras", extras.map((e) => (e.id === id ? { ...e, [k]: v } : e)));
+        toast.success("Extra actualizado");
       } catch (e) {
         const err = e as Error;
         toast.error("Error al actualizar: " + err.message);
       }
     } else {
-      A(
-        "extras",
-        extras.map((e) => (e.id === id ? { ...e, [k]: v } : e)),
-      );
+      setLocal("extras", extras.map((e) => (e.id === id ? { ...e, [k]: v } : e)));
     }
   };
 
@@ -75,26 +68,19 @@ export default function ExtrasPage() {
 
     if (id > 0) {
       try {
-        await Q(
-          "extra_update",
-          {
-            id,
-            tipo: "descuento",
-            puntos: k === "puntos" ? v : item.puntos,
-            motivo: k === "motivo" ? v : item.motivo,
-          },
-          "descuentos",
-          descuentos.map((d) => (d.id === id ? { ...d, [k]: v } : d)),
-        );
+        await syncWithServer("extra_update", {
+          id,
+          tipo: "descuento",
+          puntos: k === "puntos" ? v : item.puntos,
+          motivo: k === "motivo" ? v : item.motivo,
+        }, "descuentos", descuentos.map((d) => (d.id === id ? { ...d, [k]: v } : d)));
+        toast.success("Descuento actualizado");
       } catch (e) {
         const err = e as Error;
         toast.error("Error al actualizar: " + err.message);
       }
     } else {
-      A(
-        "descuentos",
-        descuentos.map((d) => (d.id === id ? { ...d, [k]: v } : d)),
-      );
+      setLocal("descuentos", descuentos.map((d) => (d.id === id ? { ...d, [k]: v } : d)));
     }
   };
 
@@ -119,7 +105,7 @@ export default function ExtrasPage() {
       team: view === "team" ? (target as string) : undefined,
     };
 
-    A(listKey, [...(act[listKey] || []), newItem]);
+    setLocal(listKey, [...(act[listKey] || []), newItem]);
     setShowAdd(false);
     toast.success(`${type === "extra" ? "Puntos extra" : "Sanción"} aplicada`);
   };
@@ -158,12 +144,8 @@ export default function ExtrasPage() {
                   key={e.id}
                   item={e}
                   color="#22C55E"
-                  onDel={(id: number) =>
-                    A(
-                      "extras",
-                      extrasList.filter((x) => x.id !== id),
-                    )
-                  }
+onDel={(id: number) =>
+                    setLocal("extras", extrasList.filter((x) => x.id !== id))}
                   db={db}
                   isTeam={view === "team"}
                   locked={locked}
@@ -182,12 +164,8 @@ export default function ExtrasPage() {
                   key={d.id}
                   item={d}
                   color="#FF6B6B"
-                  onDel={(id: number) =>
-                    A(
-                      "descuentos",
-                      descuentosList.filter((x) => x.id !== id),
-                    )
-                  }
+onDel={(id: number) =>
+                    setLocal("descuentos", descuentosList.filter((x) => x.id !== id))}
                   db={db}
                   isTeam={view === "team"}
                   locked={locked}

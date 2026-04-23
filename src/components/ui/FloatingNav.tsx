@@ -1,9 +1,10 @@
 "use client"
 
 import * as React from "react"
-import { useRouter } from "next/navigation"
-import { ChevronUp, type LucideIcon } from "lucide-react"
+import { type LucideIcon } from "lucide-react"
+import { motion, AnimatePresence } from "framer-motion"
 import { cn } from "@/lib/utils"
+import Link from "next/link"
 
 interface NavItem {
   value: string
@@ -14,19 +15,21 @@ interface NavItem {
 
 interface FloatingNavProps {
   value: string
-  onValueChange?: (value: string) => void
   items: NavItem[]
   lockedValues?: string[]
+  onValueChange?: (value: string) => void
 }
 
-export function FloatingNav({ value, onValueChange, items, lockedValues = [] }: FloatingNavProps) {
-  const router = useRouter()
+export function FloatingNav({ value, items, lockedValues = [], onValueChange }: FloatingNavProps) {
   const [isOpen, setIsOpen] = React.useState(false)
   const containerRef = React.useRef<HTMLDivElement>(null)
 
   const currentItem = items.find((item) => item.value === value) || items[0]
   const CurrentIcon = currentItem.icon
 
+  const useCallback = !!onValueChange
+
+  // Click outside para cerrar
   React.useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
@@ -34,17 +37,16 @@ export function FloatingNav({ value, onValueChange, items, lockedValues = [] }: 
       }
     }
 
-    document.addEventListener("mousedown", handleClickOutside)
-    return () => document.removeEventListener("mousedown", handleClickOutside)
-  }, [])
+    if (isOpen) {
+      document.addEventListener("mousedown", handleClickOutside)
+      return () => document.removeEventListener("mousedown", handleClickOutside)
+    }
+  }, [isOpen])
 
   const handleSelect = (item: NavItem) => {
     if (lockedValues.includes(item.value)) return
     
-    // If item has href, use it; otherwise call onValueChange
-    if (item.href) {
-      router.push(item.href)
-    } else if (onValueChange) {
+    if (useCallback && onValueChange) {
       onValueChange(item.value)
     }
     setIsOpen(false)
@@ -52,65 +54,105 @@ export function FloatingNav({ value, onValueChange, items, lockedValues = [] }: 
 
   return (
     <div ref={containerRef} className="fixed bottom-6 left-1/2 z-[60] -translate-x-1/2 pb-6 pb-safe">
-      {/* Dropdown menu - appears above */}
-      <div
+      <motion.div
         className={cn(
-          "absolute bottom-full left-1/2 mb-2 -translate-x-1/2 overflow-hidden rounded-2xl border border-border bg-white p-1 shadow-lg transition-all duration-200",
-          isOpen
-            ? "pointer-events-auto translate-y-0 opacity-100"
-            : "pointer-events-none translate-y-2 opacity-0"
+          "flex rounded-2xl border border-border bg-white shadow-lg overflow-hidden",
+          isOpen ? "border-primary" : ""
         )}
+        initial={false}
+        animate={isOpen ? "open" : "closed"}
+        onClick={() => !isOpen && setIsOpen(true)}
+        style={{ cursor: "pointer" }}
       >
-        <div className="flex w-48 flex-col">
-          {items.map((item) => {
-            const Icon = item.icon
-            const isActive = item.value === value
-            const isLocked = lockedValues.includes(item.value)
-            return (
-              <button
-                key={item.value}
-                onClick={() => handleSelect(item)}
-                disabled={isLocked}
-                className={cn(
-                  "flex items-center gap-2 rounded-2xl px-3 py-1.5 text-sm font-medium transition-colors",
-                  isActive
-                    ? "bg-primary text-white"
-                    : isLocked
-                      ? "text-muted-foreground/50 cursor-not-allowed"
-                      : "text-foreground/60 hover:text-foreground hover:bg-muted"
-                )}
-              >
-                <Icon className="size-4" />
-                {item.label}
-                {isLocked && (
-                  <svg xmlns="http://www.w3.org/2000/svg" className="size-3 ml-auto text-red-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-                    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-                  </svg>
-                )}
-              </button>
-            )
-          })}
-        </div>
-      </div>
-
-      {/* Main floating button */}
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className={cn(
-          "flex items-center gap-2 rounded-full border border-surface-dark bg-white px-4 py-2.5 shadow-lg shadow-black/10 transition-all hover:bg-accent",
-          isOpen && "bg-accent"
-        )}
-      >
-        <CurrentIcon className="size-4 text-foreground" />
-        <span className="text-sm font-medium text-foreground">{currentItem.label}</span>
-        <ChevronUp
-          className={cn(
-            "size-4 text-muted-foreground transition-transform duration-200",
-            isOpen && "rotate-180"
+        {/* Botón principal - solo visible cuando está cerrado */}
+        <AnimatePresence mode="wait">
+          {!isOpen && (
+            <motion.div
+              key="closed"
+              className="flex items-center justify-center w-[90px] shrink-0"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.15 }}
+            >
+              <div className="flex flex-col items-center justify-center gap-1 p-3">
+                <CurrentIcon className="size-5 text-foreground" />
+                <span className="text-[10px] text-center leading-tight">{currentItem.label}</span>
+              </div>
+            </motion.div>
           )}
-        />
-      </button>
+        </AnimatePresence>
+
+        {/* Grid de opciones - visible cuando está abierto */}
+        <AnimatePresence mode="wait">
+          {isOpen && (
+            <motion.div
+              key="open"
+              className="grid grid-cols-3 gap-1 p-2 w-[300px]"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.15 }}
+            >
+              {items.map((item) => {
+                const Icon = item.icon
+                const isActive = item.value === value
+                const isLocked = lockedValues.includes(item.value)
+
+                if (isLocked) {
+                  return (
+                    <button
+                      key={item.value}
+                      disabled
+                      className="flex flex-col items-center justify-center gap-1 rounded-2xl border border-border p-3 text-sm font-medium text-muted-foreground/50 cursor-not-allowed"
+                    >
+                      <Icon className="size-5" />
+                      <span className="text-[10px] text-center leading-tight">{item.label}</span>
+                    </button>
+                  )
+                }
+
+                const href = useCallback ? undefined : (item.href || (item.value ? `/${item.value}` : "/"))
+
+                if (useCallback) {
+                  return (
+                    <button
+                      key={item.value}
+                      onClick={() => handleSelect(item)}
+                      className={cn(
+                        "flex flex-col items-center justify-center gap-1 rounded-2xl border border-border p-3 text-sm font-medium transition-colors",
+                        isActive
+                          ? "bg-primary text-white border-primary"
+                          : "hover:bg-muted"
+                      )}
+                    >
+                      <Icon className="size-5" />
+                      <span className="text-[10px] text-center leading-tight">{item.label}</span>
+                    </button>
+                  )
+                }
+
+                return (
+                  <Link
+                    key={item.value}
+                    href={href!}
+                    className={cn(
+                      "flex flex-col items-center justify-center gap-1 rounded-2xl border border-border p-3 text-sm font-medium transition-colors",
+                      isActive
+                        ? "bg-primary text-white border-primary"
+                        : "hover:bg-muted"
+                    )}
+                    onClick={() => setIsOpen(false)}
+                  >
+                    <Icon className="size-5" />
+                    <span className="text-[10px] text-center leading-tight">{item.label}</span>
+                  </Link>
+                )
+              })}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </motion.div>
     </div>
   )
 }

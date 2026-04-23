@@ -54,13 +54,13 @@ import type { Activity, ParticipantBasic, AppState } from "@/lib/types";
 let tempIdCounter = 0;
 const generateTempId = () => -1 - tempIdCounter++;
 
-function NewPlayerModal({ act, db, onClose, onSave, A, Q }: {
+function NewPlayerModal({ act, db, onClose, onSave, setLocal, syncWithServer }: {
   act: Activity;
   db: any;
   onClose: () => void;
   onSave: (data: unknown, isNew: boolean, invitadorId?: number | null) => Promise<number>;
-  A: (key: string, value: unknown) => void;
-  Q: (key: string, data: unknown, target: string, value: unknown) => Promise<unknown>;
+  setLocal: (key: string, value: unknown) => void;
+  syncWithServer: (key: string, data: unknown, target: string, value: unknown) => Promise<unknown>;
 }) {
   const [newPlayer, setNewPlayer] = useState<{
     nombre: string;
@@ -112,8 +112,9 @@ function NewPlayerModal({ act, db, onClose, onSave, A, Q }: {
       const newId = await onSave(participantData, true, invitadorId);
       const playerId = newId || p.id;
 
-      const newAsistentes = Array.from(new Set([...act.asistentes, playerId]));
-      Q(
+const newAsistentes = Array.from(new Set([...act.asistentes, playerId]));
+      setLocal("asistentes", newAsistentes);
+      syncWithServer(
         "attendance",
         { participantId: playerId, value: true },
         "asistentes",
@@ -121,14 +122,14 @@ function NewPlayerModal({ act, db, onClose, onSave, A, Q }: {
       );
 
       if (newPlayer.invitadorId && act.id) {
-        Q(
+        syncWithServer(
           "invitacion_add",
           { invitador: Number(newPlayer.invitadorId), invitedId: playerId },
           "invitaciones",
           [...(act.invitaciones || []), { id: -Date.now(), invitador: newPlayer.invitadorId, invitado_id: playerId }],
         );
       } else {
-        A("invitaciones", [
+        setLocal("invitaciones", [
           ...(act.invitaciones || []),
           {
             id: generateTempId(),
@@ -279,7 +280,7 @@ function NewPlayerModal({ act, db, onClose, onSave, A, Q }: {
 }
 
 export default function AsistenciaPage() {
-  const { activity: act, A, Q, db, locked, pendingOps } = useEditContext();
+  const { activity: act, setLocal, syncWithServer, db, locked, pendingOps } = useEditContext();
   const { saveParticipant } = useApp();
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
   const [search, setSearch] = useState("");
@@ -293,28 +294,32 @@ export default function AsistenciaPage() {
     const newValue = isIncluded ? c.filter((x) => x !== id) : [...c, id];
 
     if (key === "asistentes") {
-      Q("attendance", { participantId: id, value: !isIncluded }, key, newValue);
+      setLocal("asistentes", newValue);
+      syncWithServer("attendance", { participantId: id, value: !isIncluded }, "asistentes", newValue);
       if (isIncluded) {
-        A("socials", (act.socials || []).filter((x) => x !== id));
-        A("puntuales", (act.puntuales || []).filter((x) => x !== id));
-        A("biblias", (act.biblias || []).filter((x) => x !== id));
+        setLocal("socials", (act.socials || []).filter((x) => x !== id));
+        setLocal("puntuales", (act.puntuales || []).filter((x) => x !== id));
+        setLocal("biblias", (act.biblias || []).filter((x) => x !== id));
         const newEq = { ...act.equipos };
         delete newEq[id];
-        A("equipos", newEq);
+        setLocal("equipos", newEq);
       }
     } else if (key === "socials") {
-      Q("socials", { participantId: id, value: !isIncluded }, key, newValue);
+      setLocal("socials", newValue);
+      syncWithServer("socials", { participantId: id, value: !isIncluded }, "socials", newValue);
       if (!isIncluded) {
         const newEq = { ...act.equipos };
         delete newEq[id];
-        A("equipos", newEq);
+        setLocal("equipos", newEq);
       }
     } else if (key === "puntuales") {
-      Q("puntuales", { participantId: id, value: !isIncluded }, key, newValue);
+      setLocal("puntuales", newValue);
+      syncWithServer("puntuales", { participantId: id, value: !isIncluded }, "puntuales", newValue);
     } else if (key === "biblias") {
-      Q("biblias", { participantId: id, value: !isIncluded }, key, newValue);
+      setLocal("biblias", newValue);
+      syncWithServer("biblias", { participantId: id, value: !isIncluded }, "biblias", newValue);
     } else {
-      A(key, newValue);
+      setLocal(key, newValue);
     }
   };
 
@@ -349,8 +354,8 @@ export default function AsistenciaPage() {
           db={db}
           onClose={() => setShowNewPlayer(false)}
           onSave={saveParticipant}
-          A={A}
-          Q={Q}
+          setLocal={setLocal}
+          syncWithServer={syncWithServer}
         />
       )}
 
@@ -498,7 +503,7 @@ export default function AsistenciaPage() {
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => {
-                A("asistentes", []);
+                setLocal("asistentes", []);
                 toast.success("Asistencia limpiada");
               }}
               className="bg-red-500 hover:bg-red-600"
@@ -521,7 +526,7 @@ export default function AsistenciaPage() {
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => {
-                A("asistentes", sorted.map((p) => p.id));
+                setLocal("asistentes", sorted.map((p) => p.id));
                 toast.success("Todos presentes");
               }}
             >

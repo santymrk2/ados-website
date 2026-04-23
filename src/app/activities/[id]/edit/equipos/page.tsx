@@ -11,7 +11,7 @@ import { SexBadge } from "@/components/ui/Badges";
 import type { Activity, ParticipantBasic } from "@/lib/types";
 
 export default function EquiposPage() {
-  const { activity: act, A, Q, db, locked, pendingOps } = useEditContext();
+  const { activity: act, setLocal, syncWithServer, db, locked, pendingOps } = useEditContext();
   const [viewMode, setViewMode] = useState<"cards" | "list">("cards");
   const [selectedTeam, setSelectedTeam] = useState<string | null>(null);
   
@@ -36,7 +36,7 @@ export default function EquiposPage() {
     [db.participants, act.asistentes, act.socials],
   );
 
-  const setTeam = (pid: number, team: string) => {
+  const setTeam = async (pid: number, team: string) => {
     const eq = { ...(act.equipos || {}) };
     let finalTeam: string | null = team;
     if (eq[pid] === team) {
@@ -45,8 +45,17 @@ export default function EquiposPage() {
     } else {
       eq[pid] = team;
     }
-    Q("team", { participantId: pid, team: finalTeam }, "equipos", eq);
-    toast.success("Equipo actualizado");
+
+    // Actualizar local primero (optimistic update)
+    setLocal("equipos", eq);
+
+    try {
+      await syncWithServer("team", { participantId: pid, team: finalTeam }, "equipos", eq);
+      toast.success("Equipo actualizado");
+    } catch (e) {
+      const err = e as Error;
+      toast.error("Error al actualizar equipo: " + err.message);
+    }
   };
 
   const autoBalance = (resetAll = false) => {
@@ -79,7 +88,7 @@ export default function EquiposPage() {
       counts[best].total++;
     });
     
-    A("equipos", eq);
+    setLocal("equipos", eq);
     toast.success(resetAll ? "Equipos redistribuidos" : "Equipos completados");
   };
 

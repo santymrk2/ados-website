@@ -22,15 +22,15 @@ import {
 } from "@/components/ui/alert-dialog";
 
 export default function EditPage() {
-  const { activity: act, A, Q, locked, pendingOps } = useEditContext();
+  const { activity: act, setLocal, syncWithServer, locked, pendingOps } = useEditContext();
   const [showUnlockDialog, setShowUnlockDialog] = useState(false);
 
   const handleLockToggle = (checked: boolean) => {
     if (checked) {
       if (act.id) {
-        Q("config", { k: "locked", v: true }, "locked", true);
+        syncWithServer("config", { k: "locked", v: true }, "locked", true);
       } else {
-        A("locked", true);
+        setLocal("locked", true);
       }
       toast.success("Actividad bloqueada", {
         description: "Nadie puede editar hasta que la desbloquees",
@@ -42,9 +42,9 @@ export default function EditPage() {
 
   const confirmUnlock = () => {
     if (act.id) {
-      Q("config", { k: "locked", v: false }, "locked", false);
+      syncWithServer("config", { k: "locked", v: false }, "locked", false);
     } else {
-      A("locked", false);
+      setLocal("locked", false);
     }
     setShowUnlockDialog(false);
     toast.success("Actividad desbloqueada", {
@@ -69,7 +69,7 @@ export default function EditPage() {
             )}
             <div>
               <Label style={{ margin: 0 }} className="text-sm font-bold">
-                {locked ? "Actividad bloqueada" : "Actividad desbloqueada"}
+                {locked ? "setLocalctividad bloqueada" : "setLocalctividad desbloqueada"}
               </Label>
               <p className="text-[10px] text-text-muted mt-0.5">
                 {locked
@@ -107,7 +107,7 @@ export default function EditPage() {
             <Label>Nombre de Actividad</Label>
             <Input
               value={act.titulo || ""}
-              onChange={(e) => A("titulo", e.target.value)}
+              onChange={(e) => setLocal("titulo", e.target.value)}
               placeholder="Ej: Actividad Mayo"
               disabled={locked}
             />
@@ -117,7 +117,7 @@ export default function EditPage() {
             <Label>Fecha</Label>
             <DatePicker
               value={act.fecha}
-              onChange={(date) => A("fecha", date)}
+              onChange={(date) => setLocal("fecha", date)}
               placeholder="Seleccionar fecha"
               disabled={locked}
             />
@@ -130,8 +130,8 @@ export default function EditPage() {
               onValueChange={(v) => {
                 const val = Number(v);
                 if (act.id)
-                  Q("config", { k: "cantEquipos", v: val }, "cantEquipos", val);
-                else A("cantEquipos", val);
+                  syncWithServer("config", { k: "cantEquipos", v: val }, "cantEquipos", val);
+                else setLocal("cantEquipos", val);
               }}
               className="flex gap-4 mt-2"
               disabled={locked}
@@ -160,7 +160,7 @@ export default function EditPage() {
             <Label style={{ margin: 0 }}>Nota</Label>
             <HelpInfo
               title="Flujo de Carga"
-              text="1. Marcá Asistencia. 2. Asigná Equipos. 3. Cargá Juegos y Deportes. Los puntos se calculan automáticamente."
+              text="1. Marcá setLocalsistencia. 2. setLocalsigná Equipos. 3. Cargá Juegos y Deportes. Los puntos se calculan automáticamente."
             />
           </div>
         </div>

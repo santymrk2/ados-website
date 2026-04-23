@@ -1,3 +1,5 @@
+"use client";
+
 import { useEditContext } from "../layout";
 import { toast } from "@/hooks/use-toast";
 import { Label, Empty } from "@/components/ui/Common";
@@ -8,7 +10,7 @@ import {
   ComboboxContent,
   ComboboxList,
   ComboboxItem,
-  ComboboxValue,
+  ComboboxTrigger,
 } from "@/components/ui/combobox";
 import type { ParticipantBasic } from "@/lib/types";
 
@@ -20,7 +22,7 @@ interface InvitacionWithId {
 }
 
 export default function InvitadosPage() {
-  const { activity: act, A, Q, db, locked, pendingOps } = useEditContext();
+  const { activity: act, setLocal, syncWithServer, db, locked, pendingOps } = useEditContext();
   
   const invitacionesList = (act.invitaciones || []) as InvitacionWithId[];
 
@@ -46,7 +48,7 @@ export default function InvitadosPage() {
 
   const add = async () => {
     const tempId = -Date.now();
-    A("invitaciones", [
+    setLocal("invitaciones", [
       ...invitacionesList,
       { id: tempId, invitador: null, invitadorId: null, invitadoId: null },
     ]);
@@ -55,7 +57,7 @@ export default function InvitadosPage() {
 
   const del = async (id: number) => {
     if (!id || id < 0) {
-      A(
+      setLocal(
         "invitaciones",
         invitacionesList.filter((i) => i.id !== id),
       );
@@ -64,12 +66,7 @@ export default function InvitadosPage() {
     }
 
     try {
-      await Q(
-        "invitacion_delete",
-        { id },
-        "invitaciones",
-        invitacionesList.filter((i) => i.id !== id),
-      );
+      await syncWithServer("invitacion_delete", { id }, "invitaciones", invitacionesList.filter((i) => i.id !== id));
       toast.success("Invitación eliminada");
     } catch (e) {
       const err = e as Error;
@@ -83,16 +80,13 @@ export default function InvitadosPage() {
 
     if (id < 0 && k === "invitadoId" && v) {
       try {
-        const result = await Q("invitacion_add", {
+        const result = await syncWithServer("invitacion_add", {
           invitador: inv.invitador,
           invitadoId: v as number,
         }, "invitaciones", invitacionesList);
-        A(
-          "invitaciones",
-          invitacionesList.map((i) =>
-            i.id === id ? { ...i, id: (result as { id: number }).id, [k]: v } : i,
-          ),
-        );
+        setLocal("invitaciones", invitacionesList.map((i) =>
+          i.id === id ? { ...i, id: (result as { id: number }).id, [k]: v } : i,
+        ));
         toast.success("Invitación guardada");
       } catch (e) {
         const err = e as Error;
@@ -101,19 +95,16 @@ export default function InvitadosPage() {
       return;
     }
 
-if (id > 0) {
+    if (id > 0) {
       try {
-        await Q("invitacion_update", {
+        await syncWithServer("invitacion_update", {
           id,
           invitador: k === "invitador" ? v : inv.invitador,
           invitadoId: k === "invitadoId" ? v : inv.invitadoId,
         }, "invitaciones", invitacionesList);
-        A(
-          "invitaciones",
-          invitacionesList.map((i) =>
-            i.id === id ? { ...i, [k]: v } : i,
-          ),
-        );
+        setLocal("invitaciones", invitacionesList.map((i) =>
+          i.id === id ? { ...i, [k]: v } : i,
+        ));
         toast.success("Invitación actualizada");
       } catch (e) {
         const err = e as Error;
@@ -122,10 +113,7 @@ if (id > 0) {
       return;
     }
 
-    A(
-      "invitaciones",
-      invitacionesList.map((i) => (i.id === id ? { ...i, [k]: v } : i)),
-    );
+    setLocal("invitaciones", invitacionesList.map((i) => (i.id === id ? { ...i, [k]: v } : i)));
   };
 
   return (
@@ -143,9 +131,9 @@ if (id > 0) {
         </Button>
       </div>
       <div className="flex flex-col gap-3 mt-3">
-        {invitacionesList.map((inv) => (
+        {invitacionesList.map((inv, index) => (
           <div
-            key={inv.id}
+            key={inv.id ?? `temp-${index}`}
             className="bg-white rounded-xl border border-surface-dark p-3 shadow-sm"
           >
             <div className="flex justify-between items-center mb-3 text-xs font-black text-text-muted">
@@ -168,10 +156,11 @@ if (id > 0) {
                 items={getAvailableParticipants()}
                 disabled={locked}
               >
-                <ComboboxInput placeholder="— Seleccionar —" />
-                <ComboboxValue>
-                  {({ value }) => value ? getParticipantLabel(Number(value)) : "— Seleccionar —"}
-                </ComboboxValue>
+                <ComboboxInput
+                  placeholder="— Seleccionar —"
+                  readOnly
+                />
+                <ComboboxTrigger />
                 <ComboboxContent>
                   <ComboboxList>
                     {getAvailableParticipants().map((p) => (
@@ -182,6 +171,11 @@ if (id > 0) {
                   </ComboboxList>
                 </ComboboxContent>
               </Combobox>
+              {inv.invitador && (
+                <div className="text-sm font-medium text-foreground mt-1">
+                  {getParticipantLabel(inv.invitador)}
+                </div>
+              )}
             </div>
             <Label>Invitado</Label>
             <div className="mb-3">
@@ -191,10 +185,11 @@ if (id > 0) {
                 items={getAllParticipants()}
                 disabled={locked}
               >
-                <ComboboxInput placeholder="— Seleccionar —" />
-                <ComboboxValue>
-                  {({ value }) => value ? getParticipantLabel(Number(value)) : "— Seleccionar —"}
-                </ComboboxValue>
+                <ComboboxInput
+                  placeholder="— Seleccionar —"
+                  readOnly
+                />
+                <ComboboxTrigger />
                 <ComboboxContent>
                   <ComboboxList>
                     {getAllParticipants().map((p) => (
@@ -205,6 +200,11 @@ if (id > 0) {
                   </ComboboxList>
                 </ComboboxContent>
               </Combobox>
+              {inv.invitadoId && (
+                <div className="text-sm font-medium text-foreground mt-1">
+                  {getParticipantLabel(inv.invitadoId)}
+                </div>
+              )}
             </div>
           </div>
         ))}

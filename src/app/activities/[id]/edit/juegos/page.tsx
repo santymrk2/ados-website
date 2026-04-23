@@ -3,6 +3,7 @@
 import { useState, useMemo } from "react";
 import { useEditContext } from "../layout";
 import { Plus } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
 import { TEAMS, PTS, TEAM_COLORS, getTeamBg } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,7 +17,7 @@ let tempIdCounter = 0;
 const generateTempId = () => -1 - tempIdCounter++;
 
 export default function JuegosPage() {
-  const { activity: act, A, Q, locked, pendingOps } = useEditContext();
+  const { activity: act, setLocal, syncWithServer, locked, pendingOps } = useEditContext();
   
   const isAddingSaving =
     pendingOps.size > 0 &&
@@ -47,27 +48,60 @@ export default function JuegosPage() {
   const add = async () => {
     const tempId = generateTempId();
     const nj: Juego = { id: tempId, nombre: "", pos: {} };
-    const result = await Q("game_add", nj, "juegos", [
-      ...(act.juegos || []),
-      nj,
-    ]);
-    if (result && typeof result === "object" && "id" in result) {
-      A("juegos", [...(act.juegos || []), { ...nj, id: (result as { id: number }).id }]);
+    // Agregar local primero como temporal
+    setLocal("juegos", [...(act.juegos || []), nj]);
+
+    try {
+      const result = await syncWithServer("game_add", nj, "juegos", [
+        ...(act.juegos || []),
+        nj,
+      ]);
+      if (result && typeof result === "object" && "id" in result) {
+        // Actualizar con el ID real del server
+        setLocal("juegos", (act.juegos || []).map((j) =>
+          j.id === tempId ? { ...j, id: (result as { id: number }).id } : j,
+        ));
+        toast.success("Juego agregado");
+      }
+    } catch (e) {
+      // Si falla, revertir el temporal
+      setLocal("juegos", (act.juegos || []).filter((j) => j.id !== tempId));
+      const err = e as Error;
+      toast.error("Error al agregar: " + err.message);
     }
   };
-  const del = (id: number) =>
-    Q(
-      "game_delete",
-      { id },
-      "juegos",
-      (act.juegos || []).filter((j: Juego) => j.id !== id),
-    );
-  const updN = (id: number, v: string) =>
-    A(
-      "juegos",
-      (act.juegos || []).map((j: Juego) => (j.id === id ? { ...j, nombre: v } : j)),
-    );
-  const updPos = (jid: number, team: string, pos: string) => {
+
+  const del = async (id: number) => {
+    if (id < 0) {
+      setLocal("juegos", (act.juegos || []).filter((j) => j.id !== id));
+      toast.success("Juego eliminado");
+      return;
+    }
+
+    try {
+      await syncWithServer("game_delete", { id }, "juegos", (act.juegos || []).filter((j) => j.id !== id));
+      toast.success("Juego eliminado");
+    } catch (e) {
+      const err = e as Error;
+      toast.error("Error al eliminar: " + err.message);
+    }
+  };
+
+  const updN = async (id: number, v: string) => {
+    if (id < 0) {
+      setLocal("juegos", (act.juegos || []).map((j) => (j.id === id ? { ...j, nombre: v } : j)));
+      return;
+    }
+
+    try {
+      await syncWithServer("game_update", { id, nombre: v }, "juegos", (act.juegos || []).map((j) => (j.id === id ? { ...j, nombre: v } : j)));
+    } catch (e) {
+      const err = e as Error;
+      toast.error("Error al actualizar: " + err.message);
+    }
+  };
+
+  const updPos = async (jid: number, team: string, pos: string) => {
     const game = (act.juegos || []).find((j: Juego) => j.id === jid);
     if (!game) return;
 
@@ -98,7 +132,18 @@ export default function JuegosPage() {
     const newList = (act.juegos || []).map((g: Juego) =>
       g.id === jid ? { ...g, pos: newPos } : g,
     );
-    Q("game_pos", { juegoId: jid, pos: newPos }, "juegos", newList);
+
+    // Actualizar local primero
+    setLocal("juegos", newList);
+
+    if (jid > 0) {
+      try {
+        await syncWithServer("game_pos", { juegoId: jid, pos: newPos }, "juegos", newList);
+      } catch (e) {
+        const err = e as Error;
+        toast.error("Error al actualizar posición: " + err.message);
+      }
+    }
   };
 
   return (

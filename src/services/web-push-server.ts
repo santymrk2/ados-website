@@ -65,17 +65,18 @@ export async function sendPushToSubscription(
   try {
     await webpush.sendNotification(pushSubscription, payload);
     return { success: true };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Web Push send error:", error);
-    // If subscription is invalid (410 Gone), we should delete it
-    if (error instanceof webpush.WebPushError && error.statusCode === 410) {
+    const webPushError = error as { statusCode?: number };
+    if (webPushError.statusCode === 410) {
       return {
         success: false,
         error: "Subscription expired",
         shouldDelete: true,
       };
     }
-    return { success: false, error };
+    const message = error instanceof Error ? error.message : String(error);
+    return { success: false, error: message };
   }
 }
 

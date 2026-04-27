@@ -31,7 +31,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { useApp } from "@/hooks/useApp";
-import type { Activity } from "@/lib/types";
+import type { Activity, Gol } from "@/lib/types";
 
 export default function ActivitiesPage() {
   const router = useRouter();
@@ -101,7 +101,7 @@ export default function ActivitiesPage() {
           <Empty text="No hay actividades todavía" />
         ) : (
           <div className="flex flex-col gap-3">
-            {sorted.map((a: any) => (
+            {sorted.map((a: Activity) => (
               <div
                 key={a.id}
                 onClick={() => handleView(a)}
@@ -141,7 +141,7 @@ export default function ActivitiesPage() {
                   <Chip
                     icon={Trophy}
                     val={(a.goles || []).reduce(
-                      (s: any, g: any) => s + g.cant,
+                      (s: number, g: Gol) => s + g.cant,
                       0,
                     )}
                     label="goles"

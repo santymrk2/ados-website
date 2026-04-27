@@ -80,22 +80,19 @@ export async function subscribeToPush(): Promise<PushSubscriptionData | null> {
     
     const subscription = await registration.pushManager.subscribe({
       userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(publicKey) as any,
+      applicationServerKey: urlBase64ToUint8Array(publicKey) as BufferSource,
     });
 
-    // getKey() returns ArrayBuffer in Chrome/Edge
-    let p256dhKey = (subscription as any).getKey('p256dh');
-    let authKey = (subscription as any).getKey('auth');
+    const p256dhKey = subscription.getKey('p256dh') as ArrayBuffer | null;
+    const authKey = subscription.getKey('auth') as ArrayBuffer | null;
     
     let p256dh: string;
     let auth: string;
     
     if (p256dhKey && p256dhKey.byteLength > 0) {
-      // Chrome/Edge: getKey() returns ArrayBuffer
       p256dh = uint8ArrayToUrlBase64(new Uint8Array(p256dhKey));
-      auth = uint8ArrayToUrlBase64(new Uint8Array(authKey));
+      auth = uint8ArrayToUrlBase64(new Uint8Array(authKey!));
     } else {
-      // Firefox: get keys from JSON representation
       const json = subscription.toJSON();
       p256dh = json?.keys?.p256dh || '';
       auth = json?.keys?.auth || '';

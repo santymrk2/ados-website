@@ -7,6 +7,7 @@ import { Avatar } from "@/components/ui/Avatar";
 import { cn } from "@/lib/utils";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import type { ParticipantBasic } from "@/lib/types";
 
 const MONTHS = [
   "Enero",
@@ -29,7 +30,7 @@ function getInitials(nombre: string, apellido: string) {
   return `${nombre?.[0] || ""}${apellido?.[0] || ""}`.toUpperCase();
 }
 
-function SimpleAvatar({ p, size = 36 }: { p: any; size?: number }) {
+function SimpleAvatar({ p, size = 36 }: { p: ParticipantBasic; size?: number }) {
   const initials = getInitials(p.nombre, p.apellido);
   const isM = p.sexo === "M";
   const isMX = p.sexo === "MX";
@@ -74,7 +75,7 @@ function PlayerDetailModal({
   player,
   onClose,
 }: {
-  player: any;
+  player: ParticipantBasic;
   onClose: () => void;
 }) {
   if (!player) return null;
@@ -169,10 +170,10 @@ export default function Page() {
   const { db } = useApp();
   const { participants } = db;
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [selectedPlayer, setSelectedPlayer] = useState<any>(null);
+  const [selectedPlayer, setSelectedPlayer] = useState<ParticipantBasic | null>(null);
 
   const birthdaysByMonth = useMemo(() => {
-    const byMonth = Array.from({ length: 12 }, () => [] as any[]);
+    const byMonth = Array.from({ length: 12 }, () => [] as ParticipantBasic[]);
     participants.forEach((p) => {
       if (p.fechaNacimiento) {
         const month = parseInt(p.fechaNacimiento.split("-")[1]) - 1;
@@ -181,8 +182,8 @@ export default function Page() {
     });
     byMonth.forEach((arr) =>
       arr.sort((a, b) => {
-        const dayA = parseInt(a.fechaNacimiento.split("-")[2]);
-        const dayB = parseInt(b.fechaNacimiento.split("-")[2]);
+        const dayA = parseInt(a.fechaNacimiento!.split("-")[2]);
+        const dayB = parseInt(b.fechaNacimiento!.split("-")[2]);
         return dayA - dayB;
       }),
     );
@@ -205,7 +206,7 @@ export default function Page() {
   for (let i = 1; i <= daysInMonth; i++) days.push(i);
 
   const birthdaysToday = birthdaysByMonth[currentMonth].filter((p) => {
-    const day = parseInt(p.fechaNacimiento.split("-")[2]);
+    const day = parseInt(p.fechaNacimiento!.split("-")[2]);
     return day === new Date().getDate();
   });
 
@@ -267,7 +268,7 @@ export default function Page() {
           if (!day) return <div key={`empty-${idx}`} />;
 
           const birthdays = birthdaysByMonth[currentMonth].filter((p) => {
-            const bday = parseInt(p.fechaNacimiento.split("-")[2]);
+            const bday = parseInt(p.fechaNacimiento!.split("-")[2]);
             return bday === day;
           });
 
@@ -349,7 +350,7 @@ export default function Page() {
             </div>
           ) : (
             birthdaysByMonth[currentMonth].map((p) => {
-              const day = parseInt(p.fechaNacimiento.split("-")[2]);
+              const day = parseInt(p.fechaNacimiento!.split("-")[2]);
               return (
                 <div
                   key={p.id}

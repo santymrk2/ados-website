@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { participants } from "@/lib/schema";
 import { eq } from "drizzle-orm";
+import type { Participant } from "@/lib/types";
 
 export const dynamic = 'force-dynamic';
 
@@ -26,7 +27,7 @@ export async function GET(
       return NextResponse.json({ success: false, error: "Jugador no encontrado" }, { status: 404 });
     }
 
-    const p = result[0] as any;
+    const p = result[0] as Participant;
     
     // IMPORTANTE: Aquí convertimos las fotos para que usen nuestro Proxy
     // No devolvemos la URL de MinIO directamente para evitar errores de DNS/Protocolo en el navegador

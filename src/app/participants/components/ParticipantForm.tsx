@@ -8,9 +8,10 @@ import { Label } from "@/components/ui/Common";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ImageCropModal } from "@/components/ui/ImageCropModal";
+import { getParticipant } from "@/lib/api-client";
 import { downloadBase64Image } from "@/lib/image-utils";
 import { DatePicker } from "@/components/ui/calendar";
-import { getImg } from "@/lib/utils";
+import { getErrorMessage, getImg } from "@/lib/utils";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -21,16 +22,16 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { getParticipant } from "@/lib/api-client";
 import { Avatar } from "@/components/ui/Avatar";
 import { cn } from "@/lib/utils";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import type { DBData, Participant } from "@/lib/types";
 
 interface ParticipantFormProps {
-  db: any;
-  initial?: any;
+  db: DBData;
+  initial?: Participant;
   onClose: () => void;
-  onSave: (data: any, isNew: boolean) => Promise<void>;
+  onSave: (data: Participant, isNew: boolean) => Promise<void>;
 }
 
 export function ParticipantForm({ db, initial, onClose, onSave }: ParticipantFormProps) {
@@ -51,7 +52,7 @@ export function ParticipantForm({ db, initial, onClose, onSave }: ParticipantFor
     }
   }, [initial?.id]);
 
-  const F = (k: string, v: any) => {
+  const F = (k: string, v: unknown) => {
     setForm((f) => ({ ...f, [k]: v }));
     setHasChanges(true);
   };
@@ -107,9 +108,9 @@ export function ParticipantForm({ db, initial, onClose, onSave }: ParticipantFor
       toast.success("Guardado con éxito");
       setHasChanges(false);
       onClose();
-    } catch (e: any) {
+    } catch (e: unknown) {
       toast.dismiss(loadingToast);
-      toast.error("Error al guardar: " + e.message);
+      toast.error("Error al guardar: " + getErrorMessage(e));
       setIsSubmitting(false);
     }
   };
@@ -243,7 +244,7 @@ export function ParticipantForm({ db, initial, onClose, onSave }: ParticipantFor
           <div className="space-y-2">
             <Label className="text-slate-600 font-bold ml-1">Fecha de Nacimiento</Label>
             <DatePicker
-              value={form.fechaNacimiento}
+              value={form.fechaNacimiento ?? undefined}
               onChange={(date) => F("fechaNacimiento", date)}
               placeholder="Seleccionar fecha"
             />

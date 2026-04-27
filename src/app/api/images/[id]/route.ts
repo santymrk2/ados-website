@@ -34,8 +34,8 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
         "Cache-Control": "public, max-age=31536000, immutable",
       },
     });
-  } catch (e: any) {
-    if (e?.name === "NoSuchKey") {
+  } catch (e: unknown) {
+    if (e instanceof Error && e.name === "NoSuchKey") {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
     console.error("[API Images] Error proxying image:", e);

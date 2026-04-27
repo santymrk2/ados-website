@@ -4,7 +4,18 @@ import React from "react";
 import * as AvatarPrimitive from "@radix-ui/react-avatar";
 import { cn, getImg } from "@/lib/utils";
 
-export function Avatar({ p, size = 36, className = "" }) {
+interface AvatarProps {
+  p: {
+    nombre?: string | null;
+    apellido?: string | null;
+    sexo?: string | null;
+    foto?: string | null;
+  };
+  size?: number;
+  className?: string;
+}
+
+export function Avatar({ p, size = 36, className = "" }: AvatarProps) {
   const initials =
     `${p.nombre?.[0] || ""}${p.apellido?.[0] || ""}`.toUpperCase();
   const isM = p.sexo === "M";

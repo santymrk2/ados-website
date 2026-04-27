@@ -1,3 +1,5 @@
+import { getErrorMessage } from "@/lib/utils";
+
 export interface PixelCrop {
   x: number;
   y: number;
@@ -45,8 +47,9 @@ function enhanceExposure(ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElemen
   let imgData;
   try {
     imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-  } catch (e: any) {
-    console.warn('enhanceExposure: no se pudo acceder a los píxeles:', e.message);
+  } catch (e: unknown) {
+      const err = getErrorMessage(e);
+    console.warn('enhanceExposure: no se pudo acceder a los píxeles:', err);
     return;
   }
 

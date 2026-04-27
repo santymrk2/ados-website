@@ -2,6 +2,13 @@ import { db } from './db';
 import { sql, eq, and } from 'drizzle-orm';
 import * as schema from './schema';
 
+interface DuplicateRow {
+  juego_id: number;
+  equipo: string;
+  cnt: number;
+  ids: string;
+}
+
 export async function migrateDatabase() {
   console.log('🔍 Verificando integridad de datos...');
 
@@ -38,9 +45,10 @@ export async function migrateDatabase() {
 
       // 3. Limpiar duplicados: mantener el ID más alto (más reciente)
       for (const row of duplicates.rows || []) {
-        const juegoId = (row as any).juego_id;
-        const equipo = (row as any).equipo;
-        const ids = ((row as any).ids as string).split(',').map(Number);
+        const typedRow = row as unknown as DuplicateRow;
+        const juegoId = typedRow.juego_id;
+        const equipo = typedRow.equipo;
+        const ids = typedRow.ids.split(',').map(Number);
 
         // Mantener el ID más alto, eliminar los demás
         const idsToDelete = ids.sort((a, b) => b - a).slice(1);

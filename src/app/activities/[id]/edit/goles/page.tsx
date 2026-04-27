@@ -207,13 +207,13 @@ export default function GolesPage() {
   }, [db.participants, act.asistentes, act.socials]);
 
   const add = () => {
-    const ng = { id: generateTempId(), pid: null, tipo: "f", cant: 1 };
-    setLocal("goles", (prev: any[]) => [...(prev || []), ng], true);
+    const ng: Gol = { id: generateTempId(), pid: null, tipo: "f", cant: 1 };
+    setLocal("goles", (prev: Gol[]) => [...(prev || []), ng], true);
     toast.success("Fila de gol agregada");
   };
 
   const del = async (id: number) => {
-    const updateFn = (prev: any[]) => (prev || []).filter((g) => g.id !== id);
+    const updateFn = (prev: Gol[]) => (prev || []).filter((g) => g.id !== id);
     if (id < 0) {
       setLocal("goles", updateFn, true);
       return;
@@ -229,7 +229,7 @@ export default function GolesPage() {
   };
 
   const upd = async (id: number, k: string, v: unknown) => {
-    const updateFn = (prev: any[]) => (prev || []).map((g) => (g.id === id ? { ...g, [k]: v } : g));
+    const updateFn = (prev: Gol[]) => (prev || []).map((g) => (g.id === id ? { ...g, [k]: v } : g));
     
     // Optimistic update
     setLocal("goles", updateFn, true);
@@ -246,12 +246,12 @@ export default function GolesPage() {
 
   const createOnServer = async (tempId: number, goal: Gol) => {
     if (!goal.pid) return;
-    const updateFn = (prev: any[]) => (prev || []).map(g => g.id === tempId ? goal : g);
+    const updateFn = (prev: Gol[]) => (prev || []).map(g => g.id === tempId ? goal : g);
     
     try {
       const result = await syncWithServer("goal_add", { pid: goal.pid, tipo: goal.tipo, cant: goal.cant }, "goles", updateFn);
       const realId = (result as { id: number }).id;
-      setLocal("goles", (prev: any[]) => (prev || []).map(g => g.id === tempId ? { ...g, id: realId } : g), true);
+      setLocal("goles", (prev: Gol[]) => (prev || []).map(g => g.id === tempId ? { ...g, id: realId } : g), true);
     } catch (e) {
       const err = e as Error;
       toast.error("Error al guardar gol: " + err.message);

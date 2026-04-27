@@ -30,13 +30,13 @@ import { toast } from "@/hooks/use-toast";
 
 import { Button } from "@/components/ui/button";
 
-import type { Activity, Participant } from "@/lib/types";
+import type { Activity, Participant, DBData } from "@/lib/types";
 
-type DbType = any;
+type DbType = DBData;
 
 // Tipos exports para los tabs
-export type LocalSetter = (key: string, value: unknown | ((prev: any) => unknown), skipSave?: boolean) => void;
-export type ServerSync = (operation: string, data: unknown, field: string, newValue: unknown | ((prev: any) => unknown)) => Promise<unknown>;
+export type LocalSetter = <K extends keyof Activity>(key: K, value: Activity[K] | ((prev: Activity[K]) => Activity[K]), skipSave?: boolean) => void;
+export type ServerSync = <K extends keyof Activity>(operation: string, data: unknown, field: K, newValue: Activity[K] | ((prev: Activity[K]) => Activity[K])) => Promise<unknown>;
 export type SaveStatus = "saved" | "saving" | "error";
 
 // Constantes
@@ -143,36 +143,41 @@ export default function EditLayout({ children, mode = "edit" }: EditLayoutProps)
   // === FUNCIONES COMPARTIDAS ===
 
   // Actualiza solo estado local (sin llamada al servidor)
-  const setLocal: LocalSetter = useCallback((key: string, value: unknown | ((prev: any) => unknown), skipSave = false) => {
+  const setLocal: LocalSetter = useCallback(<K extends keyof Activity>(key: K, value: Activity[K] | ((prev: Activity[K]) => Activity[K]), skipSave = false) => {
     setActivity((prev) => {
-      const nextValue = typeof value === "function" ? value(prev[key as keyof Activity]) : value;
+      const nextValue = typeof value === "function" 
+        ? (value as (prev: Activity[K]) => Activity[K])(prev[key]) 
+        : value;
       return { ...prev, [key]: nextValue };
     });
     if (!skipSave) {
       setSaveStatus("saving");
     }
     if (key === "locked") {
-      setLocked(typeof value === "function" ? value(locked) as boolean : value as boolean);
+      setLocked((value as boolean));
     }
   }, [locked]);
 
   // Sincroniza cambio al servidor (PATCH atómico)
-  const syncWithServer: ServerSync = useCallback(async (operationType: string, data: unknown, field: string, newValue: unknown | ((prev: any) => unknown)) => {
-    const opId = (data as any)?.juegoId || (data as any)?.id || (data as any)?.participantId || (data as any)?.pid || "";
+  const syncWithServer: ServerSync = useCallback(async <K extends keyof Activity>(operationType: string, data: unknown, field: K, newValue: Activity[K] | ((prev: Activity[K]) => Activity[K])) => {
+    const opData = data as { juegoId?: number | string; id?: number | string; participantId?: number | string; pid?: number | string };
+    const opId = opData?.juegoId || opData?.id || opData?.participantId || opData?.pid || "";
     const opKey = `${operationType}:${opId}`;
 
     setPendingOps((prev) => new Set([...prev, opKey]));
     
     // Resolve newValue using functional update if needed
-    let resolvedValue: unknown;
+    let resolvedValue: Activity[K];
     setActivity((prev) => {
-      resolvedValue = typeof newValue === "function" ? newValue(prev[field as keyof Activity]) : newValue;
+      resolvedValue = typeof newValue === "function" 
+        ? (newValue as (prev: Activity[K]) => Activity[K])(prev[field]) 
+        : newValue;
       return { ...prev, [field]: resolvedValue };
     });
 
     // Also update locked state if field is "locked"
     if (field === "locked") {
-      setLocked(typeof newValue === "function" ? newValue(locked) as boolean : newValue as boolean);
+      setLocked(newValue as boolean);
     }
 
     // Usar activityRef para evitar closure stale

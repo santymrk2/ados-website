@@ -3,6 +3,7 @@
 import { useViewContext } from "../layout";
 import { Gamepad2 } from "lucide-react";
 import { Empty } from "@/components/ui/Common";
+import type { Juego } from "@/lib/types";
 
 export default function JuegosPage() {
   const { act } = useViewContext();
@@ -20,7 +21,7 @@ export default function JuegosPage() {
       <div className="font-bold text-sm text-accent mb-2 flex items-center gap-2">
         <Gamepad2 className="w-4 h-4" /> Juegos Mixtos
       </div>
-      {juegos.map((j: any) => {
+      {juegos.map((j: Juego) => {
         const posToTeams: Record<string, string[]> = {};
         Object.entries(j.pos || {}).forEach(([pos, equipos]) => {
           if (!posToTeams[pos]) posToTeams[pos] = [];

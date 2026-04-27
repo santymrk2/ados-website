@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useApp } from "@/hooks/useApp";
 import { $role } from "@/store/appStore";
 import { ParticipantForm } from "@/app/participants/components/ParticipantForm";
+import type { Participant } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -59,7 +60,7 @@ function ParticipantFormEditWrapper({ id }: { id: string }) {
   return (
     <ParticipantForm
       db={db}
-      initial={participant}
+      initial={participant as Participant}
       onClose={() => router.back()}
       onSave={saveParticipant}
     />

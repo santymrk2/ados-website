@@ -18,6 +18,7 @@ import {
   deleteParticipant as dbDeleteParticipant,
   quickUpdateActivity,
 } from "@/lib/api-client";
+import type { Activity, Participant, DBData } from "@/lib/types";
 
 export function useDatabase() {
   // Always provide default values to prevent undefined errors
@@ -34,7 +35,7 @@ export function useDatabase() {
   }, []);
 
   // Guardar actividad
-  const saveActivity = useCallback(async (activity: any, isNew: boolean) => {
+  const saveActivity = useCallback(async (activity: Activity, isNew: boolean) => {
     const id = await dbSaveActivity(activity, isNew);
     await refreshData(false);
     return id;
@@ -47,7 +48,7 @@ export function useDatabase() {
   }, []);
 
   // Quick update (asistencia, equipos, etc)
-  const quickUpdate = useCallback(async (activityId: number, type: string, data: any, skipRefresh = false) => {
+  const quickUpdate = useCallback(async (activityId: number, type: string, data: unknown, skipRefresh = false) => {
     const result = await quickUpdateActivity(activityId, type, data);
     if (!skipRefresh) {
       await refreshData(false);
@@ -56,7 +57,7 @@ export function useDatabase() {
   }, []);
 
   // Guardar participante
-  const saveParticipant = useCallback(async (participant: any, isNew: boolean, invitadorId: number | null = null) => {
+  const saveParticipant = useCallback(async (participant: Participant, isNew: boolean, invitadorId: number | null = null) => {
     const id = await dbSaveParticipant(participant, isNew, invitadorId);
     await refreshData(false);
     return id;
@@ -68,12 +69,12 @@ export function useDatabase() {
     await refreshData(false);
   }, []);
 
-  const db = useMemo(() => ({
+  const db = useMemo((): DBData => ({
     participants,
     activities,
     rankings,
-    nextPid: participants.length > 0 ? Math.max(0, ...participants.map((p: any) => p.id)) + 1 : 1,
-    nextAid: activities.length > 0 ? Math.max(0, ...activities.map((a: any) => a.id)) + 1 : 1,
+    nextPid: participants.length > 0 ? Math.max(0, ...participants.map((p) => p.id)) + 1 : 1,
+    nextAid: activities.length > 0 ? Math.max(0, ...activities.map((a) => a.id)) + 1 : 1,
   }), [participants, activities, rankings, dataVersion]);
 
   return {

@@ -12,7 +12,13 @@ import { Avatar } from "@/components/ui/Avatar";
 import { cn } from "@/lib/utils";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import type { Extra, ParticipantBasic } from "@/lib/types";
+import type { Extra, ParticipantBasic, DBData } from "@/lib/types";
+
+interface ExtraResult {
+  id: number;
+  participantId?: number | null;
+  team?: string | null;
+}
 
 interface ExtraWithId extends Extra {
   id: number;
@@ -21,7 +27,7 @@ interface ExtraWithId extends Extra {
 
 interface ExtraRowProps {
   item: ExtraWithId;
-  db: any;
+  db: DBData;
   isTeam: boolean;
   onUpdate: (id: number, key: string, value: unknown) => void;
   onDelete: (id: number) => void;
@@ -268,7 +274,7 @@ export default function ExtrasPage() {
 
 
   const del = async (id: number, listKey: "extras" | "descuentos") => {
-    const updateFn = (prev: any[]) => (prev || []).filter((e) => e.id !== id);
+    const updateFn = (prev: Extra[]) => (prev || []).filter((e) => e.id !== id);
     
     if (id < 0) {
       setLocal(listKey, updateFn, true);
@@ -285,14 +291,14 @@ export default function ExtrasPage() {
   };
 
   const upd = async (id: number, listKey: "extras" | "descuentos", k: string, v: unknown) => {
-    const updateFn = (prev: any[]) => (prev || []).map((e) => (e.id === id ? { ...e, [k]: v } : e));
+    const updateFn = (prev: Extra[]) => (prev || []).map((e) => (e.id === id ? { ...e, [k]: v } : e));
     
     setLocal(listKey, updateFn, true);
 
     if (id < 0) return;
 
     try {
-      const item = ((act[listKey] || []) as ExtraWithId[]).find(e => e.id === id);
+      const item = (act[listKey] || []).find(e => e.id === id);
       if (!item) return;
       await syncWithServer("extra_update", { 
         id, 
@@ -308,7 +314,7 @@ export default function ExtrasPage() {
   };
 
   const createOnServer = async (tempId: number, listKey: "extras" | "descuentos", extra: ExtraWithId) => {
-    const updateFn = (prev: any[]) => (prev || []).map(e => e.id === tempId ? extra : e);
+    const updateFn = (prev: Extra[]) => (prev || []).map(e => e.id === tempId ? extra : e);
 
     try {
       const result = await syncWithServer("extra_add", {
@@ -319,11 +325,12 @@ export default function ExtrasPage() {
         motivo: extra.motivo,
       }, listKey, updateFn);
       
-      const realId = (result as { id: number, participantId?: number, team?: string }).id;
-      const finalPid = (result as any).participantId ?? extra.pid;
-      const finalTeam = (result as any).team ?? extra.team;
+      const resultTyped = result as ExtraResult;
+      const realId = resultTyped.id;
+      const finalPid = resultTyped.participantId ?? extra.pid;
+      const finalTeam = resultTyped.team ?? extra.team;
 
-      setLocal(listKey, (prev: any[]) => (prev || []).map((e: any) => 
+      setLocal(listKey, (prev: Extra[]) => (prev || []).map((e) => 
         e.id === tempId ? { ...e, id: realId, pid: finalPid, team: finalTeam } : e
       ), true);
       toast.success("Guardado");
@@ -331,7 +338,7 @@ export default function ExtrasPage() {
       const err = e as Error;
       toast.error("Error al guardar: " + err.message);
       // Cleanup zombies
-      setLocal(listKey, (prev: any[]) => (prev || []).filter((e: any) => e.id !== tempId), true);
+      setLocal(listKey, (prev: Extra[]) => (prev || []).filter((e) => e.id !== tempId), true);
     }
   };
 
@@ -348,7 +355,7 @@ export default function ExtrasPage() {
       scope: team ? "team" : "ind",
     };
     
-    const addFn = (prev: any[]) => [...(prev || []), newItem];
+    const addFn = (prev: Extra[]) => [...(prev || []), newItem];
     setLocal(listKey, addFn, true);
     
     try {
@@ -360,14 +367,15 @@ export default function ExtrasPage() {
         motivo: newItem.motivo,
       }, listKey, addFn);
       
-      const realId = (result as any).id;
-      setLocal(listKey, (prev: any[]) => (prev || []).map((e: any) => 
+      const resultTyped = result as ExtraResult;
+      const realId = resultTyped.id;
+      setLocal(listKey, (prev: Extra[]) => (prev || []).map((e) => 
         e.id === tempId ? { ...e, id: realId } : e
       ), true);
       toast.success("Agregado");
     } catch (e) {
       toast.error("Error al agregar");
-      setLocal(listKey, (prev: any[]) => (prev || []).filter((e: any) => e.id !== tempId), true);
+      setLocal(listKey, (prev: Extra[]) => (prev || []).filter((e) => e.id !== tempId), true);
     }
   };
 

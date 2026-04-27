@@ -8,7 +8,7 @@ import { HelpInfo } from "@/components/ui/HelpInfo";
 import { Empty } from "@/components/ui/Common";
 import { Avatar } from "@/components/ui/Avatar";
 import { TEAM_COLORS } from "@/lib/constants";
-import type { ParticipantBasic } from "@/lib/types";
+import type { ParticipantBasic, Gol } from "@/lib/types";
 
 interface ScorerItem extends ParticipantBasic {
   goles: number;
@@ -27,8 +27,8 @@ export default function GoleadoresPage() {
       if (!p) return;
       (["f", "h", "b"] as const).forEach((tipo) => {
         const cant = (act.goles || [])
-          .filter((g: any) => g.pid === pid && g.tipo === tipo)
-          .reduce((s: number, g: any) => s + g.cant, 0);
+          .filter((g: Gol) => g.pid === pid && g.tipo === tipo)
+          .reduce((s: number, g: Gol) => s + g.cant, 0);
         if (cant > 0) res[tipo].push({ ...p, goles: cant });
       });
     });

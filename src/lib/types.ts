@@ -68,6 +68,7 @@ export interface Gol {
   cant: number;
   matchId?: number | null;
   team?: string | null;
+  sexo?: string; //sexo del jugador para filtrar goleadores
 }
 
 // Extra/descuento de puntos (penalización o bonus)
@@ -154,6 +155,14 @@ export interface UIState {
 // ----------------------------------------------------------------------------
 // DB STATE
 // ----------------------------------------------------------------------------
+export interface DBData {
+  participants: ParticipantBasic[];
+  activities: Activity[];
+  rankings: Ranking[];
+  nextPid: number;
+  nextAid: number;
+}
+
 export interface DBState {
   loading: boolean;
   error: Error | null;

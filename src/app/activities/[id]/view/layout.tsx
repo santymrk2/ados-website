@@ -18,12 +18,11 @@ import { formatDate } from "@/lib/utils";
 import { useApp } from "@/hooks/useApp";
 import { useAuth } from "@/hooks/useAuth";
 import { FloatingNav } from "@/components/ui/FloatingNav";
-import type { Activity, ParticipantBasic, AppState } from "@/lib/types";
+import type { Activity, ParticipantBasic, AppState, DBData } from "@/lib/types";
 
-// Contexto para las pages de view
 export interface ViewContextValue {
   act: Activity | undefined;
-  db: any;
+  db: DBData;
   teamRank: { team: string; pts: number }[];
   maxTeamPts: number;
   playerRank: (ParticipantBasic & { pts: number; goles: number })[];

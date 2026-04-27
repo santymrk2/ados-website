@@ -1,4 +1,5 @@
 import { SEED_PARTICIPANTS, newAct } from './constants';
+import type { Activity, Participant } from './types';
 
 const API_BASE = '/api';
 
@@ -41,7 +42,7 @@ export async function getActivities() {
   return Array.isArray(json) ? json : (json.data ?? []);
 }
 
-export async function saveActivity(activity: any, isNewProvided?: boolean) {
+export async function saveActivity(activity: Activity, isNewProvided?: boolean) {
   const isNew = isNewProvided !== undefined ? isNewProvided : !activity.id;
   const res = await fetch(`${API_BASE}/activities`, {
     method: 'POST',
@@ -57,7 +58,7 @@ export async function saveActivity(activity: any, isNewProvided?: boolean) {
   return isNew ? result.id : activity.id;
 }
 
-export async function quickUpdateActivity(activityId: number, type: string, data: any) {
+export async function quickUpdateActivity(activityId: number, type: string, data: unknown) {
   const res = await fetch(`${API_BASE}/activities`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
@@ -76,7 +77,7 @@ export async function deleteActivity(id: number) {
   if (!res.ok) throw new Error('Failed to delete activity');
 }
 
-export async function saveParticipant(participant: any, isNew: boolean, invitadorId: number | null = null) {
+export async function saveParticipant(participant: Participant, isNew: boolean, invitadorId: number | null = null) {
   const res = await fetch(`${API_BASE}/participants`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

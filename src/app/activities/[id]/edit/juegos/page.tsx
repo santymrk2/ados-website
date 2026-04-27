@@ -28,28 +28,27 @@ export default function JuegosPage() {
   const add = async () => {
     const tempId = generateTempId();
     const nj: Juego = { id: tempId, nombre: "", pos: {} };
-    const addFn = (prev: any[]) => [...(prev || []), nj];
-    
+const addFn = (prev: Juego[]) => [...(prev || []), nj];
     setLocal("juegos", addFn, true);
-
+    
     try {
       const result = await syncWithServer("game_add", nj, "juegos", addFn);
       if (result && typeof result === "object" && "id" in result) {
         const finalId = (result as { id: number }).id;
-        setLocal("juegos", (prev: any[]) => (prev || []).map((j) =>
+        setLocal("juegos", (prev: Juego[]) => (prev || []).map((j) =>
           j.id === tempId ? { ...j, id: finalId } : j,
         ), true);
         toast.success("Juego agregado");
       }
     } catch (e) {
-      setLocal("juegos", (prev: any[]) => (prev || []).filter((j) => j.id !== tempId), true);
+      setLocal("juegos", (prev: Juego[]) => (prev || []).filter((j) => j.id !== tempId), true);
       const err = e as Error;
       toast.error("Error al agregar: " + err.message);
     }
   };
 
   const del = async (id: number) => {
-    const updateFn = (prev: any[]) => (prev || []).filter((j) => j.id !== id);
+    const updateFn = (prev: Juego[]) => (prev || []).filter((j) => j.id !== id);
     
     if (id < 0) {
       setLocal("juegos", updateFn, true);
@@ -66,7 +65,7 @@ export default function JuegosPage() {
   };
 
   const updN = async (id: number, v: string) => {
-    const updateFn = (prev: any[]) => (prev || []).map((j) => (j.id === id ? { ...j, nombre: v } : j));
+    const updateFn = (prev: Juego[]) => (prev || []).map((j) => (j.id === id ? { ...j, nombre: v } : j));
     
     setLocal("juegos", updateFn, true);
     if (id < 0) return;
@@ -80,7 +79,7 @@ export default function JuegosPage() {
   };
 
   const updPos = async (jid: number, team: string, pos: string) => {
-    const updateFn = (prevList: any[]) => {
+    const updateFn = (prevList: Juego[]) => {
       return (prevList || []).map((game: Juego) => {
         if (game.id !== jid) return game;
 

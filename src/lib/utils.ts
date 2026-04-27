@@ -18,6 +18,13 @@ export function formatDate(d: string | Date | null | undefined): string {
   return `${day} ${['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'][parseInt(m) - 1]} ${y}`;
 }
 
+// Extract error message from unknown error
+export function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  if (typeof error === 'string') return error;
+  return 'Error desconocido';
+}
+
 export function isToday(d: string | Date | null | undefined): boolean {
   if (!d) return false;
   if (d instanceof Date) {

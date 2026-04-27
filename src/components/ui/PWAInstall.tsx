@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { Download, Share2, Smartphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-let deferredPrompt: any = null;
+let deferredPrompt: Event | null = null;
 
 // Paths where PWA install should be shown
 const ALLOWED_PATHS = ["/", "/activities", "/participants", "/calendar"];
@@ -38,7 +38,7 @@ export function PWAInstall() {
     // Check if already installed
     const isStandalone =
       window.matchMedia("(display-mode: standalone)").matches ||
-      (window.navigator as any).standalone;
+      (window.navigator as Navigator & { standalone?: boolean }).standalone;
 
     if (isStandalone) {
       setIsInstalled(true);
@@ -62,7 +62,7 @@ export function PWAInstall() {
     // iOS detection
     const isIOS =
       /iphone|ipad|ipod/i.test(navigator.userAgent) &&
-      !(window as any).MSStream;
+      !((window as Window & { MSStream?: unknown }).MSStream);
 
     if (isIOS && !isStandalone) {
       setShowIOSBtn(true);
@@ -83,10 +83,12 @@ export function PWAInstall() {
   const handleInstall = async () => {
     if (!deferredPrompt) return;
 
-    deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
+    const event = deferredPrompt as { prompt?: () => Promise<void>; userChoice?: Promise<{ outcome: string }> };
+    if (event.prompt) await event.prompt();
+    const outcome = event.userChoice ? await event.userChoice : Promise.resolve({ outcome: "dismissed" });
+    const result = await outcome;
 
-    if (outcome === "accepted") {
+    if (result.outcome === "accepted") {
       setShowAndroidBtn(false);
       setIsInstalled(true);
     }

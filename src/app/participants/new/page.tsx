@@ -34,7 +34,7 @@ export default function Page() {
   return (
     <ParticipantForm
       db={db}
-      initial={null}
+      initial={undefined}
       onClose={() => router.back()}
       onSave={saveParticipant}
     />

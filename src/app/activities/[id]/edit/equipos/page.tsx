@@ -37,7 +37,7 @@ export default function EquiposPage() {
   );
 
   const setTeam = async (pid: number, team: string) => {
-    const updateFn = (prev: any) => {
+    const updateFn = (prev: Record<string, string>) => {
       const next = { ...(prev || {}) };
       if (next[pid] === team) {
         delete next[pid];
@@ -62,7 +62,7 @@ export default function EquiposPage() {
   };
 
   const autoBalance = (resetAll = false) => {
-    setLocal("equipos", (prev: any) => {
+    setLocal("equipos", (prev: Record<string, string>) => {
       const eq = resetAll ? {} : { ...(prev || {}) };
       const counts: Record<string, { M: number; F: number; total: number }> = {};
       activeTeams.forEach((t) => {
@@ -73,7 +73,7 @@ export default function EquiposPage() {
       present.forEach((p) => {
         const t = eq[p.id];
         if (t && activeTeams.includes(t)) {
-          counts[t][p.sexo]++;
+          counts[t][p.sexo as "M" | "F"]++;
           counts[t].total++;
         }
       });
@@ -85,11 +85,11 @@ export default function EquiposPage() {
       [...masc, ...fem].forEach((p: ParticipantBasic) => {
         const best = [...activeTeams].sort(
           (a, b) =>
-            counts[a][p.sexo] - counts[b][p.sexo] ||
+            counts[a][p.sexo as "M" | "F"] - counts[b][p.sexo as "M" | "F"] ||
             counts[a].total - counts[b].total,
         )[0];
         eq[p.id] = best;
-        counts[best][p.sexo]++;
+        counts[best][p.sexo as "M" | "F"]++;
         counts[best].total++;
       });
       return eq;

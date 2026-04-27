@@ -49,16 +49,16 @@ import {
   ComboboxItem,
   ComboboxValue,
 } from "@/components/ui/combobox";
-import type { Activity, ParticipantBasic, AppState } from "@/lib/types";
+import type { Activity, ParticipantBasic, AppState, Participant, DBData, Invitacion, ParticipantFormData } from "@/lib/types";
 
 let tempIdCounter = 0;
 const generateTempId = () => -1 - tempIdCounter++;
 
 function NewPlayerModal({ act, db, onClose, onSave, setLocal, syncWithServer }: {
   act: Activity;
-  db: any;
+  db: DBData;
   onClose: () => void;
-  onSave: (data: unknown, isNew: boolean, invitadorId?: number | null) => Promise<number>;
+  onSave: (data: Participant, isNew: boolean, invitadorId?: number | null) => Promise<number>;
   setLocal: LocalSetter;
   syncWithServer: ServerSync;
 }) {
@@ -112,7 +112,7 @@ function NewPlayerModal({ act, db, onClose, onSave, setLocal, syncWithServer }: 
       const newId = await onSave(participantData, true, invitadorId);
       const playerId = newId || p.id;
 
-      const updateAsistentes = (prev: any[]) => Array.from(new Set([...(prev || []), playerId]));
+      const updateAsistentes = (prev: number[]) => Array.from(new Set([...(prev || []), playerId]));
       setLocal("asistentes", updateAsistentes);
       syncWithServer(
         "attendance",
@@ -126,10 +126,10 @@ function NewPlayerModal({ act, db, onClose, onSave, setLocal, syncWithServer }: 
           "invitacion_add",
           { invitador: Number(newPlayer.invitadorId), invitadoId: playerId },
           "invitaciones",
-          (prev: any[]) => [...(prev || []), { id: -Date.now(), invitador: newPlayer.invitadorId, invitadoId: playerId }],
+          (prev: Invitacion[]) => [...(prev || []), { id: -Date.now(), invitador: newPlayer.invitadorId, invitadoId: playerId }],
         );
       } else {
-        setLocal("invitaciones", (prev: any[]) => [
+        setLocal("invitaciones", (prev: Invitacion[]) => [
           ...(prev || []),
           {
             id: generateTempId(),
@@ -294,7 +294,7 @@ export default function AsistenciaPage() {
     const newValue = isIncluded ? c.filter((x) => x !== id) : [...c, id];
 
     if (key === "asistentes") {
-      const updateFn = (prev: any[]) => {
+      const updateFn = (prev: number[]) => {
         const c = prev || [];
         return c.includes(id) ? c.filter((x) => x !== id) : [...c, id];
       };
@@ -302,38 +302,38 @@ export default function AsistenciaPage() {
       syncWithServer("attendance", { participantId: id, value: !isIncluded }, "asistentes", updateFn);
       
       if (isIncluded) {
-        setLocal("socials", (prev: any[]) => (prev || []).filter((x) => x !== id));
-        setLocal("puntuales", (prev: any[]) => (prev || []).filter((x) => x !== id));
-        setLocal("biblias", (prev: any[]) => (prev || []).filter((x) => x !== id));
-        setLocal("equipos", (prev: any) => {
+        setLocal("socials", (prev: number[]) => (prev || []).filter((x) => x !== id));
+        setLocal("puntuales", (prev: number[]) => (prev || []).filter((x) => x !== id));
+        setLocal("biblias", (prev: number[]) => (prev || []).filter((x) => x !== id));
+        setLocal("equipos", (prev: Record<string, string>) => {
           const next = { ...(prev || {}) };
           delete next[id];
           return next;
         });
       }
     } else if (key === "socials") {
-      const updateFn = (prev: any[]) => {
+      const updateFn = (prev: number[]) => {
         const c = prev || [];
         return c.includes(id) ? c.filter((x) => x !== id) : [...c, id];
       };
       setLocal("socials", updateFn);
       syncWithServer("socials", { participantId: id, value: !isIncluded }, "socials", updateFn);
       if (!isIncluded) {
-        setLocal("equipos", (prev: any) => {
+        setLocal("equipos", (prev: Record<string, string>) => {
           const next = { ...(prev || {}) };
           delete next[id];
           return next;
         });
       }
     } else if (key === "puntuales" || key === "biblias") {
-      const updateFn = (prev: any[]) => {
+      const updateFn = (prev: number[]) => {
         const c = prev || [];
         return c.includes(id) ? c.filter((x) => x !== id) : [...c, id];
       };
-      setLocal(key, updateFn);
-      syncWithServer(key === "puntuales" ? "puntuales" : "biblias", { participantId: id, value: !isIncluded }, key, updateFn);
+      setLocal(key as "puntuales" | "biblias", updateFn);
+      syncWithServer(key === "puntuales" ? "puntuales" : "biblias", { participantId: id, value: !isIncluded }, key as "puntuales" | "biblias", updateFn);
     } else {
-      setLocal(key, (prev: any[]) => {
+      setLocal(key as "asistentes", (prev: number[]) => {
         const c = prev || [];
         return c.includes(id) ? c.filter((x) => x !== id) : [...c, id];
       });

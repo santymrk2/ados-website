@@ -249,11 +249,13 @@ export function newAct() {
 
 export function newPart() {
   return {
-    id: null,
+    id: 0,
     nombre: "",
     apellido: "",
     sexo: "M",
-    fechaNacimiento: "",
-    foto: ""
+    fechaNacimiento: null,
+    foto: null,
+    fotoAltaCalidad: null,
+    invitadoPor: null,
   };
 }

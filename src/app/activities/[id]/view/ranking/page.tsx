@@ -15,6 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import type { Invitacion, Gol } from "@/lib/types";
 
 const PODIUM_COLORS = [
   { bg: "bg-amber-400", text: "text-amber-900", border: "border-amber-200", icon: Trophy },
@@ -31,7 +32,7 @@ export default function RankingPage() {
   // Calcular goleadores traídos
   const invitedCount = useMemo(() => {
     const counts: Record<number, number> = {};
-    (act.invitaciones || []).forEach((inv: any) => {
+    (act.invitaciones || []).forEach((inv: Invitacion) => {
       if (inv.invitador) {
         counts[inv.invitador] = (counts[inv.invitador] || 0) + 1;
       }
@@ -54,8 +55,8 @@ export default function RankingPage() {
     return playerRank
       .map((p) => {
         const misGoles = (act.goles || [])
-          .filter((g: any) => g.pid === p.id && g.tipo === tipo && g.sexo === sexo)
-          .reduce((s: number, g: any) => s + (g.cant || 0), 0);
+          .filter((g: Gol) => g.pid === p.id && g.tipo === tipo && g.sexo === sexo)
+          .reduce((s: number, g: Gol) => s + (g.cant || 0), 0);
         return { ...p, pts: misGoles };
       })
       .sort((a, b) => b.pts - a.pts);

@@ -63,7 +63,7 @@ export async function GET(request: NextRequest) {
 
     const parsed = allActs.map((a) => {
       const actAp = ap.filter((x) => x.activityId === a.id);
-      const equipos: any = {};
+      const equipos: Record<number, string> = {};
       actAp.forEach((x) => {
         if (x.equipo) equipos[x.participantId] = x.equipo;
       });
@@ -71,7 +71,7 @@ export async function GET(request: NextRequest) {
       const actJuegos = jj
         .filter((x) => x.activityId === a.id)
         .map((j) => {
-          const pos: any = {};
+          const pos: Record<string, string[]> = {};
           jp.filter((x) => x.juegoId === j.id).forEach((x) => {
             if (!pos[x.posicion]) pos[x.posicion] = [];
             pos[x.posicion].push(x.equipo);
@@ -285,10 +285,10 @@ export async function POST(request: NextRequest) {
           const jId = jRes[0].id;
 
           if (j.pos && Object.keys(j.pos).length > 0) {
-            const jpData: any[] = [];
+            const jpData: { juegoId: number; equipo: string; posicion: number }[] = [];
             const seenEquipos = new Set<string>();
             Object.entries(j.pos).forEach(
-              ([posStr, equipos]: [string, any]) => {
+              ([posStr, equipos]) => {
                 const posicion = Number(posStr);
                 if (Array.isArray(equipos) && equipos.length > 0) {
                   equipos.forEach((eqName) => {
@@ -339,7 +339,7 @@ export async function POST(request: NextRequest) {
       }
 
       if (data.goles && data.goles.length > 0) {
-        const gData = data.goles.map((g: any) => ({
+        const gData = data.goles.map((g) => ({
           activityId: currentActId,
           participantId: g.pid || null,
           matchId: g.matchId ? matchIdMap[g.matchId] || null : null,
@@ -351,10 +351,10 @@ export async function POST(request: NextRequest) {
       }
 
       const activeTeams = ["A", "B", "C", "D"].slice(0, data.cantEquipos || 4);
-      const extrasData: any[] = [];
+      const extrasData: { activityId: number; participantId: number | null; team: string | null; tipo: string; puntos: number; motivo: string }[] = [];
 
       if (data.extras && data.extras.length > 0) {
-        data.extras.forEach((e: any) => {
+        data.extras.forEach((e) => {
           if (e.team && !activeTeams.includes(e.team)) return;
           if (e.pid && e.team) e.team = null;
 
@@ -370,7 +370,7 @@ export async function POST(request: NextRequest) {
       }
 
       if (data.descuentos && data.descuentos.length > 0) {
-        data.descuentos.forEach((e: any) => {
+        data.descuentos.forEach((e) => {
           if (e.team && !activeTeams.includes(e.team)) return;
           if (e.pid && e.team) e.team = null;
 
@@ -390,7 +390,7 @@ export async function POST(request: NextRequest) {
       }
 
       if (data.invitaciones && data.invitaciones.length > 0) {
-        const invData = data.invitaciones.map((i: any) => ({
+        const invData = data.invitaciones.map((i) => ({
           activityId: currentActId,
           invitadorId: i.invitador,
           invitadoId: i.invitadoId || i.invitado_id, // Soporte ambos temporalmente durante migración
@@ -550,9 +550,13 @@ export async function PATCH(request: NextRequest) {
         }
         break;
       }
-      case "goal_update": {
+case "goal_update": {
         const { id, pid, tipo, cant } = data;
-        const updateData: any = {};
+        const updateData: Partial<{
+          participantId: number | null;
+          tipo: string;
+          cant: number;
+        }> = {};
         if (pid !== undefined) updateData.participantId = pid;
         if (tipo !== undefined) updateData.tipo = tipo;
         if (cant !== undefined) updateData.cant = cant;
@@ -561,6 +565,25 @@ export async function PATCH(request: NextRequest) {
           .update(schema.goles)
           .set(updateData)
           .where(eq(schema.goles.id, id));
+        break;
+      }
+      case "extra_update": {
+        const { id, pid, team, puntos, motivo } = data;
+        const updateData: Partial<{
+          participantId: number | null;
+          team: string | null;
+          puntos: number;
+          motivo: string;
+        }> = {};
+        if (pid !== undefined) updateData.participantId = pid;
+        if (team !== undefined) updateData.team = team;
+        if (puntos !== undefined) updateData.puntos = puntos;
+        if (motivo !== undefined) updateData.motivo = motivo;
+
+        await db
+          .update(schema.extras)
+          .set(updateData)
+          .where(eq(schema.extras.id, id));
         break;
       }
       case "extra_toggle": {
@@ -601,7 +624,12 @@ export async function PATCH(request: NextRequest) {
       }
       case "extra_update": {
         const { id, pid, team, puntos, motivo } = data;
-        const updateData: any = {};
+        const updateData: Partial<{
+          participantId: number | null;
+          team: string | null;
+          puntos: number;
+          motivo: string;
+        }> = {};
         if (pid !== undefined) updateData.participantId = pid;
         if (team !== undefined) updateData.team = team;
         if (puntos !== undefined) updateData.puntos = puntos;
@@ -686,8 +714,8 @@ export async function PATCH(request: NextRequest) {
                   ],
                   set: { posicion: teamData.posicion },
                 });
-            } catch (insertErr: any) {
-              console.error("[game_pos] Insert Error:", insertErr.message);
+            } catch (insertErr: unknown) {
+              console.error("[game_pos] Insert Error:", insertErr instanceof Error ? insertErr.message : insertErr);
             }
           }
         });

@@ -36,44 +36,15 @@ export default function RankingPage() {
       if (inv.invitador) {
         counts[inv.invitador] = (counts[inv.invitador] || 0) + 1;
       }
-      // Verificar si hay invitadorId también
-      if (inv.invitadorId) {
-        counts[inv.invitadorId] = (counts[inv.invitadorId] || 0) + 1;
-      }
     });
-    
-    // Imprimir para debug
-    console.log('Invitaciones:', act.invitaciones);
-    console.log('Conteo de invitados:', counts);
     return counts;
   }, [act.invitaciones]);
 
-const rankingData = useMemo(() => {
+  const rankingData = useMemo(() => {
     if (rankingType === "puntos") {
-      // Verificar duplicados en playerRank
-      const ids = playerRank.map(p => p.id);
-      const uniqueIds = new Set(ids);
-      if (ids.length !== uniqueIds.size) {
-        console.log('IDs duplicados encontrados en playerRank:', ids);
-        console.log('IDs únicos:', Array.from(new Set(ids)));
-      }
       return playerRank;
     }
     if (rankingType === "invitados") {
-      // Verificar si hay duplicados en playerRank
-      const data = playerRank.map((p) => ({
-        ...p,
-        pts: invitedCount[p.id] || 0,
-      }));
-      
-      // Verificar duplicados
-      const ids = playerRank.map(p => p.id);
-      const uniqueIds = new Set(ids);
-      if (ids.length !== uniqueIds.size) {
-        console.log('IDs duplicados encontrados:', ids);
-        console.log('IDs únicos:', Array.from(new Set(ids)));
-      }
-      
       return playerRank.map((p) => ({
         ...p,
         pts: invitedCount[p.id] || 0,
@@ -93,14 +64,6 @@ const rankingData = useMemo(() => {
 
   const top3 = rankingData.slice(0, 3);
   const rest = rankingData.slice(3);
-
-  const allSameScore = useMemo(() => {
-    if (rankingData.length === 0) return false;
-    const firstScore = rankingData[0]?.pts || 0;
-    return rankingData.every(p => p.pts === firstScore);
-  }, [rankingData]);
-
-  const showPodium = top3.length > 0 && !allSameScore;
 
   return (
     <div>
@@ -122,8 +85,8 @@ const rankingData = useMemo(() => {
         </Select>
       </div>
 
-{/* Podium */}
-      {showPodium && (
+      {/* Podium */}
+      {top3.length > 0 && (
         <div className="flex justify-center items-end gap-2 mb-6">
           {top3[1] && (
             <div className="flex flex-col items-center">
@@ -132,83 +95,13 @@ const rankingData = useMemo(() => {
                 <div className="font-bold text-sm text-white truncate max-w-[100px]">
                   {top3[1].nombre}
                 </div>
-                <div className="text-xs text-white/60">
-                  {rankingType === "invitados" ? `${top3[1].pts} invitados` : `${top3[1].pts} pts`}
-                </div>
+                <div className="text-xs text-white/60">{top3[1].pts} pts</div>
               </div>
               <div className="w-16 h-16 bg-slate-300 rounded-t-xl flex items-center justify-center">
                 <Medal className="w-8 h-8 text-slate-600" />
               </div>
             </div>
           )}
-          {top3[0] && (
-            <div className="flex flex-col items-center">
-              <Avatar p={top3[0]} size={56} />
-              <div className="mt-2 text-center">
-                <div className="font-bold text-sm text-white truncate max-w-[100px]">
-                  {top3[0].nombre}
-                </div>
-                <div className="text-xs text-white/60">
-                  {rankingType === "invitados" ? `${top3[0].pts} invitados` : `${top3[0].pts} pts`}
-                </div>
-              </div>
-              <div className="w-20 h-20 bg-amber-400 rounded-t-xl flex items-center justify-center">
-                <Trophy className="w-10 h-10 text-amber-900" />
-              </div>
-            </div>
-          )}
-          {top3[2] && (
-            <div className="flex flex-col items-center">
-              <Avatar p={top3[2]} size={48} />
-              <div className="mt-2 text-center">
-                <div className="font-bold text-sm text-white truncate max-w-[100px]">
-                  {top3[2].nombre}
-                </div>
-                <div className="text-xs text-white/60">
-                  {rankingType === "invitados" ? `${top3[2].pts} invitados` : `${top3[2].pts} pts`}
-                </div>
-              </div>
-              <div className="w-16 h-16 bg-orange-400 rounded-t-xl flex items-center justify-center">
-                <Medal className="w-8 h-8 text-orange-900" />
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-          {top3[0] && (
-            <div className="flex flex-col items-center">
-              <Avatar p={top3[0]} size={56} />
-              <div className="mt-2 text-center">
-                <div className="font-bold text-sm text-white truncate max-w-[100px]">
-                  {top3[0].nombre}
-                </div>
-                <div className="text-xs text-white/60">
-                  {rankingType === "invitados" ? `${top3[0].pts} invitados` : `${top3[0].pts} pts`}
-                </div>
-              </div>
-              <div className="w-20 h-20 bg-amber-400 rounded-t-xl flex items-center justify-center">
-                <Trophy className="w-10 h-10 text-amber-900" />
-              </div>
-            </div>
-          )}
-          {top3[2] && (
-            <div className="flex flex-col items-center">
-              <Avatar p={top3[2]} size={48} />
-              <div className="mt-2 text-center">
-                <div className="font-bold text-sm text-white truncate max-w-[100px]">
-                  {top3[2].nombre}
-                </div>
-                <div className="text-xs text-white/60">
-                  {rankingType === "invitados" ? `${top3[2].pts} invitados` : `${top3[2].pts} pts`}
-                </div>
-              </div>
-              <div className="w-16 h-16 bg-orange-400 rounded-t-xl flex items-center justify-center">
-                <Medal className="w-8 h-8 text-orange-900" />
-              </div>
-            </div>
-          )}
-        </div>
-      )}
           {top3[0] && (
             <div className="flex flex-col items-center">
               <Avatar p={top3[0]} size={56} />
@@ -256,9 +149,7 @@ const rankingData = useMemo(() => {
                 {p.nombre} {p.apellido}
               </div>
             </div>
-            <div className="font-black text-lg">
-              {rankingType === "invitados" ? `${p.pts} invitados` : `${p.pts} pts`}
-            </div>
+            <div className="font-black text-lg">{p.pts} pts</div>
           </div>
         ))}
       </div>

@@ -5,7 +5,7 @@ export const dynamic = 'force-dynamic';
 import { participants, activityParticipants, goles, extras, invitaciones } from "@/lib/schema";
 import { eq, or } from "drizzle-orm";
 import { eventBus } from "@/lib/eventBus";
-import { uploadBase64Image, getImageUrl } from "@/services/minio";
+import { uploadBase64Image, getImageUrl, minioConfig } from "@/services/minio";
 
 const generateUniqueFilename = (prefix: string) => `${prefix}_${Date.now()}_${Math.random().toString(36).substring(7)}.jpg`;
 
@@ -77,14 +77,30 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    // Check MinIO is configured
+    if (!minioConfig.isConfigured) {
+      return NextResponse.json({ error: "MinIO not configured. Please set MINIO_ENDPOINT, MINIO_ROOT_USER, and MINIO_ROOT_PASSWORD" }, { status: 500 });
+    }
+    
     const body = await request.json();
     const { data, isNew, invitadorId } = body;
     
+    // Handle image uploads
     if (data.foto && data.foto.startsWith('data:image')) {
-       data.foto = await uploadBase64Image(data.foto, generateUniqueFilename('thumb'));
+      try {
+        data.foto = await uploadBase64Image(data.foto, generateUniqueFilename('thumb'));
+      } catch (uploadError) {
+        console.error('[MinIO] Image upload failed:', uploadError);
+        return NextResponse.json({ error: `Error uploading image: ${uploadError instanceof Error ? uploadError.message : 'Unknown error'}` }, { status: 500 });
+      }
     }
     if (data.fotoAltaCalidad && data.fotoAltaCalidad.startsWith('data:image')) {
-       data.fotoAltaCalidad = await uploadBase64Image(data.fotoAltaCalidad, generateUniqueFilename('full'));
+      try {
+        data.fotoAltaCalidad = await uploadBase64Image(data.fotoAltaCalidad, generateUniqueFilename('full'));
+      } catch (uploadError) {
+        console.error('[MinIO] Image upload failed:', uploadError);
+        return NextResponse.json({ error: `Error uploading image: ${uploadError instanceof Error ? uploadError.message : 'Unknown error'}` }, { status: 500 });
+      }
     }
     
     if (isNew) {

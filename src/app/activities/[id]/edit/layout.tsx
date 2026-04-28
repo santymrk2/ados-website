@@ -230,8 +230,8 @@ export default function EditLayout({ children, mode = "edit" }: EditLayoutProps)
       const realId = await saveActivity(saved, isNew);
       if (isNew && realId) {
         setActivity((prev) => ({ ...prev, id: realId }));
-        // Redireccionar a la URL con el ID correcto
-        router.replace(`/activities/${realId}/edit/info`);
+        // Redireccionar a la URL con el ID correcto (General tab)
+        router.replace(`/activities/${realId}/edit`);
       }
       setSaveStatus("saved");
     } catch (e) {

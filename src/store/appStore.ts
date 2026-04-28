@@ -82,8 +82,6 @@ export const refreshData = async (forceLoader = false) => {
 async function doRefresh(forceLoader: boolean): Promise<void> {
   let lastError: Error | null = null;
 
-
-
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     try {
       if (typeof window !== 'undefined') syncTeamConstants();
@@ -110,11 +108,6 @@ async function doRefresh(forceLoader: boolean): Promise<void> {
         aData.some((a, i) => a.id !== oldA[i]?.id);
       const rChanged = rData.length !== oldR.length ||
         rData.some((r, i) => r.id !== oldR[i]?.id);
-
-
-
-      // Show sample data to verify actual values
-
 
       // Force new array reference to ensure React re-renders
       const newParticipants = [...pData];

@@ -157,12 +157,11 @@ export const triggerRankingsRebuild = () => {
     } catch (e) {
       console.error('Error rebuilding rankings cache:', e);
     }
-  }, 3000);
+}, 3000);
 };
 
-// Al iniciar el server conectamos el eventBus con el rebuild
-// Y lanzamos el primero
-if (typeof process !== 'undefined') {
+// Solo auto-inicializar fuera de Vercel (donde no hay event loop confiable)
+if (!process.env.VERCEL) {
   eventBus.on('data-changed', triggerRankingsRebuild);
   setTimeout(triggerRankingsRebuild, 5000);
 }

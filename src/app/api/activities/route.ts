@@ -301,16 +301,19 @@ export async function POST(request: NextRequest) {
               },
             );
             if (jpData.length > 0) {
-              await tx
-                .insert(schema.juegoPosiciones)
-                .values(jpData)
-                .onConflictDoUpdate({
-                  target: [
-                    schema.juegoPosiciones.juegoId,
-                    schema.juegoPosiciones.equipo,
-                  ],
-                  set: { posicion: jpData[0].posicion },
-                });
+              // Insert each position individually to handle conflicts correctly
+              for (const jp of jpData) {
+                await tx
+                  .insert(schema.juegoPosiciones)
+                  .values(jp)
+                  .onConflictDoUpdate({
+                    target: [
+                      schema.juegoPosiciones.juegoId,
+                      schema.juegoPosiciones.equipo,
+                    ],
+                    set: { posicion: jp.posicion },
+                  });
+              }
             }
           }
         }
@@ -621,25 +624,6 @@ case "goal_update": {
           })
           .returning();
         return NextResponse.json(newExtra);
-      }
-      case "extra_update": {
-        const { id, pid, team, puntos, motivo } = data;
-        const updateData: Partial<{
-          participantId: number | null;
-          team: string | null;
-          puntos: number;
-          motivo: string;
-        }> = {};
-        if (pid !== undefined) updateData.participantId = pid;
-        if (team !== undefined) updateData.team = team;
-        if (puntos !== undefined) updateData.puntos = puntos;
-        if (motivo !== undefined) updateData.motivo = motivo;
-
-        await db
-          .update(schema.extras)
-          .set(updateData)
-          .where(eq(schema.extras.id, id));
-        break;
       }
       case "extra_delete": {
         const { id } = data;

@@ -200,11 +200,12 @@ export default function GolesPage() {
   const [openDropdown, setOpenDropdown] = useState<number | string | null>(null);
   
   const participants = useMemo(() => {
+    // Permitir agregar goles a cualquier asistente, no solo a los que no son social
     return db.participants.filter(
       (p: ParticipantBasic) =>
-        act.asistentes.includes(p.id) && !(act.socials || []).includes(p.id),
+        act.asistentes.includes(p.id),
     );
-  }, [db.participants, act.asistentes, act.socials]);
+  }, [db.participants, act.asistentes]);
 
   const add = () => {
     const ng: Gol = { id: generateTempId(), pid: null, tipo: "f", cant: 1 };

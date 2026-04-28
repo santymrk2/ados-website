@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { GetObjectCommand } from "@aws-sdk/client-s3";
+import { GetObjectCommand, S3ServiceException } from "@aws-sdk/client-s3";
 import { s3Client, minioConfig } from "@/services/minio";
 
 export const dynamic = "force-dynamic";
@@ -10,6 +10,12 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
 
     if (!id) {
       return NextResponse.json({ error: "Missing filename" }, { status: 400 });
+    }
+
+    // Verificar que MinIO esté configurado
+    if (!minioConfig.isConfigured) {
+      console.error("[API Images] MinIO not configured");
+      return NextResponse.json({ error: "Image storage not configured" }, { status: 503 });
     }
 
     const command = new GetObjectCommand({
@@ -35,8 +41,22 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
       },
     });
   } catch (e: unknown) {
-    if (e instanceof Error && e.name === "NoSuchKey") {
-      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    // Detectar errores específicos de S3
+    if (e instanceof Error) {
+      // NoSuchKey = archivo no existe
+      if (e.name === "NoSuchKey" || (e as any).$metadata?.httpStatusCode === 404) {
+        return NextResponse.json({ error: "Not found" }, { status: 404 });
+      }
+      // AccessDenied = credenciales inválidas
+      if (e.name === "AccessDenied" || (e as any).$metadata?.httpStatusCode === 403) {
+        console.error("[API Images] Access denied to MinIO:", e.message);
+        return NextResponse.json({ error: "Image storage access denied" }, { status: 503 });
+      }
+      // Network errors = no puede conectar
+      if (e.message?.includes("ENOTFOUND") || e.message?.includes("ECONNREFUSED")) {
+        console.error("[API Images] Cannot connect to MinIO:", e.message);
+        return NextResponse.json({ error: "Image storage unavailable" }, { status: 503 });
+      }
     }
     console.error("[API Images] Error proxying image:", e);
     return NextResponse.json({ error: "Server error" }, { status: 500 });

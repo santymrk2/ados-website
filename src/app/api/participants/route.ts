@@ -5,7 +5,7 @@ export const dynamic = 'force-dynamic';
 import { participants, activityParticipants, goles, extras, invitaciones } from "@/lib/schema";
 import { eq, or } from "drizzle-orm";
 import { eventBus } from "@/lib/eventBus";
-import { uploadBase64Image, getImageUrl, minioConfig } from "@/services/minio";
+import { uploadBase64Image, minioConfig } from "@/services/minio";
 
 const generateUniqueFilename = (prefix: string) => `${prefix}_${Date.now()}_${Math.random().toString(36).substring(7)}.jpg`;
 
@@ -25,14 +25,12 @@ export async function GET(request: NextRequest) {
 
       const p = result[0];
       
-      // Clean and get signed URL from MinIO
-      if (p.foto && !p.foto.startsWith('data:')) {
-        const key = p.foto.replace(/^\/api\/images\//, '').replace(/\/api\/images\//g, '');
-        p.foto = await getImageUrl(key);
+      // Usar el proxy de Next.js en vez de signed URLs ( más compatible con Dokploy)
+      if (p.foto && !p.foto.startsWith('data:') && !p.foto.startsWith('http')) {
+        p.foto = `/api/images/${p.foto}`;
       }
-      if (p.fotoAltaCalidad && !p.fotoAltaCalidad.startsWith('data:')) {
-        const key = p.fotoAltaCalidad.replace(/^\/api\/images\//, '').replace(/\/api\/images\//g, '').replace(/\/api\/images\//g, '');
-        p.fotoAltaCalidad = await getImageUrl(key);
+      if (p.fotoAltaCalidad && !p.fotoAltaCalidad.startsWith('data:') && !p.fotoAltaCalidad.startsWith('http')) {
+        p.fotoAltaCalidad = `/api/images/${p.fotoAltaCalidad}`;
       }
 
       return NextResponse.json({ success: true, data: p }, { 

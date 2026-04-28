@@ -35,10 +35,11 @@ export const s3Client = new S3Client({
 });
 
 // Signing client for generating browser-reachable URLs
-// If MINIO_PUBLIC_URL is provided, we use it for signing
-const signingClient = MINIO_PUBLIC_URL 
+// En Dokploy/Container: usar endpoint interno, no el público
+// El MINIO_PUBLIC_URL es solo para cuando se necesita una URL accessible públicamente
+const signingClient = MINIO_PUBLIC_URL
   ? new S3Client({
-      endpoint: MINIO_PUBLIC_URL,
+      endpoint: MINIO_PUBLIC_URL, // URL externa (para desarrollo o cuando el server no puede alcanzar MinIO directo)
       region: 'us-east-1',
       credentials: {
         accessKeyId: MINIO_ROOT_USER!,
@@ -46,7 +47,7 @@ const signingClient = MINIO_PUBLIC_URL
       },
       forcePathStyle: true,
     })
-  : s3Client;
+  : s3Client; // Usa el mismo client que el interno
 
 export const getImageUrl = async (key: string | null) => {
   if (!key) return null;

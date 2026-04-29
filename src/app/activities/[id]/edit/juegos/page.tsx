@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { useEditContext } from "../layout";
 import { Plus, X } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
@@ -14,136 +14,149 @@ import { SavingOverlay } from "@/components/ui/SavingOverlay";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import type { Activity, Juego } from "@/lib/types";
 
-const generateTempId = () => -(Date.now() + Math.floor(Math.random() * 1000));
+const generateTempId = () => `temp-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+
+function computeNewPos(currentPos: Record<string, string[]>, team: string, pos: string): Record<string, string[]> {
+  const newPos: Record<string, string[]> = {};
+  Object.entries(currentPos || {}).forEach(([k, v]) => {
+    if (Array.isArray(v)) {
+      newPos[k] = [...v];
+    }
+  });
+
+  const isToggleOff = Array.isArray(newPos[pos]) && newPos[pos].includes(team);
+
+  Object.keys(newPos).forEach((p) => {
+    if (Array.isArray(newPos[p])) {
+      newPos[p] = newPos[p].filter((t) => t !== team);
+      if (newPos[p].length === 0) delete newPos[p];
+    }
+  });
+
+  if (!isToggleOff) {
+    const posArray = newPos[pos] ? [...newPos[pos]] : [];
+    newPos[pos] = [...posArray, team].sort();
+  }
+
+  return newPos;
+}
 
 export default function JuegosPage() {
   const { activity: act, setLocal, syncWithServer, locked, pendingOps } = useEditContext();
-  
+
   const isAddingSaving =
     pendingOps.size > 0 &&
-    Array.from(pendingOps).some((op) =>
-      op.startsWith("game_add"),
-    );
+    Array.from(pendingOps).some((op) => op.startsWith("game_add"));
 
   const add = async () => {
     const tempId = generateTempId();
     const nj: Juego = { id: tempId, nombre: "", pos: {} };
-const addFn = (prev: Juego[]) => [...(prev || []), nj];
-    setLocal("juegos", addFn, true);
-    
+
+    // Guardar estado previo para rollback si falla
+    const prevJuegos = [...(act.juegos || [])];
+
     try {
-      const result = await syncWithServer("game_add", nj, "juegos", addFn);
+      const result = await syncWithServer("game_add", nj, "juegos", (prev) => [...(prev || []), nj]);
       if (result && typeof result === "object" && "id" in result) {
         const finalId = (result as { id: number }).id;
         setLocal("juegos", (prev: Juego[]) => (prev || []).map((j) =>
           j.id === tempId ? { ...j, id: finalId } : j,
         ), true);
         toast.success("Juego agregado");
+      } else {
+        // Rollback si el servidor no devolvió id
+        setLocal("juegos", () => prevJuegos, true);
+        toast.error("Error: no se obtuvo el ID del juego");
       }
     } catch (e) {
-      setLocal("juegos", (prev: Juego[]) => (prev || []).filter((j) => j.id !== tempId), true);
+      // Rollback al estado anterior
+      setLocal("juegos", () => prevJuegos, true);
       const err = e as Error;
       toast.error("Error al agregar: " + err.message);
     }
   };
 
-  const del = async (id: number) => {
+  const del = useCallback(async (id: number | string) => {
     const updateFn = (prev: Juego[]) => (prev || []).filter((j) => j.id !== id);
-    
-    if (id < 0) {
+
+    const prevJuegos = [...(act.juegos || [])];
+
+    if (typeof id === "string" && id.startsWith("temp")) {
       setLocal("juegos", updateFn, true);
       return;
     }
+
+    setLocal("juegos", updateFn, true);
 
     try {
       await syncWithServer("game_delete", { id }, "juegos", updateFn);
       toast.success("Juego eliminado");
     } catch (e) {
+      // Rollback al estado anterior
+      setLocal("juegos", () => prevJuegos, true);
       const err = e as Error;
       toast.error("Error al eliminar: " + err.message);
     }
-  };
+  }, [act.juegos, setLocal, syncWithServer]);
 
-  const updN = async (id: number, v: string) => {
+  const updN = useCallback(async (id: number | string, v: string) => {
+    const prevJuegos = [...(act.juegos || [])];
     const updateFn = (prev: Juego[]) => (prev || []).map((j) => (j.id === id ? { ...j, nombre: v } : j));
-    
+
     setLocal("juegos", updateFn, true);
-    if (id < 0) return;
+    if (typeof id === "string" && id.startsWith("temp")) return;
 
     try {
       await syncWithServer("game_update", { id, nombre: v }, "juegos", updateFn);
     } catch (e) {
+      setLocal("juegos", () => prevJuegos, true);
       const err = e as Error;
       toast.error("Error al actualizar: " + err.message);
     }
-  };
+  }, [act.juegos, setLocal, syncWithServer]);
 
-  const updPos = async (jid: number, team: string, pos: string) => {
+  const updPos = useCallback(async (jid: number | string, team: string, pos: string) => {
+    const prevJuegos = [...(act.juegos || [])];
     const updateFn = (prevList: Juego[]) => {
       return (prevList || []).map((game: Juego) => {
         if (game.id !== jid) return game;
-
-        const newPos: Record<string, string[]> = {};
-        Object.entries(game.pos || {}).forEach(([k, v]) => {
-          if (Array.isArray(v)) {
-            newPos[k] = [...(v as string[])];
-          }
-        });
-
-        const isToggleOff = Array.isArray(newPos[pos]) && newPos[pos].includes(team);
-
-        Object.keys(newPos).forEach((p) => {
-          if (Array.isArray(newPos[p])) {
-            newPos[p] = newPos[p].filter((t) => t !== team);
-            if (newPos[p].length === 0) {
-              delete newPos[p];
-            }
-          }
-        });
-
-        if (!isToggleOff) {
-          const posArray = newPos[pos] ? [...newPos[pos]] : [];
-          newPos[pos] = [...posArray, team].sort();
-        }
-
+        const newPos = computeNewPos(game.pos || {}, team, pos);
         return { ...game, pos: newPos };
       });
     };
 
     setLocal("juegos", updateFn, true);
 
-    if (jid > 0) {
+    if (typeof jid === "number" && jid > 0) {
       try {
-        // We need the newPos for the server call, but we can re-calculate it or find it in the new list
-        // For simplicity and accuracy, let's re-calculate it or use a simpler approach
-        const game = (act.juegos || []).find((j: Juego) => j.id === jid);
-        if (!game) return;
+        const currentJuego = prevJuegos.find((j: Juego) => j.id === jid);
+        if (!currentJuego) return;
 
-        const newPos: Record<string, string[]> = {};
-        Object.entries(game.pos || {}).forEach(([k, v]) => {
-          if (Array.isArray(v)) {
-            newPos[k] = [...(v as string[])];
-          }
-        });
-        const isToggleOff = Array.isArray(newPos[pos]) && newPos[pos].includes(team);
-        Object.keys(newPos).forEach((p) => {
-          if (Array.isArray(newPos[p])) {
-            newPos[p] = newPos[p].filter((t) => t !== team);
-            if (newPos[p].length === 0) delete newPos[p];
-          }
-        });
-        if (!isToggleOff) {
-          const posArray = newPos[pos] ? [...newPos[pos]] : [];
-          newPos[pos] = [...posArray, team].sort();
-        }
-
+        const newPos = computeNewPos(currentJuego.pos || {}, team, pos);
         await syncWithServer("game_pos", { juegoId: jid, pos: newPos }, "juegos", updateFn);
       } catch (e) {
+        setLocal("juegos", () => prevJuegos, true);
         const err = e as Error;
         toast.error("Error al actualizar posición: " + err.message);
       }
     }
-  };
+  }, [act.juegos, setLocal, syncWithServer]);
+
+  const renderJuegoCard = useCallback((j: Juego, gi: number) => (
+    <JuegoCard
+      key={String(j.id)}
+      j={j}
+      gi={gi}
+      act={act}
+      onNombre={(v: string) => updN(j.id, v)}
+      onDel={() => del(j.id)}
+      onPos={(team: string, pos: string) => updPos(j.id, team, pos)}
+      locked={locked}
+      saving={[...pendingOps].some(
+        (op) => op === `game_pos:${j.id}` || op === `game_delete:${j.id}`,
+      )}
+    />
+  ), [act, updN, del, updPos, locked, pendingOps]);
 
   return (
     <div>
@@ -160,21 +173,7 @@ const addFn = (prev: Juego[]) => [...(prev || []), nj];
         </Button>
       </div>
       <div className="flex flex-col gap-4">
-        {(act.juegos || []).map((j: Juego, gi: number) => (
-          <JuegoCard
-            key={j.id}
-            j={j}
-            gi={gi}
-            act={act}
-            onNombre={(v: string) => updN(j.id, v)}
-            onDel={() => del(j.id)}
-            onPos={(team: string, pos: string) => updPos(j.id, team, pos)}
-            locked={locked}
-            saving={[...pendingOps].some(
-              (op) => op === `game_pos:${j.id}` || op === `game_delete:${j.id}`,
-            )}
-          />
-        ))}
+        {(act.juegos || []).map(renderJuegoCard)}
       </div>
       {(act.juegos || []).length === 0 && (
         <Empty text="Sin juegos registrados" />
@@ -203,18 +202,22 @@ function JuegoCard({
   saving?: boolean;
 }) {
   const [localNombre, setLocalNombre] = useState(j.nombre || "");
-
-  useEffect(() => {
-    if (localNombre === (j.nombre || "")) return;
-    const timer = setTimeout(() => {
-      onNombre(localNombre);
-    }, 800);
-    return () => clearTimeout(timer);
-  }, [localNombre, j.id, j.nombre, onNombre]);
+  const onNombreRef = useRef(onNombre);
+  onNombreRef.current = onNombre;
 
   useEffect(() => {
     setLocalNombre(j.nombre || "");
   }, [j.nombre]);
+
+  useEffect(() => {
+    if (localNombre === (j.nombre || "")) return;
+
+    const timer = setTimeout(() => {
+      onNombreRef.current(localNombre);
+    }, 800);
+
+    return () => clearTimeout(timer);
+  }, [localNombre, j.id]);
 
   const posToTeams = j.pos || {};
   const placed: string[] = [];
@@ -258,7 +261,7 @@ function JuegoCard({
             <X className="w-5 h-5" />
           </Button>
         </div>
-        
+
         <div className="p-3 bg-surface-light/30">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {posArray.map((pos) => {
@@ -270,8 +273,8 @@ function JuegoCard({
                   key={pos}
                   className={cn(
                     "flex flex-col p-2.5 rounded-xl transition-all border",
-                    hasTeams 
-                      ? "bg-white border-surface-dark shadow-sm" 
+                    hasTeams
+                      ? "bg-white border-surface-dark shadow-sm"
                       : "bg-transparent border-dashed border-surface-dark/50"
                   )}
                 >
@@ -286,9 +289,9 @@ function JuegoCard({
                     {unplaced.length > 0 && !isDisabled && (
                       <Popover>
                         <PopoverTrigger asChild>
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
+                          <Button
+                            variant="ghost"
+                            size="sm"
                             className="h-6 px-2 text-[10px] font-black uppercase tracking-tight text-primary hover:bg-primary/5"
                           >
                             <Plus className="w-3 h-3 mr-1" /> Agregar
@@ -306,7 +309,7 @@ function JuegoCard({
                                 className="flex items-center justify-between px-2 py-2 rounded-lg hover:bg-surface-light transition-colors text-left"
                               >
                                 <div className="flex items-center gap-2">
-                                  <div 
+                                  <div
                                     className="w-5 h-5 rounded flex items-center justify-center font-black text-white text-[10px]"
                                     style={{ backgroundColor: TEAM_COLORS[t] }}
                                   >

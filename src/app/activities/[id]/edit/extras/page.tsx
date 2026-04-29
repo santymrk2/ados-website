@@ -254,12 +254,12 @@ export default function ExtrasPage() {
     return db.participants
       .filter(
         (p: ParticipantBasic) =>
-          act.asistentes.includes(p.id) && !(act.socials || []).includes(p.id),
+          act.asistentes.includes(p.id),
       )
       .sort((a: ParticipantBasic, b: ParticipantBasic) =>
         `${a.apellido} ${a.nombre}`.localeCompare(`${b.apellido} ${b.nombre}`)
       );
-  }, [db.participants, act.asistentes, act.socials]);
+  }, [db.participants, act.asistentes]);
 
   const filteredPlayers = useMemo(() => {
     if (!search.trim()) return availablePlayers;
@@ -470,8 +470,8 @@ export default function ExtrasPage() {
           
           <div className="grid grid-cols-1 gap-2">
             {filteredPlayers.map((p) => {
-              const pExtras = filteredE.filter(x => x.pid === p.id);
-              const pDescs = filteredD.filter(x => x.pid === p.id);
+              const pExtras = extrasList.filter(x => x.pid === p.id);
+              const pDescs = descuentosList.filter(x => x.pid === p.id);
               const total = pExtras.reduce((s, x) => s + x.puntos, 0) - pDescs.reduce((s, x) => s + x.puntos, 0);
 
               return (

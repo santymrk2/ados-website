@@ -504,7 +504,7 @@ export async function PATCH(request: NextRequest) {
         const { participantId, value } = data;
         await db
           .update(schema.activityParticipants)
-          .set({ esSocial: value })
+          .set({ esSocial: value, equipo: null })
           .where(
             and(
               eq(schema.activityParticipants.activityId, activityId),

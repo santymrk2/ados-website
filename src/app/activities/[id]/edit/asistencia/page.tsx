@@ -280,7 +280,7 @@ function NewPlayerModal({ act, db, onClose, onSave, setLocal, syncWithServer }: 
 }
 
 export default function AsistenciaPage() {
-  const { activity: act, setLocal, syncWithServer, db, locked, pendingOps } = useEditContext();
+  const { activity: act, setLocal, syncWithServer, db, locked } = useEditContext();
   const { saveParticipant } = useApp();
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
   const [search, setSearch] = useState("");
@@ -289,19 +289,18 @@ export default function AsistenciaPage() {
   const [confirmAllOpen, setConfirmAllOpen] = useState(false);
 
   const toggle = (key: string, id: number) => {
-    const c = act[key as keyof Activity] as number[] || [];
-    const isIncluded = c.includes(id);
-    const newValue = isIncluded ? c.filter((x) => x !== id) : [...c, id];
-
     if (key === "asistentes") {
+      const c = act.asistentes || [];
+      const isIncluded = c.includes(id);
       const updateFn = (prev: number[]) => {
-        const c = prev || [];
-        return c.includes(id) ? c.filter((x) => x !== id) : [...c, id];
+        const arr = prev || [];
+        return arr.includes(id) ? arr.filter((x) => x !== id) : [...arr, id];
       };
       setLocal("asistentes", updateFn);
       syncWithServer("attendance", { participantId: id, value: !isIncluded }, "asistentes", updateFn);
-      
+
       if (isIncluded) {
+        // Clear all related flags in a single batched update
         setLocal("socials", (prev: number[]) => (prev || []).filter((x) => x !== id));
         setLocal("puntuales", (prev: number[]) => (prev || []).filter((x) => x !== id));
         setLocal("biblias", (prev: number[]) => (prev || []).filter((x) => x !== id));
@@ -312,30 +311,28 @@ export default function AsistenciaPage() {
         });
       }
     } else if (key === "socials") {
+      const c = act.socials || [];
+      const isIncluded = c.includes(id);
       const updateFn = (prev: number[]) => {
-        const c = prev || [];
-        return c.includes(id) ? c.filter((x) => x !== id) : [...c, id];
+        const arr = prev || [];
+        return arr.includes(id) ? arr.filter((x) => x !== id) : [...arr, id];
       };
       setLocal("socials", updateFn);
       syncWithServer("socials", { participantId: id, value: !isIncluded }, "socials", updateFn);
-      // Siempre limpiar el equipo al cambiar el modo (social o recre)
       setLocal("equipos", (prev: Record<string, string>) => {
         const next = { ...(prev || {}) };
         delete next[id];
         return next;
       });
     } else if (key === "puntuales" || key === "biblias") {
+      const c = (act[key as "puntuales" | "biblias"] as number[]) || [];
+      const isIncluded = c.includes(id);
       const updateFn = (prev: number[]) => {
-        const c = prev || [];
-        return c.includes(id) ? c.filter((x) => x !== id) : [...c, id];
+        const arr = prev || [];
+        return arr.includes(id) ? arr.filter((x) => x !== id) : [...arr, id];
       };
       setLocal(key as "puntuales" | "biblias", updateFn);
       syncWithServer(key === "puntuales" ? "puntuales" : "biblias", { participantId: id, value: !isIncluded }, key as "puntuales" | "biblias", updateFn);
-    } else {
-      setLocal(key as "asistentes", (prev: number[]) => {
-        const c = prev || [];
-        return c.includes(id) ? c.filter((x) => x !== id) : [...c, id];
-      });
     }
   };
 
@@ -359,8 +356,6 @@ export default function AsistenciaPage() {
     }
     return arr;
   }, [db.participants, sortOrder, search]);
-
-  const isPending = (key: string) => pendingOps.has(key);
 
   return (
     <div>
@@ -518,8 +513,18 @@ export default function AsistenciaPage() {
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction
-              onClick={() => {
+              onClick={async () => {
+                // Update local state immediately for responsive UI
                 setLocal("asistentes", []);
+                // Sync each removal with the server
+                for (const id of act.asistentes) {
+                  try {
+                    await syncWithServer("attendance", { participantId: id, value: false }, "asistentes", (prev) => (prev || []).filter((x) => x !== id));
+                  } catch {
+                    // Non-blocking: local state already updated, server will retry via auto-save
+                  }
+                }
+                setConfirmClearOpen(false);
                 toast.success("Asistencia limpiada");
               }}
               className="bg-red-500 hover:bg-red-600"
@@ -541,8 +546,19 @@ export default function AsistenciaPage() {
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction
-              onClick={() => {
-                setLocal("asistentes", sorted.map((p) => p.id));
+              onClick={async () => {
+                const newIds = sorted.map((p) => p.id);
+                // Update local state immediately for responsive UI
+                setLocal("asistentes", newIds);
+                // Sync each addition with the server
+                for (const id of newIds) {
+                  try {
+                    await syncWithServer("attendance", { participantId: id, value: true }, "asistentes", (prev) => Array.from(new Set([...(prev || []), id])));
+                  } catch {
+                    // Non-blocking: local state already updated, server will retry via auto-save
+                  }
+                }
+                setConfirmAllOpen(false);
                 toast.success("Todos presentes");
               }}
             >

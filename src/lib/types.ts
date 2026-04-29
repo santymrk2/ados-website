@@ -44,9 +44,8 @@ export interface ParticipantBasic {
 
 // Juego dentro de una actividad
 export interface Juego {
-  id: number;
+  id: number | string;
   nombre: string | null;
-  // pos[posición] = [equipos en esa posición]
   pos: Record<string, string[]>;
 }
 

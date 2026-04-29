@@ -148,15 +148,16 @@ export default function EditLayout({ children, mode = "edit" }: EditLayoutProps)
       const nextValue = typeof value === "function" 
         ? (value as (prev: Activity[K]) => Activity[K])(prev[key]) 
         : value;
-      return { ...prev, [key]: nextValue };
+      const updated = { ...prev, [key]: nextValue };
+      if (key === "locked") {
+        setLocked(nextValue as boolean);
+      }
+      return updated;
     });
     if (!skipSave) {
       setSaveStatus("saving");
     }
-    if (key === "locked") {
-      setLocked((value as boolean));
-    }
-  }, [locked]);
+  }, []);
 
   // Sincroniza cambio al servidor (PATCH atómico)
   const syncWithServer: ServerSync = useCallback(async <K extends keyof Activity>(operationType: string, data: unknown, field: K, newValue: Activity[K] | ((prev: Activity[K]) => Activity[K])) => {
@@ -184,7 +185,7 @@ export default function EditLayout({ children, mode = "edit" }: EditLayoutProps)
     const currentActivity = activityRef.current;
     if (currentActivity.id) {
       try {
-        const skipRefresh = ["game_pos", "game_add", "game_delete", "goal_add", "goal_remove", "extra_add", "extra_delete"].includes(operationType);
+        const skipRefresh = ["game_pos", "game_add", "game_delete", "goal_add", "goal_remove", "goal_update", "extra_add", "extra_delete", "extra_update"].includes(operationType);
         // We pass the resolved value to quickUpdate if needed, but quickUpdate doesn't seem to use it?
         // Actually quickUpdate only takes operationType and data.
         const result = await quickUpdate(currentActivity.id, operationType, data, skipRefresh);
@@ -208,17 +209,17 @@ export default function EditLayout({ children, mode = "edit" }: EditLayoutProps)
         return next;
       });
     }
-  }, [quickUpdate, locked]);
+  }, [quickUpdate]);
 
   // Provider value con los nuevos nombres
-  const contextValue = {
+  const contextValue = useMemo(() => ({
     activity,
     setLocal,
     syncWithServer,
     db,
     locked,
     pendingOps,
-  };
+  }), [activity, setLocal, syncWithServer, db, locked, pendingOps]);
 
   // Guardar toda la actividad (POST completo)
   const doSave = useCallback(async () => {

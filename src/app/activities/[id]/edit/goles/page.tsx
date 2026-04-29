@@ -52,7 +52,7 @@ function GoalRow({
     : availablePlayers;
 
   const handleSelect = (pid: number) => {
-    if (g.id === undefined) return;
+    if (g.id === undefined || g.id === null) return;
     if (g.id < 0) {
       onCreate(g.id, { ...g, pid });
     } else {
@@ -146,7 +146,7 @@ function GoalRow({
           <button
             key={type.id}
             disabled={locked}
-            onClick={() => g.id !== undefined && onUpdate(g.id, "tipo", type.id)}
+            onClick={() => g.id != null && onUpdate(g.id, "tipo", type.id)}
             className={cn(
               "px-2 py-1 rounded-md text-[10px] font-black transition-all",
               g.tipo === type.id 
@@ -164,7 +164,7 @@ function GoalRow({
       <div className="flex items-center gap-1 bg-surface-light rounded-lg px-1 shrink-0">
         <button
           disabled={locked || (g.cant || 1) <= 1}
-          onClick={() => g.id !== undefined && onUpdate(g.id, "cant", (g.cant || 1) - 1)}
+          onClick={() => g.id != null && onUpdate(g.id, "cant", (g.cant || 1) - 1)}
           className="w-6 h-6 flex items-center justify-center text-text-muted hover:text-red-500 disabled:opacity-30 transition-colors"
         >
           <Minus className="w-3 h-3" />
@@ -174,7 +174,7 @@ function GoalRow({
         </span>
         <button
           disabled={locked}
-          onClick={() => g.id !== undefined && onUpdate(g.id, "cant", (g.cant || 1) + 1)}
+          onClick={() => g.id != null && onUpdate(g.id, "cant", (g.cant || 1) + 1)}
           className="w-6 h-6 flex items-center justify-center text-text-muted hover:text-teal-500 transition-colors"
         >
           <Plus className="w-3 h-3" />
@@ -183,7 +183,7 @@ function GoalRow({
 
       {/* ELIMINAR */}
       <Button
-        onClick={() => g.id !== undefined && onDelete(g.id)}
+        onClick={() => g.id != null && onDelete(g.id)}
         variant="ghost"
         size="icon"
         disabled={locked}
@@ -200,7 +200,6 @@ export default function GolesPage() {
   const [openDropdown, setOpenDropdown] = useState<number | string | null>(null);
   
   const participants = useMemo(() => {
-    // Permitir agregar goles a cualquier asistente, no solo a los que no son social
     return db.participants.filter(
       (p: ParticipantBasic) =>
         act.asistentes.includes(p.id),

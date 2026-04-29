@@ -184,7 +184,7 @@ export default function EditLayout({ children, mode = "edit" }: EditLayoutProps)
     const currentActivity = activityRef.current;
     if (currentActivity.id) {
       try {
-        const skipRefresh = ["game_pos", "game_add", "game_delete"].includes(operationType);
+        const skipRefresh = ["game_pos", "game_add", "game_delete", "goal_add", "goal_remove", "extra_add", "extra_delete"].includes(operationType);
         // We pass the resolved value to quickUpdate if needed, but quickUpdate doesn't seem to use it?
         // Actually quickUpdate only takes operationType and data.
         const result = await quickUpdate(currentActivity.id, operationType, data, skipRefresh);
@@ -254,13 +254,17 @@ export default function EditLayout({ children, mode = "edit" }: EditLayoutProps)
     }
   }, [activity, saveStatus, doSave]);
 
-  // Sincronizar con datos del servidor
+  // Sincronizar con datos del servidor solo después de que se guarde
+  // Agregar delay para evitar sobrescribir datos locales antes de que el servidor-process
   useEffect(() => {
     if (!activity.id || saveStatus !== "saved") return;
-    const initialActivity = db?.activities?.find((a: Activity) => a.id === activity.id);
-    if (initialActivity) {
-      setActivity(initialActivity);
-    }
+    const timer = setTimeout(() => {
+      const initialActivity = db?.activities?.find((a: Activity) => a.id === activity.id);
+      if (initialActivity) {
+        setActivity(initialActivity);
+      }
+    }, 500); // 500ms delay para permitir que el servidor procese completamente
+    return () => clearTimeout(timer);
   }, [db?.activities, activity.id, saveStatus]);
 
   // Cambio de tab

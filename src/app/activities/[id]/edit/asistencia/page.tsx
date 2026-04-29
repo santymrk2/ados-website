@@ -318,13 +318,12 @@ export default function AsistenciaPage() {
       };
       setLocal("socials", updateFn);
       syncWithServer("socials", { participantId: id, value: !isIncluded }, "socials", updateFn);
-      if (!isIncluded) {
-        setLocal("equipos", (prev: Record<string, string>) => {
-          const next = { ...(prev || {}) };
-          delete next[id];
-          return next;
-        });
-      }
+      // Siempre limpiar el equipo al cambiar el modo (social o recre)
+      setLocal("equipos", (prev: Record<string, string>) => {
+        const next = { ...(prev || {}) };
+        delete next[id];
+        return next;
+      });
     } else if (key === "puntuales" || key === "biblias") {
       const updateFn = (prev: number[]) => {
         const c = prev || [];

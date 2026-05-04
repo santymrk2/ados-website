@@ -59,20 +59,25 @@ export const triggerRankingsRebuild = () => {
         const actInvitaciones = invitacionesRaw.filter((i) => i.activityId === actId);
         const actPartidos = partidosRaw.filter((p) => p.activityId === actId);
 
-        // Build asistentes, puntuales, biblias, socials, equipos
+        // Build asistentes, puntuales, biblias, socials, equipos (deduplicated to handle DB duplicates)
         const asistentes: number[] = [];
         const puntuales: number[] = [];
         const biblias: number[] = [];
         const socials: number[] = [];
         const equipos: Record<string, string> = {};
+        const seenParticipants = new Set<number>();
 
         for (const ap of actParticipants) {
-          if (ap.participantId) asistentes.push(ap.participantId);
-          if (ap.esPuntual) puntuales.push(ap.participantId);
-          if (ap.tieneBiblia) biblias.push(ap.participantId);
-          if (ap.esSocial) socials.push(ap.participantId);
-          if (ap.equipo && ap.participantId) {
-            equipos[ap.participantId] = ap.equipo;
+          const pid = ap.participantId;
+          if (pid && !seenParticipants.has(pid)) {
+            seenParticipants.add(pid);
+            asistentes.push(pid);
+          }
+          if (ap.esPuntual) puntuales.push(pid);
+          if (ap.tieneBiblia) biblias.push(pid);
+          if (ap.esSocial) socials.push(pid);
+          if (ap.equipo && pid) {
+            equipos[pid] = ap.equipo;
           }
         }
 

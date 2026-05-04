@@ -64,7 +64,15 @@ export async function GET(request: NextRequest) {
     const parsed = allActs.map((a) => {
       const actAp = ap.filter((x) => x.activityId === a.id);
       const equipos: Record<number, string> = {};
+
+      // Deduplicate asistentes to handle duplicate DB entries
+      const seenParticipants = new Set<number>();
+      const uniqueAsistentes: number[] = [];
       actAp.forEach((x) => {
+        if (x.participantId && !seenParticipants.has(x.participantId)) {
+          seenParticipants.add(x.participantId);
+          uniqueAsistentes.push(x.participantId);
+        }
         if (x.equipo) equipos[x.participantId] = x.equipo;
       });
 
@@ -87,7 +95,7 @@ export async function GET(request: NextRequest) {
         titulo: a.titulo || "",
         cantEquipos: a.cantEquipos || 4,
         locked: !!a.locked,
-        asistentes: actAp.map((x) => x.participantId),
+        asistentes: uniqueAsistentes,
         puntuales: actAp.filter((x) => x.esPuntual).map((x) => x.participantId),
         biblias: actAp.filter((x) => x.tieneBiblia).map((x) => x.participantId),
         socials: actAp.filter((x) => x.esSocial).map((x) => x.participantId),

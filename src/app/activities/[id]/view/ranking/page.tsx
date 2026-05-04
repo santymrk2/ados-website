@@ -62,6 +62,13 @@ export default function RankingPage() {
       .sort((a, b) => b.pts - a.pts);
   }, [playerRank, rankingType, invitedCount, act]);
 
+  // Label for the points column based on ranking type
+  const pointsLabel = useMemo(() => {
+    if (rankingType === "invitados") return "invitados";
+    if (rankingType.startsWith("goles_")) return "goles";
+    return "pts";
+  }, [rankingType]);
+
   const top3 = rankingData.slice(0, 3);
   const rest = rankingData.slice(3);
 
@@ -95,7 +102,7 @@ export default function RankingPage() {
                 <div className="font-bold text-sm text-white truncate max-w-[100px]">
                   {top3[1].nombre}
                 </div>
-                <div className="text-xs text-white/60">{top3[1].pts} pts</div>
+                <div className="text-xs text-white/60">{top3[1].pts} {pointsLabel}</div>
               </div>
               <div className="w-16 h-16 bg-slate-300 rounded-t-xl flex items-center justify-center">
                 <Medal className="w-8 h-8 text-slate-600" />
@@ -109,7 +116,7 @@ export default function RankingPage() {
                 <div className="font-bold text-sm text-white truncate max-w-[100px]">
                   {top3[0].nombre}
                 </div>
-                <div className="text-xs text-white/60">{top3[0].pts} pts</div>
+                <div className="text-xs text-white/60">{top3[0].pts} {pointsLabel}</div>
               </div>
               <div className="w-20 h-20 bg-amber-400 rounded-t-xl flex items-center justify-center">
                 <Trophy className="w-10 h-10 text-amber-900" />
@@ -123,7 +130,7 @@ export default function RankingPage() {
                 <div className="font-bold text-sm text-white truncate max-w-[100px]">
                   {top3[2].nombre}
                 </div>
-                <div className="text-xs text-white/60">{top3[2].pts} pts</div>
+                <div className="text-xs text-white/60">{top3[2].pts} {pointsLabel}</div>
               </div>
               <div className="w-16 h-16 bg-orange-400 rounded-t-xl flex items-center justify-center">
                 <Medal className="w-8 h-8 text-orange-900" />
@@ -149,7 +156,7 @@ export default function RankingPage() {
                 {p.nombre} {p.apellido}
               </div>
             </div>
-            <div className="font-black text-lg">{p.pts} pts</div>
+            <div className="font-black text-lg">{p.pts} {pointsLabel}</div>
           </div>
         ))}
       </div>

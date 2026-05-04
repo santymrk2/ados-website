@@ -2,20 +2,36 @@
 
 import { useState, useMemo } from "react";
 import { useViewContext } from "../layout";
-import { TEAMS, TEAM_COLORS, getTeamBg, PTS } from "@/lib/constants";
-import { RankBadge, PodiumBadge } from "@/components/ui/Badges";
+import { TEAMS, TEAM_COLORS, getTeamBg } from "@/lib/constants";
+import { SexBadge } from "@/components/ui/Badges";
 import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/button";
 import { PlayerPointsModal } from "@/app/activities/_components/PlayerPointsModal";
 import type { ParticipantBasic } from "@/lib/types";
 
 export default function EquiposPage() {
-  const { act, db, teamRank, maxTeamPts, playerRank } = useViewContext();
+  const { act, db, playerRank } = useViewContext();
   const participants = db.participants;
   const [selectedTeam, setSelectedTeam] = useState<string | null>(null);
   const [selectedPlayer, setSelectedPlayer] = useState<ParticipantBasic | null>(null);
 
   const activeTeams = TEAMS.slice(0, act?.cantEquipos || 4);
+
+  // Calcular stats de cada equipo
+  const teamStats = useMemo(() => {
+    if (!act) return [];
+    return activeTeams.map((t) => {
+      const members = act.asistentes
+        .map((pid) => participants.find((p) => p.id === pid))
+        .filter((p): p is ParticipantBasic => !!p && act.equipos?.[p.id] === t);
+      return {
+        team: t,
+        total: members.length,
+        m: members.filter((p) => p.sexo === "M").length,
+        f: members.filter((p) => p.sexo === "F").length,
+      };
+    });
+  }, [activeTeams, act, participants]);
 
   const selectedTeamData = useMemo(() => {
     if (!selectedTeam || !act) return null;
@@ -38,8 +54,8 @@ export default function EquiposPage() {
       men: present
         .filter((p) => p.sexo === "M")
         .sort((a, b) =>
-          `${b.apellido} ${b.nombre}`.localeCompare(
-            `${a.apellido} ${a.nombre}`,
+          `${a.apellido} ${a.nombre}`.localeCompare(
+            `${b.apellido} ${b.nombre}`,
           ),
         ),
     };
@@ -47,40 +63,41 @@ export default function EquiposPage() {
 
   return (
     <div>
-      <div className="flex flex-col gap-2 mb-5">
-        {teamRank.map(({ team, pts }, i) => (
+      {/* Team cards - grid layout */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-4">
+        {teamStats.map(({ team, total, m, f }) => (
           <div
             key={team}
-            className="rounded-2xl p-4 flex items-center gap-3 border-2 cursor-pointer hover:scale-[1.02] transition-transform"
+            className="rounded-2xl p-3 flex items-center gap-2 border-2 cursor-pointer hover:scale-[1.02] transition-transform"
             style={{
               backgroundColor: getTeamBg(team),
               borderColor:
-                i === 0 ? TEAM_COLORS[team] : TEAM_COLORS[team] + "44",
+                selectedTeam === team
+                  ? TEAM_COLORS[team]
+                  : TEAM_COLORS[team] + "44",
             }}
             onClick={() => setSelectedTeam(team)}
           >
-            <PodiumBadge pos={i + 1} />
             <div
-              className="font-black text-xl"
+              className="font-black text-lg"
               style={{ color: TEAM_COLORS[team] }}
             >
               {team}
             </div>
-            <div className="flex-1 bg-black/30 rounded-full h-2 overflow-hidden">
-              <div
-                className="h-full rounded-full transition-all"
-                style={{
-                  width: `${(pts / maxTeamPts) * 100}%`,
-                  backgroundColor: TEAM_COLORS[team],
-                }}
-              />
+            <div className="flex-1 text-center">
+              <div className="font-black text-xl">{total}</div>
+              <div className="text-[10px] text-text-muted flex items-center justify-center gap-0.5">
+                <SexBadge sex="M" className="w-3 h-3" />
+                {m} <SexBadge sex="F" className="w-3 h-3" />
+                {f}
+              </div>
             </div>
-            <div className="font-black text-2xl">{pts}</div>
           </div>
         ))}
       </div>
 
-      {selectedTeam && (
+      {/* Selected team members */}
+      {selectedTeam && selectedTeamData && (
         <div className="mb-5">
           <div className="flex items-center justify-between mb-3">
             <div
@@ -100,7 +117,7 @@ export default function EquiposPage() {
           </div>
 
           <div className="flex flex-col gap-3">
-            {selectedTeamData && selectedTeamData.women.length > 0 && (
+            {selectedTeamData.women.length > 0 && (
               <div className="bg-pink-50 rounded-xl p-3 border border-pink-100">
                 <div className="font-bold text-sm text-pink-700 mb-2 flex items-center gap-2">
                   Mujer ({selectedTeamData.women.length})
@@ -127,10 +144,10 @@ export default function EquiposPage() {
               </div>
             )}
 
-            {selectedTeamData && selectedTeamData.men.length > 0 && (
+            {selectedTeamData.men.length > 0 && (
               <div className="bg-cyan-50 rounded-xl p-3 border border-cyan-100">
                 <div className="font-bold text-sm text-cyan-700 mb-2 flex items-center gap-2">
-                  Varones ({selectedTeamData.men.length})
+                  Varón ({selectedTeamData.men.length})
                 </div>
                 <div className="flex flex-col gap-1">
                   {selectedTeamData.men.map((p) => (
@@ -154,8 +171,7 @@ export default function EquiposPage() {
               </div>
             )}
 
-            {selectedTeamData &&
-              selectedTeamData.women.length === 0 &&
+            {selectedTeamData.women.length === 0 &&
               selectedTeamData.men.length === 0 && (
                 <div className="text-accent text-center text-text-muted text-sm py-4">
                   Sin jugadores en este equipo

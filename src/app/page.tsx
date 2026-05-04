@@ -16,13 +16,15 @@ import {
   Award,
   Circle,
   ClipboardList,
+  Users,
+  X,
 } from "lucide-react";
 import { Section, Empty } from "@/components/ui/Common";
 import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/button";
 import { SexBadge, RankBadge, PodiumBadge } from "@/components/ui/Badges";
 import { cn, formatDate } from "@/lib/utils";
-import type { ParticipantBasic, Activity, Ranking } from "@/lib/types";
+import type { ParticipantBasic, Activity, Ranking, Invitacion } from "@/lib/types";
 
 // Tipo para ranking calculado con stats
 interface RankingWithStats extends ParticipantBasic {
@@ -121,8 +123,11 @@ export default function Page() {
 
   const [showRanking, setShowRanking] = useState(false);
   const [showTopGoleadores, setShowTopGoleadores] = useState(false);
+  const [showInvitaciones, setShowInvitaciones] = useState(false);
   const [topGoleadoresGender, setTopGoleadoresGender] = useState<'M' | 'F'>('M');
   const [rankingMetric, setRankingMetric] = useState<RankingMetricKey>('total');
+  const [selectedActivityIds, setSelectedActivityIds] = useState<number[]>([]);
+  const [selectedInviter, setSelectedInviter] = useState<ParticipantBasic | null>(null);
 
   const handleActivityClick = (activityId: number) => {
     router.push(`/activities/${activityId}`);
@@ -241,6 +246,50 @@ export default function Page() {
 
   const topScorers =
     topGoleadoresGender === "M" ? stats.top5ScorersM : stats.top5ScorersF;
+
+  // Por defecto, si no hay actividades seleccionadas, mostrar todas
+  const activeActivityIds = selectedActivityIds.length > 0
+    ? selectedActivityIds
+    : (activities || []).map((a) => a.id);
+
+  // Calcular ranking de invitaciones basado en actividades seleccionadas
+  const invitacionRanking = useMemo(() => {
+    const counts: Record<number, { total: number; invitaciones: Invitacion[] }> = {};
+
+    (activities || []).forEach((act) => {
+      if (!activeActivityIds.includes(act.id)) return;
+      (act.invitaciones || []).forEach((inv) => {
+        if (inv.invitador) {
+          if (!counts[inv.invitador]) {
+            counts[inv.invitador] = { total: 0, invitaciones: [] };
+          }
+          counts[inv.invitador].total += 1;
+          counts[inv.invitador].invitaciones.push(inv);
+        }
+      });
+    });
+
+    return (participants || [])
+      .map((p) => ({
+        ...p,
+        invitedCount: counts[p.id]?.total || 0,
+        invitaciones: counts[p.id]?.invitaciones || [],
+      }))
+      .filter((p) => p.invitedCount > 0)
+      .sort((a, b) => b.invitedCount - a.invitedCount);
+  }, [participants, activities, activeActivityIds]);
+
+  // Obtener los invitados de una persona específica
+  const getInvitadosDetails = (invitaciones: Invitacion[]) => {
+    return invitaciones.map((inv) => {
+      const invited = (participants || []).find((p) => p.id === inv.invitadoId);
+      const activity = (activities || []).find((a) => a.id === inv.activityId);
+      return {
+        invited: invited || null,
+        activity: activity || null,
+      };
+    });
+  };
 
   return (
     <>
@@ -477,6 +526,92 @@ export default function Page() {
             </>
           )}
 
+          {/* Sección Invitaciones */}
+          <div className="flex justify-between items-center mb-4 mt-6">
+            <Section icon={Users} title="Invitaciones" />
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => setShowInvitaciones(!showInvitaciones)}
+            >
+              {showInvitaciones ? (
+                <EyeOff className="w-5 h-5" />
+              ) : (
+                <Eye className="w-5 h-5" />
+              )}
+            </Button>
+          </div>
+
+          {showInvitaciones && (
+            <>
+              {/* Checklist de actividades */}
+              <div className="bg-white rounded-xl p-4 border border-surface-dark mb-4">
+                <div className="text-xs font-bold text-text-muted mb-2">
+                  Filtrar por actividades:
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {(activities || []).map((act) => (
+                    <button
+                      key={act.id}
+                      onClick={() => {
+                        setSelectedActivityIds((prev) =>
+                          prev.includes(act.id)
+                            ? prev.filter((id) => id !== act.id)
+                            : [...prev, act.id],
+                        );
+                      }}
+                      className={cn(
+                        "px-2 py-1 rounded-lg text-xs font-bold transition-all",
+                        selectedActivityIds.length === 0 || selectedActivityIds.includes(act.id)
+                          ? "bg-primary text-white"
+                          : "bg-surface-dark text-text-muted",
+                      )}
+                    >
+                      {act.titulo || formatDate(act.fecha)}
+                    </button>
+                  ))}
+                </div>
+                {selectedActivityIds.length === 0 && (
+                  <div className="text-xs text-text-muted mt-2 italic">
+                    (Mostrando todas las actividades)
+                  </div>
+                )}
+              </div>
+
+              {/* Ranking de invitaciones */}
+              {invitacionRanking.length === 0 ? (
+                <Empty text="No hay invitaciones registradas" />
+              ) : (
+                <div className="flex flex-col gap-2 mb-5">
+                  {invitacionRanking.slice(0, 10).map((p, i) => (
+                    <div
+                      key={p.id}
+                      onClick={() => setSelectedInviter(p)}
+                      className={cn(
+                        "bg-white rounded-xl p-3 flex items-center gap-3 border cursor-pointer hover:bg-surface-dark transition-colors",
+                        i <= 2 ? "border-primary/30" : "border-surface-dark",
+                      )}
+                    >
+                      <RankBadge pos={i + 1} />
+                      <Avatar p={p} size={36} />
+                      <div className="flex-1 z-10 min-w-0">
+                        <div className="font-bold truncate">
+                          {p.nombre} {p.apellido}
+                        </div>
+                      </div>
+                      <div className="font-black text-2xl z-10">
+                        {p.invitedCount}
+                        <span className="text-xs font-bold text-text-muted ml-1">
+                          inv.
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+
           {lastActs.length > 0 && (
             <>
               <Section icon={Calendar} title="Últimas Actividades" />
@@ -514,6 +649,55 @@ export default function Page() {
         onLogout={logout}
         role={role}
       />
+
+      {/* Modal de invitados */}
+      {selectedInviter && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full max-h-[80vh] overflow-hidden flex flex-col">
+            <div className="p-4 border-b flex items-center justify-between">
+              <div>
+                <div className="font-bold">
+                  {selectedInviter.nombre} {selectedInviter.apellido}
+                </div>
+                <div className="text-sm text-text-muted">
+                  {selectedInviter.invitedCount} invitados
+                </div>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setSelectedInviter(null)}
+              >
+                <X className="w-5 h-5" />
+              </Button>
+            </div>
+            <div className="p-4 overflow-y-auto flex-1">
+              <div className="flex flex-col gap-2">
+                {getInvitadosDetails(selectedInviter.invitaciones).map((detail, i) => (
+                  <div
+                    key={i}
+                    className="flex items-center gap-3 p-2 bg-surface-dark rounded-xl"
+                  >
+                    <Avatar p={detail.invited} size={28} />
+                    <div className="flex-1 min-w-0">
+                      <div className="font-bold text-sm truncate">
+                        {detail.invited
+                          ? `${detail.invited.nombre} ${detail.invited.apellido}`
+                          : `ID: ${detail.invited?.id}`}
+                      </div>
+                      {detail.activity && (
+                        <div className="text-xs text-text-muted truncate">
+                          {detail.activity.titulo || formatDate(detail.activity.fecha)}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

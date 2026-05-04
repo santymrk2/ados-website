@@ -36,6 +36,17 @@ interface RankingWithStats extends ParticipantBasic {
   goals?: number;
 }
 
+// Tipo para ranking de invitaciones
+interface InvitacionWithActivity {
+  inv: Invitacion;
+  activity: Activity;
+}
+
+interface InvitacionRanking extends ParticipantBasic {
+  invitedCount: number;
+  invitaciones: InvitacionWithActivity[];
+}
+
 // Tipo para stats del dashboard
 interface DashboardStats {
   jugadoresActivos: number;
@@ -127,7 +138,7 @@ export default function Page() {
   const [topGoleadoresGender, setTopGoleadoresGender] = useState<'M' | 'F'>('M');
   const [rankingMetric, setRankingMetric] = useState<RankingMetricKey>('total');
   const [selectedActivityIds, setSelectedActivityIds] = useState<number[]>([]);
-  const [selectedInviter, setSelectedInviter] = useState<ParticipantBasic | null>(null);
+  const [selectedInviter, setSelectedInviter] = useState<InvitacionRanking | null>(null);
 
   const handleActivityClick = (activityId: number) => {
     router.push(`/activities/${activityId}`);
@@ -254,7 +265,7 @@ export default function Page() {
 
   // Calcular ranking de invitaciones basado en actividades seleccionadas
   const invitacionRanking = useMemo(() => {
-    const counts: Record<number, { total: number; invitaciones: Invitacion[] }> = {};
+    const counts: Record<number, { total: number; invitaciones: { inv: Invitacion; activity: Activity }[] }> = {};
 
     (activities || []).forEach((act) => {
       if (!activeActivityIds.includes(act.id)) return;
@@ -264,7 +275,7 @@ export default function Page() {
             counts[inv.invitador] = { total: 0, invitaciones: [] };
           }
           counts[inv.invitador].total += 1;
-          counts[inv.invitador].invitaciones.push(inv);
+          counts[inv.invitador].invitaciones.push({ inv, activity: act });
         }
       });
     });
@@ -280,15 +291,17 @@ export default function Page() {
   }, [participants, activities, activeActivityIds]);
 
   // Obtener los invitados de una persona específica
-  const getInvitadosDetails = (invitaciones: Invitacion[]) => {
-    return invitaciones.map((inv) => {
-      const invited = (participants || []).find((p) => p.id === inv.invitadoId);
-      const activity = (activities || []).find((a) => a.id === inv.activityId);
-      return {
-        invited: invited || null,
-        activity: activity || null,
-      };
-    });
+  const getInvitadosDetails = (invitaciones: { inv: Invitacion; activity: Activity }[]) => {
+    return invitaciones
+      .map((item) => {
+        const invited = (participants || []).find((p) => p.id === item.inv.invitadoId);
+        if (!invited) return null;
+        return {
+          invited,
+          activity: item.activity,
+        };
+      })
+      .filter((item): item is NonNullable<typeof item> => item !== null);
   };
 
   return (
@@ -681,9 +694,7 @@ export default function Page() {
                     <Avatar p={detail.invited} size={28} />
                     <div className="flex-1 min-w-0">
                       <div className="font-bold text-sm truncate">
-                        {detail.invited
-                          ? `${detail.invited.nombre} ${detail.invited.apellido}`
-                          : `ID: ${detail.invited?.id}`}
+                        {detail.invited.nombre} {detail.invited.apellido}
                       </div>
                       {detail.activity && (
                         <div className="text-xs text-text-muted truncate">

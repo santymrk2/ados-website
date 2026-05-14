@@ -64,8 +64,14 @@ jobs:
           VIEWER_PASSWORD: viewer123
         run: |
           bun run dev &
-          echo "Waiting for dev server to start..."
-          sleep 15
+          echo "Waiting for dev server to start (max 45s)..."
+          for i in $(seq 1 45); do
+            if curl -sf http://localhost:3000 > /dev/null 2>&1; then
+              echo "Server is up!"
+              break
+            fi
+            sleep 1
+          done
           curl -f http://localhost:3000 || exit 1
           bunx playwright test
           kill %1 || true

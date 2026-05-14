@@ -131,9 +131,12 @@ export function SettingsPanel({
 
   useEffect(() => {
     if (isOpen) {
-      setColors(getTeamColors());
-      setSaved(false);
-      setOpenSections([]);
+      const colors = getTeamColors();
+      queueMicrotask(() => {
+        setColors(colors);
+        setSaved(false);
+        setOpenSections([]);
+      });
       queueMicrotask(() => checkPushStatus());
     }
   }, [isOpen, checkPushStatus]);

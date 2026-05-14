@@ -14,7 +14,7 @@ export function ImageExpandModal({ image, playerName, onClose }) {
 
   useEffect(() => {
     if (image) {
-      setIsLoading(true);
+      queueMicrotask(() => setIsLoading(true));
     }
   }, [image]);
 

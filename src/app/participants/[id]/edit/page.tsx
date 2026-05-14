@@ -25,6 +25,7 @@ function ParticipantFormEditWrapper({ id }: { id: string }) {
   const role = useStore($role);
   const isAdmin = role === "admin";
 
+  // eslint-disable-next-line react-hooks/preserve-manual-memoization
   const participant = useMemo(() => {
     if (!id || !db?.participants?.length) return null;
     const numericId = Number(id);

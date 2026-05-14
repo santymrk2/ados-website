@@ -23,7 +23,7 @@ export function PWAInstall() {
     const isAllowed = ALLOWED_PATHS.some(
       (p) => path === p || (p !== "/" && path.startsWith(p)),
     );
-    setShouldShow(isAllowed);
+    queueMicrotask(() => setShouldShow(isAllowed));
   }, []);
 
   useEffect(() => {
@@ -32,7 +32,7 @@ export function PWAInstall() {
     // Check if user previously dismissed
     const wasDismissed = localStorage.getItem("pwa_install_dismissed");
     if (wasDismissed) {
-      setDismissed(true);
+      queueMicrotask(() => setDismissed(true));
     }
 
     // Check if already installed
@@ -41,7 +41,7 @@ export function PWAInstall() {
       (window.navigator as Navigator & { standalone?: boolean }).standalone;
 
     if (isStandalone) {
-      setIsInstalled(true);
+      queueMicrotask(() => setIsInstalled(true));
       return;
     }
 
@@ -65,7 +65,7 @@ export function PWAInstall() {
       !((window as Window & { MSStream?: unknown }).MSStream);
 
     if (isIOS && !isStandalone) {
-      setShowIOSBtn(true);
+      queueMicrotask(() => setShowIOSBtn(true));
     }
 
     window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);

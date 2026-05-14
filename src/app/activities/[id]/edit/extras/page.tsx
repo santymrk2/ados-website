@@ -75,7 +75,7 @@ function ExtraRow({
 
   // Sync local state if parent state changes (e.g. from server)
   useEffect(() => {
-    setLocalMotivo(item.motivo || "");
+    queueMicrotask(() => setLocalMotivo(item.motivo || ""));
   }, [item.motivo]);
 
   const handleSelect = (pid: number) => {

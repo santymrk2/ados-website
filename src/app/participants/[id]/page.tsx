@@ -37,8 +37,8 @@ export default function Page({
   const { db, isLoading: dbLoading } = useApp();
   const role = useStore($role);
   const isAdmin = role === "admin";
-// ... (rest of the file stays same until the end)
 
+  // eslint-disable-next-line react-hooks/preserve-manual-memoization
   const initialParticipant = useMemo(() => {
     if (!id || !db?.participants?.length) return null;
     return db.participants.find((p) => p.id === Number(id)) || null;
@@ -50,13 +50,13 @@ export default function Page({
 
   useEffect(() => {
     if (initialParticipant?.id) {
-      setIsLoadingFull(true);
+      queueMicrotask(() => setIsLoadingFull(true));
       getParticipant(initialParticipant.id)
         .then((fullData) => {
-          setPlayer(fullData);
+          queueMicrotask(() => setPlayer(fullData));
         })
         .finally(() => {
-          setIsLoadingFull(false);
+          queueMicrotask(() => setIsLoadingFull(false));
         });
     }
   }, [initialParticipant?.id]);

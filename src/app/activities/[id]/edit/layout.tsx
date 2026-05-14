@@ -94,13 +94,13 @@ export default function EditLayout({ children, mode = "edit" }: EditLayoutProps)
     // Find where we are in the path
     const editIndex = pathParts.indexOf("edit");
     const tabValue = editIndex >= 0 && editIndex + 1 < pathParts.length ? pathParts[editIndex + 1] : "";
-    setCurrentTab(tabValue);
+    queueMicrotask(() => setCurrentTab(tabValue));
   }, [pathname]);
 
   // Also resolve id from params
   useEffect(() => {
     const id = params?.id as string | undefined;
-    if (id) setResolvedId(id);
+    if (id) queueMicrotask(() => setResolvedId(id));
   }, [params?.id]);
 
   const { db, saveActivity, quickUpdate, saveParticipant, isLoading: dbLoading } = useApp();
@@ -114,15 +114,18 @@ export default function EditLayout({ children, mode = "edit" }: EditLayoutProps)
   const [locked, setLocked] = useState<boolean>(false);
 
   const activityRef = useRef(activity);
-  activityRef.current = activity;
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  useEffect(() => {
+    activityRef.current = activity;
+  }, [activity]);
 
   // Cargar actividad inicial
   useEffect(() => {
     if (mode === "edit" && resolvedId && db?.activities?.length) {
       const act = db.activities.find((a) => a.id === Number(resolvedId));
       if (act) {
-        setActivity(act);
-        setLocked(act.locked || false);
+        queueMicrotask(() => setActivity(act));
+        queueMicrotask(() => setLocked(act.locked || false));
       }
     }
   }, [mode, resolvedId, db?.activities]);

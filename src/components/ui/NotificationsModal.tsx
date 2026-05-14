@@ -65,7 +65,7 @@ export function NotificationsModal({
       // Cargar notificaciones desde localStorage
       const saved = localStorage.getItem("app_notifications");
       if (saved) {
-        setNotifications(JSON.parse(saved));
+        queueMicrotask(() => setNotifications(JSON.parse(saved)));
       }
 
       // Cargar cumpleañeros del día

@@ -119,7 +119,7 @@ function PlayerDetailModal({
           </h3>
           {player.apodo && (
             <div className="text-sm font-medium text-text-muted">
-              "{player.apodo}"
+              &ldquo;{player.apodo}&rdquo;
             </div>
           )}
         </div>

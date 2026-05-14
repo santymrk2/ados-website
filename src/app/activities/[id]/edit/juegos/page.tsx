@@ -203,10 +203,13 @@ function JuegoCard({
 }) {
   const [localNombre, setLocalNombre] = useState(j.nombre || "");
   const onNombreRef = useRef(onNombre);
-  onNombreRef.current = onNombre;
 
   useEffect(() => {
-    setLocalNombre(j.nombre || "");
+    onNombreRef.current = onNombre;
+  }, [onNombre]);
+
+  useEffect(() => {
+    queueMicrotask(() => setLocalNombre(j.nombre || ""));
   }, [j.nombre]);
 
   useEffect(() => {

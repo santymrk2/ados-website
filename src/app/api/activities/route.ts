@@ -673,11 +673,11 @@ case "goal_update": {
 
         const allTeams: { equipo: string; posicion: number }[] = [];
         const seenTeams = new Set<string>();
-        Object.entries(pos).forEach(([posStr, equipos]: [string, any]) => {
+        Object.entries(pos).forEach(([posStr, equipos]) => {
           const posicion = Number(posStr);
           if (Array.isArray(equipos)) {
-            equipos.forEach((eqName: string) => {
-              if (!seenTeams.has(eqName)) {
+            equipos.forEach((eqName: unknown) => {
+              if (typeof eqName === "string" && !seenTeams.has(eqName)) {
                 seenTeams.add(eqName);
                 allTeams.push({ equipo: eqName, posicion });
               }

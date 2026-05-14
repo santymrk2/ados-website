@@ -162,7 +162,7 @@ export function PWAInstall() {
                   Instalá la app en tu iPhone
                 </p>
                 <p className="text-xs text-text-muted">
-                  Desde Safari, tocáCompartir y luego "Agregar a inicio"
+                  Desde Safari, tocáCompartir y luego &ldquo;Agregar a inicio&rdquo;
                 </p>
               </div>
             </div>

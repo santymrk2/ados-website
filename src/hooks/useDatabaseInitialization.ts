@@ -35,15 +35,21 @@ export function useDatabaseInitialization() {
       }
     };
 
-    eventSource.onerror = (error) => {
-      console.error("[SSE Client] Error:", error);
+    eventSource.onerror = () => {
+      console.error("[SSE Client] Error");
       // Close and schedule reconnection
       eventSource.close();
       eventSourceRef.current = null;
 
       // Schedule reconnection in 5 seconds
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+      }
       reconnectTimeoutRef.current = setTimeout(() => {
-        connectSSE();
+        // Re-call connectSSE by accessing it through the ref would not work
+        // since ref.current is null. Instead, we trigger a page-level refresh
+        // which will re-initialize the connection through the useEffect
+        refreshData(false);
       }, 5000);
     };
 

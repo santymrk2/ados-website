@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { GetObjectCommand, S3ServiceException } from "@aws-sdk/client-s3";
+import { GetObjectCommand } from "@aws-sdk/client-s3";
 import { s3Client, minioConfig } from "@/services/minio";
 
 export const dynamic = "force-dynamic";
@@ -44,11 +44,11 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
     // Detectar errores específicos de S3
     if (e instanceof Error) {
       // NoSuchKey = archivo no existe
-      if (e.name === "NoSuchKey" || (e as any).$metadata?.httpStatusCode === 404) {
+      if (e.name === "NoSuchKey") {
         return NextResponse.json({ error: "Not found" }, { status: 404 });
       }
       // AccessDenied = credenciales inválidas
-      if (e.name === "AccessDenied" || (e as any).$metadata?.httpStatusCode === 403) {
+      if (e.name === "AccessDenied") {
         console.error("[API Images] Access denied to MinIO:", e.message);
         return NextResponse.json({ error: "Image storage access denied" }, { status: 503 });
       }

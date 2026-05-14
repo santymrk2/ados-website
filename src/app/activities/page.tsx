@@ -160,7 +160,7 @@ export default function ActivitiesPage() {
             <AlertDialogDescription>
               ¿Estás seguro que querés eliminar la actividad{" "}
               <span className="font-semibold text-foreground">
-                "{actAEliminar?.titulo || "Sin título"}"
+                &ldquo;{actAEliminar?.titulo || "Sin título"}&rdquo;
               </span>
               ? esta acción es irreversible.
             </AlertDialogDescription>

@@ -2,12 +2,10 @@
 
 import { useState, useMemo } from "react";
 import { useViewContext } from "../layout";
-import { Trophy, Medal, Star } from "lucide-react";
-import { TEAM_COLORS, getTeamBg } from "@/lib/constants";
+import { Trophy, Medal } from "lucide-react";
 import { Avatar } from "@/components/ui/Avatar";
 import { Empty } from "@/components/ui/Common";
 import { HelpInfo } from "@/components/ui/HelpInfo";
-import { cn } from "@/lib/utils";
 import {
   Select,
   SelectContent,
@@ -27,10 +25,9 @@ export default function RankingPage() {
   const { playerRank, act } = useViewContext();
   const [rankingType, setRankingType] = useState("puntos");
 
-  if (!act) return null;
-
   // Calcular goleadores traídos
   const invitedCount = useMemo(() => {
+    if (!act) return {};
     const counts: Record<number, number> = {};
     (act.invitaciones || []).forEach((inv: Invitacion) => {
       if (inv.invitador) {
@@ -38,9 +35,10 @@ export default function RankingPage() {
       }
     });
     return counts;
-  }, [act.invitaciones]);
+  }, [act, act?.invitaciones]);
 
   const rankingData = useMemo(() => {
+    if (!act) return playerRank;
     if (rankingType === "puntos") {
       return playerRank;
     }
@@ -51,7 +49,7 @@ export default function RankingPage() {
       })).sort((a, b) => (b.pts || 0) - (a.pts || 0));
     }
     // Goles por tipo
-    const [_, tipo, sexo] = rankingType.split("_");
+    const [tipo, sexo] = rankingType.split("_").slice(1);
     return playerRank
       .map((p) => {
         const misGoles = (act.goles || [])
@@ -60,7 +58,7 @@ export default function RankingPage() {
         return { ...p, pts: misGoles };
       })
       .sort((a, b) => b.pts - a.pts);
-  }, [playerRank, rankingType, invitedCount, act]);
+  }, [playerRank, rankingType, invitedCount, act, act?.goles]);
 
   // Label for the points column based on ranking type
   const pointsLabel = useMemo(() => {
@@ -68,6 +66,8 @@ export default function RankingPage() {
     if (rankingType.startsWith("goles_")) return "goles";
     return "pts";
   }, [rankingType]);
+
+  if (!act) return null;
 
   const top3 = rankingData.slice(0, 3);
   const rest = rankingData.slice(3);

@@ -187,7 +187,7 @@ export default function Page({
                 </span>
                 {player.apodo && (
                   <span className="text-white/60 font-medium italic text-sm">
-                    "{player.apodo}"
+                    &ldquo;{player.apodo}&rdquo;
                   </span>
                 )}
               </div>

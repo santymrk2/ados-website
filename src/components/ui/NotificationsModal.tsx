@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Bell, Cake, X } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import { Bell, Cake } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -38,20 +38,7 @@ export function NotificationsModal({
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [birthdaysToday, setBirthdaysToday] = useState<Participant[]>([]);
 
-  useEffect(() => {
-    if (isOpen) {
-      // Cargar notificaciones desde localStorage
-      const saved = localStorage.getItem("app_notifications");
-      if (saved) {
-        setNotifications(JSON.parse(saved));
-      }
-
-      // Cargar cumpleañeros del día
-      loadBirthdays();
-    }
-  }, [isOpen]);
-
-  const loadBirthdays = async () => {
+  const loadBirthdays = useCallback(async () => {
     try {
       const response = await fetch("/api/participants");
       if (response.ok) {
@@ -71,7 +58,20 @@ export function NotificationsModal({
     } catch (error) {
       console.error("Error loading birthdays:", error);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (isOpen) {
+      // Cargar notificaciones desde localStorage
+      const saved = localStorage.getItem("app_notifications");
+      if (saved) {
+        setNotifications(JSON.parse(saved));
+      }
+
+      // Cargar cumpleañeros del día
+      queueMicrotask(() => loadBirthdays());
+    }
+  }, [isOpen, loadBirthdays]);
 
   const clearNotifications = () => {
     setNotifications([]);

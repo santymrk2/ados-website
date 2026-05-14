@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   LogOut,
   Palette,
@@ -58,7 +58,7 @@ function AccordionSection({
   children,
 }: {
   title: string;
-  icon: React.ComponentType<any>;
+  icon: React.ComponentType<{ className?: string }>;
   isOpen: boolean;
   onToggle: () => void;
   children: React.ReactNode;
@@ -110,16 +110,7 @@ export function SettingsPanel({
   const [isSubscribing, setIsSubscribing] = useState(false);
   const [subscriptionSaved, setSubscriptionSaved] = useState(false);
 
-  useEffect(() => {
-    if (isOpen) {
-      setColors(getTeamColors());
-      setSaved(false);
-      setOpenSections([]);
-      checkPushStatus();
-    }
-  }, [isOpen]);
-
-  const checkPushStatus = async () => {
+  const checkPushStatus = useCallback(async () => {
     try {
       const available = await isWebPushAvailable();
       setPushAvailable(available);
@@ -136,7 +127,16 @@ export function SettingsPanel({
     } catch (error) {
       console.error("Error checking push status:", error);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (isOpen) {
+      setColors(getTeamColors());
+      setSaved(false);
+      setOpenSections([]);
+      queueMicrotask(() => checkPushStatus());
+    }
+  }, [isOpen, checkPushStatus]);
 
   const toggleSection = (section: string) => {
     setOpenSections((prev) =>

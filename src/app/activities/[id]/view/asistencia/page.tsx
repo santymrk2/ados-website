@@ -16,10 +16,9 @@ export default function AsistenciaPage() {
   const [selectedAges, setSelectedAges] = useState<number[]>([]);
   const [selectedPlayer, setSelectedPlayer] = useState<ParticipantBasic | null>(null);
 
-  if (!act) return null;
-
   // Obtener edades únicas de los asistentes
   const availableAges = useMemo(() => {
+    if (!act) return [];
     const ages = new Set<number>();
     act.asistentes.forEach((pid) => {
       const p = participants.find((x) => x.id === pid);
@@ -29,10 +28,11 @@ export default function AsistenciaPage() {
       }
     });
     return Array.from(ages).sort((a, b) => a - b);
-  }, [act.asistentes, participants]);
+  }, [act, act?.asistentes, participants]);
 
   // Stats
   const stats = useMemo(() => {
+    if (!act) return { total: 0, males: 0, females: 0, puntuales: 0 };
     const total = act.asistentes.length;
     let males = 0;
     let females = 0;
@@ -48,10 +48,11 @@ export default function AsistenciaPage() {
     });
 
     return { total, males, females, puntuales };
-  }, [act, participants]);
+  }, [act, act?.puntuales, participants]);
 
   // Lista de asistentes filtrados
   const filteredAsistentes = useMemo(() => {
+    if (!act) return [];
     const enriched: (ParticipantBasic & { edad: number })[] = [];
     for (const pid of act.asistentes) {
       const p = participants.find((x) => x.id === pid);
@@ -65,7 +66,9 @@ export default function AsistenciaPage() {
       `${a.apellido} ${a.nombre}`.localeCompare(`${b.apellido} ${b.nombre}`),
     );
     return enriched;
-  }, [act.asistentes, participants, selectedAges]);
+  }, [act, act?.asistentes, participants, selectedAges]);
+
+  if (!act) return null;
 
   const toggleAge = (age: number) => {
     setSelectedAges((prev) =>

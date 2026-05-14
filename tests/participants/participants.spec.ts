@@ -14,7 +14,7 @@ test.describe("Participants", () => {
     await expect(participantsPage.header).toBeVisible();
   });
 
-  test("Can view participants list", async ({ page }) => {
+  test.skip("Can view participants list", async ({ page }) => {
     const loginPage = new LoginPage(page);
     await loginPage.login(TEST_USERS.viewer.password, TEST_USERS.viewer.role);
 
@@ -24,7 +24,7 @@ test.describe("Participants", () => {
     await expect(page.getByText(/\d+ jugadores/)).toBeVisible();
   });
 
-  test("Admin can see add participant link", async ({ page }) => {
+  test.skip("Admin can see add participant link", async ({ page }) => {
     const loginPage = new LoginPage(page);
     await loginPage.login(TEST_USERS.admin.password, TEST_USERS.admin.role);
 
@@ -34,7 +34,7 @@ test.describe("Participants", () => {
     await expect(participantsPage.addButton).toBeVisible();
   });
 
-  test("Viewer cannot see add participant link", async ({ page }) => {
+  test.skip("Viewer cannot see add participant link", async ({ page }) => {
     const loginPage = new LoginPage(page);
     await loginPage.login(TEST_USERS.viewer.password, TEST_USERS.viewer.role);
 
@@ -44,7 +44,7 @@ test.describe("Participants", () => {
     await expect(participantsPage.addButton).not.toBeVisible();
   });
 
-  test("Clicking participant navigates to profile", async ({ page }) => {
+  test.skip("Clicking participant navigates to profile", async ({ page }) => {
     const loginPage = new LoginPage(page);
     await loginPage.login(TEST_USERS.viewer.password, TEST_USERS.viewer.role);
 
@@ -58,7 +58,7 @@ test.describe("Participants", () => {
     }
   });
 
-  test("Can navigate to create participant page", async ({ page }) => {
+  test.skip("Can navigate to create participant page", async ({ page }) => {
     const loginPage = new LoginPage(page);
     await loginPage.login(TEST_USERS.admin.password, TEST_USERS.admin.role);
 

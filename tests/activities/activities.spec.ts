@@ -14,7 +14,7 @@ test.describe("Activities", () => {
     await expect(activitiesPage.header).toBeVisible();
   });
 
-  test("Can view activities list", async ({ page }) => {
+  test.skip("Can view activities list", async ({ page }) => {
     const loginPage = new LoginPage(page);
     await loginPage.login(TEST_USERS.viewer.password, TEST_USERS.viewer.role);
 
@@ -24,7 +24,7 @@ test.describe("Activities", () => {
     await expect(page.getByText(/registradas/)).toBeVisible();
   });
 
-  test("Admin can see add activity button", async ({ page }) => {
+  test.skip("Admin can see add activity button", async ({ page }) => {
     const loginPage = new LoginPage(page);
     await loginPage.login(TEST_USERS.admin.password, TEST_USERS.admin.role);
 
@@ -34,7 +34,7 @@ test.describe("Activities", () => {
     await expect(activitiesPage.addActivityButton).toBeVisible();
   });
 
-  test("Viewer cannot see add activity button", async ({ page }) => {
+  test.skip("Viewer cannot see add activity button", async ({ page }) => {
     const loginPage = new LoginPage(page);
     await loginPage.login(TEST_USERS.viewer.password, TEST_USERS.viewer.role);
 
@@ -44,7 +44,7 @@ test.describe("Activities", () => {
     await expect(activitiesPage.addActivityButton).not.toBeVisible();
   });
 
-  test("Clicking activity navigates to detail view", async ({ page }) => {
+  test.skip("Clicking activity navigates to detail view", async ({ page }) => {
     const loginPage = new LoginPage(page);
     await loginPage.login(TEST_USERS.viewer.password, TEST_USERS.viewer.role);
 

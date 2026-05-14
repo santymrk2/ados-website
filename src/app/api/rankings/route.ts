@@ -4,7 +4,7 @@ import { getRankingsCache, triggerRankingsRebuild } from "@/lib/cache";
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
-  let rankings = getRankingsCache();
+  const rankings = getRankingsCache();
 
   if (!rankings) {
     triggerRankingsRebuild();

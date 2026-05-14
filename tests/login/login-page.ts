@@ -33,7 +33,8 @@ export class LoginPage extends BasePage {
 
     await this.passwordInput.fill(password);
     await this.submitButton.click();
-    await this.page.waitForLoadState("networkidle");
+    // Don't wait for networkidle - SSE keeps connection open
+    await this.page.waitForLoadState("domcontentloaded");
   }
 
   async togglePasswordVisibility(): Promise<void> {
@@ -46,7 +47,7 @@ export class LoginPage extends BasePage {
 
   async expectRedirectToDashboard(): Promise<void> {
     await expect(this.page).not.toHaveURL(/\/api\/auth/);
-    await this.page.waitForLoadState("networkidle");
+    await this.page.waitForLoadState("domcontentloaded");
   }
 }
 

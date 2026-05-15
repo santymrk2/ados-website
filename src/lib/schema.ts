@@ -7,6 +7,7 @@ import {
   uniqueIndex,
   index,
 } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 
 export const participants = pgTable("participants", {
   id: serial("id").primaryKey(),
@@ -195,7 +196,7 @@ export const pushSubscriptions = pgTable(
     endpoint: text("endpoint").notNull(),
     p256dh: text("p256dh").notNull(),
     auth: text("auth").notNull(),
-    createdAt: text("created_at").notNull().default(new Date().toISOString()),
+    createdAt: text("created_at").notNull().default(sql`to_char(now(), 'YYYY-MM-DD"T"HH24:MI:SS"Z"')`),
   },
   (table) => ({
     // Index for filtering by participant

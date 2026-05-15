@@ -84,22 +84,27 @@ export async function sendPushToMultipleSubscriptions(
   subscriptions: Array<{ endpoint: string; p256dh: string; auth: string }>,
   notification: PushNotification,
 ) {
+  const expiredEndpoints: string[] = [];
+
   const results = await Promise.all(
-    subscriptions.map((sub) =>
-      sendPushToSubscription(
+    subscriptions.map(async (sub) => {
+      const r = await sendPushToSubscription(
         {
           endpoint: sub.endpoint,
           keys: { p256dh: sub.p256dh, auth: sub.auth },
         },
         notification,
-      ),
-    ),
+      );
+      if (r.shouldDelete) expiredEndpoints.push(sub.endpoint);
+      return r;
+    }),
   );
 
   return {
     success: results.some((r) => r.success),
     sent: results.filter((r) => r.success).length,
     failed: results.filter((r) => !r.success).length,
+    expiredEndpoints,
   };
 }
 
@@ -117,3 +122,5 @@ export async function sendBirthdayNotification(
     data: { type: "birthday" },
   });
 }
+
+export type PushMultiResult = Awaited<ReturnType<typeof sendPushToMultipleSubscriptions>>;

@@ -52,8 +52,8 @@ COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
-# Copiamos drizzle-kit y config para migraciones en producción
-COPY --from=deps /app/node_modules/drizzle-kit ./node_modules/drizzle-kit
+# Copiamos todas las dependencias (incluye drizzle-kit y drizzle-orm para migraciones)
+COPY --from=deps /app/node_modules ./node_modules
 COPY --from=builder --chown=nextjs:nodejs /app/drizzle.config.ts ./
 COPY --from=builder --chown=nextjs:nodejs /app/src/lib/schema.ts ./src/lib/
 

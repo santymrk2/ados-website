@@ -180,7 +180,7 @@ git checkout develop
 git push origin develop
 ```
 
-Dokploy detectará el cambio de imagen automáticamente y hará redeploy.
+El CI/CD llama al webhook de Dokploy automáticamente para redeploy.
 
 ## License
 

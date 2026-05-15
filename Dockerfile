@@ -52,11 +52,17 @@ COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
+# Copiamos drizzle-kit y config para migraciones en producción
+COPY --from=deps /app/node_modules/drizzle-kit ./node_modules/drizzle-kit
+COPY --from=builder --chown=nextjs:nodejs /app/drizzle.config.ts ./
+COPY --from=builder --chown=nextjs:nodejs /app/drizzle ./drizzle
+
 # Exponemos el puerto
 EXPOSE 3000
 
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
-# Ejecutamos el servidor standalone usando Bun
-CMD ["bun", "run", "server.js"]
+# Ejecutamos migraciones primero y luego el servidor
+# db:push es idempotente - puede ejecutarse múltiples veces sin problemas
+CMD ["sh", "-c", "bunx drizzle-kit push --config=drizzle.config.ts && bun run server.js"]

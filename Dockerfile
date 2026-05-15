@@ -55,6 +55,7 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 # Copiamos drizzle-kit y config para migraciones en producción
 COPY --from=deps /app/node_modules/drizzle-kit ./node_modules/drizzle-kit
 COPY --from=builder --chown=nextjs:nodejs /app/drizzle.config.ts ./
+COPY --from=builder --chown=nextjs:nodejs /app/src/lib/schema.ts ./src/lib/
 
 # Exponemos el puerto
 EXPOSE 3000

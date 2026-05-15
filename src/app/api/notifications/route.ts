@@ -27,7 +27,7 @@ function checkCronSecret(request: NextRequest): boolean {
   return request.headers.get('x-cron-secret') === CRON_SECRET;
 }
 
-async function sendBirthdayNotifications(clientDate?: string) {
+async function sendBirthdayNotifications(clientDate: string | null = null) {
   if (!isWebPushConfigured()) {
     return { error: 'Web Push not configured', status: 500 };
   }
@@ -119,7 +119,7 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const trigger = searchParams.get('trigger');
-    const clientDate = searchParams.get('date') ?? undefined;
+    const clientDate = searchParams.get('date');
 
     if (trigger === 'birthday') {
       const result = await sendBirthdayNotifications(clientDate);

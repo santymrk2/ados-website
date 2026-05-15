@@ -119,7 +119,7 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const trigger = searchParams.get('trigger');
-    const clientDate = searchParams.get('date');
+    const clientDate = searchParams.get('date') ?? undefined;
 
     if (trigger === 'birthday') {
       const result = await sendBirthdayNotifications(clientDate);

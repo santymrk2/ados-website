@@ -39,14 +39,7 @@ import {
   AlertDialogCancel,
   AlertDialogAction,
 } from "@/components/ui/alert-dialog";
-import {
-  Combobox,
-  ComboboxInput,
-  ComboboxContent,
-  ComboboxList,
-  ComboboxItem,
-  ComboboxValue,
-} from "@/components/ui/combobox";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import type { Activity, ParticipantBasic, AppState, Participant, DBData, Invitacion, ParticipantFormData } from "@/lib/types";
 
 let tempIdCounter = 0;
@@ -74,14 +67,20 @@ function NewPlayerModal({ act, db, onClose, onSave, setLocal, syncWithServer }: 
     invitadorId: null,
   });
   const [isSubmittingPlayer, setIsSubmittingPlayer] = useState(false);
+  const [invitadorOpen, setInvitadorOpen] = useState(false);
+  const [invitadorSearch, setInvitadorSearch] = useState("");
 
-  const availableInvitados = useMemo(() => {
-    return db.participants
-      .filter((p: ParticipantBasic) => act.asistentes.includes(p.id))
-      .sort((a, b) =>
-        `${a.apellido} ${a.nombre}`.localeCompare(`${b.apellido} ${b.nombre}`),
-      );
-  }, [db.participants, act.asistentes]);
+  const allParticipants = useMemo(() => {
+    return [...db.participants].sort((a, b) =>
+      `${a.apellido} ${a.nombre}`.localeCompare(`${b.apellido} ${b.nombre}`),
+    );
+  }, [db.participants]);
+
+  const filteredInvitadores = invitadorSearch.trim()
+    ? allParticipants.filter((p) =>
+        `${p.nombre} ${p.apellido}`.toLowerCase().includes(invitadorSearch.toLowerCase()),
+      )
+    : allParticipants;
 
   const handleCreatePlayer = async () => {
     if (!newPlayer.nombre.trim() || !newPlayer.apellido.trim())
@@ -151,7 +150,7 @@ function NewPlayerModal({ act, db, onClose, onSave, setLocal, syncWithServer }: 
     <Dialog open={true} onOpenChange={(open) => !open && onClose()}>
       <DialogContent
         showCloseButton={false}
-        className="max-w-sm bg-surface rounded-3xl p-5 flex flex-col overflow-y-auto max-h-[90vh]"
+        className="max-w-sm bg-white rounded-3xl p-5 flex flex-col overflow-y-auto max-h-[90vh]"
       >
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-black text-lg text-dark">Nuevo Jugador</h3>
@@ -233,35 +232,82 @@ function NewPlayerModal({ act, db, onClose, onSave, setLocal, syncWithServer }: 
 
         <div className="mb-4">
           <Label className="mb-1">¿Quién lo invitó?</Label>
-          <Combobox
-            value={newPlayer.invitadorId?.toString() || ""}
-            onValueChange={(val) => setNewPlayer((p) => ({ ...p, invitadorId: val ? Number(val) : null }))}
-            items={availableInvitados.map((p) => ({
-              value: p.id.toString(),
-              label: `${p.nombre} ${p.apellido}`,
-            }))}
-          >
-            <ComboboxInput placeholder="Seleccionar invitador..." />
-            <ComboboxValue>
-              {({ value }) =>
-                value
-                  ? (() => {
-                      const parts = db.participants.find((p) => p.id === Number(value));
-                      return parts ? `${parts.nombre} ${parts.apellido}` : "Seleccionar invitador...";
-                    })()
-                  : "Seleccionar invitador..."
-              }
-            </ComboboxValue>
-            <ComboboxContent>
-              <ComboboxList>
-                {availableInvitados.map((p) => (
-                  <ComboboxItem key={p.id.toString()} value={p.id.toString()}>
-                    {p.nombre} {p.apellido}
-                  </ComboboxItem>
-                ))}
-              </ComboboxList>
-            </ComboboxContent>
-          </Combobox>
+          <Popover open={invitadorOpen} onOpenChange={setInvitadorOpen}>
+            <PopoverTrigger asChild>
+              <button
+                className={cn(
+                  "flex items-center gap-2 w-full text-left",
+                  "p-3 rounded-xl border transition-colors text-sm",
+                  newPlayer.invitadorId
+                    ? "border-border bg-white"
+                    : "border-dashed border-border text-text-muted hover:border-teal-400 hover:bg-teal-50/30",
+                )}
+              >
+                {newPlayer.invitadorId ? (
+                  (() => {
+                    const p = db.participants.find((x) => x.id === newPlayer.invitadorId);
+                    return p ? (
+                      <>
+                        <Avatar p={p} size={24} />
+                        <span className="font-medium text-foreground">
+                          {p.nombre} {p.apellido}
+                        </span>
+                      </>
+                    ) : (
+                      <span>Seleccionar invitador...</span>
+                    );
+                  })()
+                ) : (
+                  <>
+                    <div className="w-6 h-6 rounded-full bg-surface-dark flex items-center justify-center text-xs font-black text-text-muted">
+                      ?
+                    </div>
+                    <span>Seleccionar invitador...</span>
+                  </>
+                )}
+              </button>
+            </PopoverTrigger>
+            <PopoverContent align="start" className="w-64 p-0">
+              <div className="p-2 border-b border-border">
+                <Input
+                  placeholder="Buscar participante..."
+                  value={invitadorSearch}
+                  onChange={(e) => setInvitadorSearch(e.target.value)}
+                  className="h-8 text-sm"
+                />
+              </div>
+              <div className="max-h-48 overflow-auto">
+                {filteredInvitadores.length > 0 ? (
+                  filteredInvitadores.map((p) => (
+                    <button
+                      key={p.id}
+                      onClick={() => {
+                        setNewPlayer((prev) => ({ ...prev, invitadorId: p.id }));
+                        setInvitadorOpen(false);
+                        setInvitadorSearch("");
+                      }}
+                      className={cn(
+                        "flex items-center gap-2 w-full px-3 py-2 text-left",
+                        "hover:bg-surface-light transition-colors",
+                        p.id === newPlayer.invitadorId && "bg-teal-50",
+                      )}
+                    >
+                      <Avatar p={p} size={24} />
+                      <span className="text-sm truncate">
+                        {p.nombre} {p.apellido}
+                      </span>
+                    </button>
+                  ))
+                ) : (
+                  <div className="px-3 py-4 text-center text-xs text-text-muted">
+                    {invitadorSearch
+                      ? `Sin resultados para "${invitadorSearch}"`
+                      : "No hay participantes disponibles"}
+                  </div>
+                )}
+              </div>
+            </PopoverContent>
+          </Popover>
         </div>
 
         <Button

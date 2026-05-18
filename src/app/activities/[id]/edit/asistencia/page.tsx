@@ -210,7 +210,7 @@ function NewPlayerModal({ act, db, onClose, onSave, setLocal, syncWithServer }: 
               className={cn(
                 "flex-1",
                 newPlayer.sexo === "M"
-                  ? "bg-cyan-600 border-cyan-600"
+                  ? "bg-primary"
                   : "border-surface-dark",
               )}
             >
@@ -222,7 +222,7 @@ function NewPlayerModal({ act, db, onClose, onSave, setLocal, syncWithServer }: 
               className={cn(
                 "flex-1",
                 newPlayer.sexo === "F"
-                  ? "bg-pink-500 border-pink-500"
+                  ? "bg-primary"
                   : "border-surface-dark",
               )}
             >

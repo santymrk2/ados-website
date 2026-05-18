@@ -428,20 +428,20 @@ function DatePicker({
 
     return (
       <div className={cn("flex gap-2", className)}>
-        <YearSelect
-          value={parsed ? parsed.getFullYear().toString() : ""}
+        <DateSelect
+          value={parsed ? parsed.getDate().toString() : ""}
           disabled={disabled}
-          onChange={handleYearChange}
+          onChange={handleDayChange}
         />
         <MonthSelect
           value={parsed ? parsed.getMonth().toString() : ""}
           disabled={disabled}
           onChange={handleMonthChange}
         />
-        <DateSelect
-          value={parsed ? parsed.getDate().toString() : ""}
+        <YearSelect
+          value={parsed ? parsed.getFullYear().toString() : ""}
           disabled={disabled}
-          onChange={handleDayChange}
+          onChange={handleYearChange}
         />
       </div>
     );

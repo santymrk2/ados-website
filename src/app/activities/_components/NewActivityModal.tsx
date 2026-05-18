@@ -122,6 +122,12 @@ export function NewActivityModal({ open, onOpenChange }: NewActivityModalProps) 
               className="flex gap-4 mt-2"
             >
               <div className="flex items-center gap-2">
+                <RadioGroupItem value="2" id="eq-2" />
+                <label htmlFor="eq-2" className="text-sm font-bold cursor-pointer">
+                  2 Equipos
+                </label>
+              </div>
+              <div className="flex items-center gap-2">
                 <RadioGroupItem value="4" id="eq-4" />
                 <label htmlFor="eq-4" className="text-sm font-bold cursor-pointer">
                   4 Equipos
@@ -135,9 +141,11 @@ export function NewActivityModal({ open, onOpenChange }: NewActivityModalProps) 
               </div>
             </RadioGroup>
             <div className="text-[10px] text-text-muted mt-2">
-              {cantEquipos === 6
-                ? "Se habilitarán E5 y E6 en todas las secciones."
-                : "Configuración estándar de 4 equipos (E1 a E4)."}
+              {cantEquipos === 2
+                ? "Solo se usarán E1 y E2."
+                : cantEquipos === 6
+                  ? "Se habilitarán E5 y E6 en todas las secciones."
+                  : "Configuración estándar de 4 equipos (E1 a E4)."}
             </div>
           </div>
 

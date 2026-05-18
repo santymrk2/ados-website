@@ -26,6 +26,10 @@ export interface ViewContextValue {
   teamRank: { team: string; pts: number }[];
   maxTeamPts: number;
   playerRank: (ParticipantBasic & { pts: number; goles: number })[];
+  searchQuery: string;
+  setSearchQuery: (query: string) => void;
+  filterContent: React.ReactNode;
+  setFilterContent: (content: React.ReactNode) => void;
 }
 
 const ViewContext = createContext<ViewContextValue | null>(null);
@@ -62,6 +66,8 @@ export default function ViewLayout({
 
   // Resolve params
   const [resolvedParams, setResolvedParams] = useState<{ id: string } | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filterContent, setFilterContent] = useState<React.ReactNode>(null);
 
   useEffect(() => {
     params.then(setResolvedParams);
@@ -167,7 +173,7 @@ export default function ViewLayout({
   }
 
   return (
-    <ViewContext.Provider value={{ act, db, teamRank, maxTeamPts, playerRank }}>
+    <ViewContext.Provider value={{ act, db, teamRank, maxTeamPts, playerRank, searchQuery, setSearchQuery, filterContent, setFilterContent }}>
       <div className="min-h-screen bg-primary flex flex-col">
         <div className="pt-safe">
           <div className="text-white p-4">
@@ -205,7 +211,14 @@ export default function ViewLayout({
           {children}
         </div>
 
-        <FloatingNav value={currentTab} items={TABS} />
+        <FloatingNav
+          value={currentTab}
+          items={TABS}
+          searchValue={currentTab === "asistencia" ? searchQuery : undefined}
+          onSearchChange={currentTab === "asistencia" ? setSearchQuery : undefined}
+          searchPlaceholder="Buscar por nombre..."
+          filterContent={filterContent ?? undefined}
+        />
       </div>
     </ViewContext.Provider>
   );

@@ -7,6 +7,7 @@ import * as schema from "@/lib/schema";
 import { eq, inArray, and } from "drizzle-orm";
 import { eventBus } from "@/lib/eventBus";
 import { validate, configUpdateSchema } from "@/lib/validation";
+import { TEAMS } from "@/lib/constants";
 
 // Helper function to return server errors without exposing details
 function serverError(e: unknown) {
@@ -372,7 +373,7 @@ export async function POST(request: NextRequest) {
         await tx.insert(schema.goles).values(gData);
       }
 
-      const activeTeams = ["A", "B", "C", "D"].slice(0, data.cantEquipos || 4);
+      const activeTeams = TEAMS.slice(0, data.cantEquipos || 4);
       const extrasData: { activityId: number; participantId: number | null; team: string | null; tipo: string; puntos: number; motivo: string }[] = [];
 
       if (data.extras && data.extras.length > 0) {

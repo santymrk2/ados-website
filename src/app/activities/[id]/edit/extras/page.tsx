@@ -246,8 +246,7 @@ function ExtraRow({
 }
 
 export default function ExtrasPage() {
-  const { activity: act, setLocal, syncWithServer, db, locked } = useEditContext();
-  const [search, setSearch] = useState("");
+  const { activity: act, setLocal, syncWithServer, db, locked, searchQuery } = useEditContext();
   const [openDropdown, setOpenDropdown] = useState<number | string | null>(null);
 
   const availablePlayers = useMemo(() => {
@@ -262,11 +261,11 @@ export default function ExtrasPage() {
   }, [db.participants, act.asistentes]);
 
   const filteredPlayers = useMemo(() => {
-    if (!search.trim()) return availablePlayers;
+    if (!searchQuery.trim()) return availablePlayers;
     return availablePlayers.filter((p: ParticipantBasic) => 
-      `${p.nombre} ${p.apellido}`.toLowerCase().includes(search.toLowerCase())
+      `${p.nombre} ${p.apellido}`.toLowerCase().includes(searchQuery.toLowerCase())
     );
-  }, [availablePlayers, search]);
+  }, [availablePlayers, searchQuery]);
 
   const activeTeams = useMemo(() => {
     return TEAMS.slice(0, act.cantEquipos || 4);
@@ -458,16 +457,6 @@ export default function ExtrasPage() {
         </div>
 
         <div className="space-y-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted" />
-            <Input 
-              placeholder="Buscar participante..." 
-              value={search} 
-              onChange={e => setSearch(e.target.value)}
-              className="pl-9 bg-white border-surface-dark rounded-xl"
-            />
-          </div>
-          
           <div className="grid grid-cols-1 gap-2">
             {filteredPlayers.map((p) => {
               const pExtras = extrasList.filter(x => x.pid === p.id);

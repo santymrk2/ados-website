@@ -1,12 +1,10 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useEditContext, LocalSetter, ServerSync } from "../layout";
 import { useApp } from "@/hooks/useApp";
 import { toast } from "@/hooks/use-toast";
 import {
-  Search,
-  ArrowUpDown,
   X,
   Plus,
   Clock,
@@ -280,13 +278,48 @@ function NewPlayerModal({ act, db, onClose, onSave, setLocal, syncWithServer }: 
 }
 
 export default function AsistenciaPage() {
-  const { activity: act, setLocal, syncWithServer, db, locked } = useEditContext();
+  const { activity: act, setLocal, syncWithServer, db, locked, searchQuery, setFilterContent } = useEditContext();
   const { saveParticipant } = useApp();
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
-  const [search, setSearch] = useState("");
   const [showNewPlayer, setShowNewPlayer] = useState(false);
   const [confirmClearOpen, setConfirmClearOpen] = useState(false);
   const [confirmAllOpen, setConfirmAllOpen] = useState(false);
+
+  // Proveer filtro de orden al FloatingNav
+  useEffect(() => {
+    setFilterContent(
+      <div>
+        <span className="text-[11px] font-bold text-text-muted uppercase tracking-wider mb-2 block">
+          Orden alfabético
+        </span>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setSortOrder("asc")}
+            className={cn(
+              "flex-1 px-3 py-2 rounded-lg text-sm font-bold transition-colors border",
+              sortOrder === "asc"
+                ? "bg-primary text-white border-primary"
+                : "bg-white text-foreground border-border hover:bg-surface-light",
+            )}
+          >
+            A→Z
+          </button>
+          <button
+            onClick={() => setSortOrder("desc")}
+            className={cn(
+              "flex-1 px-3 py-2 rounded-lg text-sm font-bold transition-colors border",
+              sortOrder === "desc"
+                ? "bg-primary text-white border-primary"
+                : "bg-white text-foreground border-border hover:bg-surface-light",
+            )}
+          >
+            Z→A
+          </button>
+        </div>
+      </div>,
+    );
+    return () => setFilterContent(null);
+  }, [sortOrder, setFilterContent]);
 
   const toggle = (key: string, id: number) => {
     if (key === "asistentes") {
@@ -338,11 +371,11 @@ export default function AsistenciaPage() {
 
   const sorted = useMemo<ParticipantBasic[]>(() => {
     let arr: ParticipantBasic[] = [...db.participants];
-    if (search) {
+    if (searchQuery) {
       arr = arr.filter((p) =>
         `${p.nombre} ${p.apellido}`
           .toLowerCase()
-          .includes(search.toLowerCase()),
+          .includes(searchQuery.toLowerCase()),
       );
     }
     if (sortOrder === "asc") {
@@ -355,7 +388,7 @@ export default function AsistenciaPage() {
       );
     }
     return arr;
-  }, [db.participants, sortOrder, search]);
+  }, [db.participants, sortOrder, searchQuery]);
 
   return (
     <div>
@@ -370,57 +403,43 @@ export default function AsistenciaPage() {
         />
       )}
 
-      <div className="flex flex-col gap-2 mb-3">
-        <div className="flex gap-2 mb-4 items-center">
-          <div className="relative flex-1">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted pointer-events-none" />
-            <Input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Buscar por nombre..."
-              className="pl-10"
-            />
-          </div>
+      <div className="flex items-center gap-2 mb-4">
+        <Label style={{ margin: 0 }}>
+          Asistencia
+          {searchQuery && (
+            <span className="text-text-muted text-xs font-normal ml-1">
+              (filtrado: {sorted.length})
+            </span>
+          )}
+        </Label>
+        <div className="flex gap-1 ml-auto">
           <Button
-            onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
-            title="Ordenar A→Z"
-            variant="outline"
-            size="icon"
+            onClick={() => setShowNewPlayer(true)}
+            variant="ghost"
+            size="sm"
+            disabled={locked}
+            className="bg-primary/10 text-primary text-xs flex items-center gap-1"
           >
-            <ArrowUpDown className="w-4 h-4" />
+            <Plus className="w-3 h-3" /> Nuevo
           </Button>
-        </div>
-        <div className="flex items-center gap-2">
-          <Label style={{ margin: 0 }}>Asistencia ({sorted.length})</Label>
-          <div className="flex gap-2 ml-auto">
-            <Button
-              onClick={() => setShowNewPlayer(true)}
-              variant="ghost"
-              size="sm"
-              disabled={locked}
-              className="bg-primary/10 text-primary text-xs flex items-center gap-1"
-            >
-              <Plus className="w-3 h-3" /> Nuevo
-            </Button>
-            <Button
-              onClick={() => setConfirmClearOpen(true)}
-              variant="ghost"
-              size="sm"
-              disabled={locked}
-              className="bg-red-50 text-red-500 text-xs"
-            >
-              Limpiar
-            </Button>
-            <Button
-              onClick={() => setConfirmAllOpen(true)}
-              variant="ghost"
-              size="sm"
-              disabled={locked}
-              className="bg-teal-50 text-teal-600 text-xs"
-            >
-              Todos
-            </Button>
-          </div>
+          <Button
+            onClick={() => setConfirmClearOpen(true)}
+            variant="ghost"
+            size="sm"
+            disabled={locked}
+            className="bg-red-50 text-red-500 text-xs"
+          >
+            Limpiar
+          </Button>
+          <Button
+            onClick={() => setConfirmAllOpen(true)}
+            variant="ghost"
+            size="sm"
+            disabled={locked}
+            className="bg-teal-50 text-teal-600 text-xs"
+          >
+            Todos
+          </Button>
         </div>
       </div>
 

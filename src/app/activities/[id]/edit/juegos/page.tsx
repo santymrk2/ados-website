@@ -233,9 +233,7 @@ function JuegoCard({
   const activeTeams = TEAMS.slice(0, act.cantEquipos || 4);
   const unplaced = activeTeams.filter((t) => !placed.includes(t));
   const posArray = useMemo(() => {
-    const arr: string[] = ["1", "2", "3", "4"];
-    if (act.cantEquipos === 6) arr.push("5", "6");
-    return arr;
+    return Array.from({ length: act.cantEquipos || 4 }, (_, i) => String(i + 1));
   }, [act.cantEquipos]);
 
   const isDisabled = locked || saving;

@@ -129,7 +129,7 @@ export function FloatingNav({
   };
 
   // Dimensiones según estado
-  const targetWidth = isOpen || hasExtras || searchMode || filterMode ? EXPANDED_WIDTH : COLLAPSED_WIDTH;
+  const targetWidth = EXPANDED_WIDTH; // Siempre 320px, no se achica
   const targetHeight = isOpen ? expandedHeight : filterMode ? filterHeight : COLLAPSED_HEIGHT;
 
   return (

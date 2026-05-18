@@ -123,6 +123,20 @@ NEXT_PUBLIC_APP_URL=
 | `bun run db:migrate` | Run Drizzle migrations |
 | `bunx playwright test` | Run E2E tests |
 
+## CodeGraph Index
+
+Este proyecto usa [CodeGraph](https://opencode.ai) para indexar el AST del código y permitir búsquedas estructurales rápidas desde el asistente AI.
+
+```bash
+# Reindexar después de cambios grandes (nuevos archivos, refactors, etc.)
+codegraph init -i
+
+# Verificar estado del índice
+codegraph status
+```
+
+El watcher de CodeGraph detecta cambios en tiempo real con ~500ms de delay, pero después de cambios estructurales grandes conviene reindexar manualmente.
+
 ## Git Workflow
 
 ```

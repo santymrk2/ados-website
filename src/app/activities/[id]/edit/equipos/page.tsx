@@ -10,12 +10,27 @@ import { Avatar } from "@/components/ui/Avatar";
 import { SexBadge } from "@/components/ui/Badges";
 import { confirmDialog } from "@/components/ui/confirm-dialog";
 import { cn } from "@/lib/utils";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancel,
+  AlertDialogAction,
+} from "@/components/ui/alert-dialog";
 import type { Activity, ParticipantBasic } from "@/lib/types";
 
 export default function EquiposPage() {
   const { activity: act, setLocal, syncWithServer, db, locked, searchQuery, setFilterContent } = useEditContext();
   const [selectedTeam, setSelectedTeam] = useState<string | null>(null);
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+  const [confirmChange, setConfirmChange] = useState<{
+    player: ParticipantBasic;
+    fromTeam: string;
+    toTeam: string;
+  } | null>(null);
 
   // Proveer filtro de orden al FloatingNav
   useEffect(() => {
@@ -224,6 +239,7 @@ export default function EquiposPage() {
   }, [selectedTeam, present, act.equipos, searchQuery, sortOrder]);
 
   return (
+    <>
     <div>
       {/* ─── Team cards + Stats (siempre visibles arriba) ─── */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-3">
@@ -376,7 +392,13 @@ export default function EquiposPage() {
                     {activeTeams.map((t) => (
                       <Button
                         key={t}
-                        onClick={() => setTeam(p.id, t)}
+                        onClick={() => {
+                          if (cur && cur !== t) {
+                            setConfirmChange({ player: p, fromTeam: cur, toTeam: t });
+                          } else {
+                            setTeam(p.id, t);
+                          }
+                        }}
                         variant="ghost"
                         size="sm"
                         disabled={locked}
@@ -398,5 +420,44 @@ export default function EquiposPage() {
         </div>
       )}
     </div>
+
+      <AlertDialog
+        open={!!confirmChange}
+        onOpenChange={(open) => !open && setConfirmChange(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cambiar de equipo</AlertDialogTitle>
+            <AlertDialogDescription>
+              {confirmChange && (
+                <>
+                  <span className="font-bold">{confirmChange.player.nombre} {confirmChange.player.apellido}</span>
+                  {" "}va a pasar del equipo{" "}
+                  <span className="font-bold">{confirmChange.fromTeam}</span>
+                  {" "}al equipo{" "}
+                  <span className="font-bold">{confirmChange.toTeam}</span>
+                  . ¿Estás seguro?
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setConfirmChange(null)}>
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (confirmChange) {
+                  setTeam(confirmChange.player.id, confirmChange.toTeam);
+                  setConfirmChange(null);
+                }
+              }}
+            >
+              Cambiar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }

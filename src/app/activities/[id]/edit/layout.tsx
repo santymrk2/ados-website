@@ -24,6 +24,7 @@ import {
   Loader2,
   Check,
   AlertCircle,
+  BookOpen,
 } from "lucide-react";
 import { FloatingNav } from "@/components/ui/FloatingNav";
 import { toast } from "@/hooks/use-toast";
@@ -44,6 +45,7 @@ const EDIT_TABS = [
   { value: "", label: "General", icon: FileText },
   { value: "asistencia", label: "Asistencia", icon: Users },
   { value: "equipos", label: "Equipos", icon: LayoutGrid },
+  { value: "biblia", label: "Biblia", icon: BookOpen },
   { value: "juegos", label: "Juegos", icon: Gamepad2 },
   { value: "invitados", label: "Invitados", icon: Mail },
   { value: "goles", label: "Goles", icon: Trophy },
@@ -391,8 +393,8 @@ export default function EditLayout({ children, mode = "edit" }: EditLayoutProps)
             href: tab.value ? `${base}/${tab.value}` : base,
           };
         })}
-        searchValue={currentTab === "asistencia" || currentTab === "equipos" ? searchQuery : undefined}
-        onSearchChange={currentTab === "asistencia" || currentTab === "equipos" ? setSearchQuery : undefined}
+        searchValue={currentTab === "asistencia" || currentTab === "biblia" || currentTab === "equipos" ? searchQuery : undefined}
+        onSearchChange={currentTab === "asistencia" || currentTab === "biblia" || currentTab === "equipos" ? setSearchQuery : undefined}
         searchPlaceholder="Buscar por nombre..."
         filterContent={filterContent ?? undefined}
       />

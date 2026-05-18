@@ -8,18 +8,16 @@ import {
   X,
   Plus,
   Clock,
-  BookOpen,
   Coffee,
   Zap,
+  CalendarCheck,
+  CalendarX,
 } from "lucide-react";
 import {
-  TEAMS,
   getEdad,
-  TEAM_COLORS,
-  getTeamBg,
   newPart,
 } from "@/lib/constants";
-import { Modal, Label, Empty, PillCheck } from "@/components/ui/Common";
+import { Modal, Label, Empty } from "@/components/ui/Common";
 import { SexBadge } from "@/components/ui/Badges";
 import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/button";
@@ -28,7 +26,6 @@ import { cn } from "@/lib/utils";
 import { confirmDialog } from "@/components/ui/confirm-dialog";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { DatePicker } from "@/components/ui/calendar";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -404,15 +401,32 @@ export default function AsistenciaPage() {
         delete next[id];
         return next;
       });
-    } else if (key === "puntuales" || key === "biblias") {
-      const c = (act[key as "puntuales" | "biblias"] as number[]) || [];
+    } else if (key === "puntuales") {
+      const c = act.puntuales || [];
       const isIncluded = c.includes(id);
       const updateFn = (prev: number[]) => {
         const arr = prev || [];
         return arr.includes(id) ? arr.filter((x) => x !== id) : [...arr, id];
       };
-      setLocal(key as "puntuales" | "biblias", updateFn);
-      syncWithServer(key === "puntuales" ? "puntuales" : "biblias", { participantId: id, value: !isIncluded }, key as "puntuales" | "biblias", updateFn);
+
+      // Si marca como puntual, también marca como presente automáticamente
+      if (!isIncluded && !act.asistentes.includes(id)) {
+        const asistUpdateFn = (prev: number[]) => [...(prev || []), id];
+        setLocal("asistentes", asistUpdateFn);
+        syncWithServer("attendance", { participantId: id, value: true }, "asistentes", asistUpdateFn);
+      }
+
+      // syncWithServer ya actualiza el estado local internamente
+      syncWithServer("puntuales", { participantId: id, value: !isIncluded }, "puntuales", updateFn);
+    } else if (key === "biblias") {
+      const c = act.biblias || [];
+      const isIncluded = c.includes(id);
+      const updateFn = (prev: number[]) => {
+        const arr = prev || [];
+        return arr.includes(id) ? arr.filter((x) => x !== id) : [...arr, id];
+      };
+      setLocal("biblias", updateFn);
+      syncWithServer("biblias", { participantId: id, value: !isIncluded }, "biblias", updateFn);
     }
   };
 
@@ -494,19 +508,47 @@ export default function AsistenciaPage() {
         {sorted.map((p: ParticipantBasic) => {
           const here = act.asistentes.includes(p.id);
           const punct = (act.puntuales || []).includes(p.id);
-          const bib = (act.biblias || []).includes(p.id);
-          const team = act.equipos?.[p.id];
           return (
             <div
               key={p.id}
               className={`rounded-lg border bg-white ${here ? "border-primary shadow-md shadow-primary/20" : "border-surface-dark"}`}
             >
-              <div className="flex items-center p-3 gap-3">
-                <Checkbox
-                  checked={here}
-                  onCheckedChange={() => toggle("asistentes", p.id)}
-                  disabled={locked}
-                />
+              <div className="flex items-center p-3 gap-2">
+                <div className="flex gap-0">
+                  <button
+                    onClick={() => toggle("asistentes", p.id)}
+                    disabled={locked}
+                    className={cn(
+                      "flex items-center justify-center h-9 min-w-9 px-2 text-sm font-semibold transition-colors",
+                      locked && "opacity-50 cursor-not-allowed pointer-events-none",
+                    )}
+                    style={{
+                      backgroundColor: here ? "#22C55E33" : "#f5f5f5",
+                      border: `1px solid ${here ? "#22C55E66" : "#e5e5e5"}`,
+                      borderRight: "none",
+                      color: here ? "#22C55E" : "#999",
+                      borderRadius: "12px 0 0 12px",
+                    }}
+                  >
+                    {here ? <CalendarCheck className="w-3.5 h-3.5" /> : <CalendarX className="w-3.5 h-3.5" />}
+                  </button>
+                  <button
+                    onClick={() => toggle("puntuales", p.id)}
+                    disabled={locked}
+                    className={cn(
+                      "flex items-center justify-center h-9 min-w-9 px-2 text-sm font-semibold transition-colors",
+                      locked && "opacity-50 cursor-not-allowed pointer-events-none",
+                    )}
+                    style={{
+                      backgroundColor: punct ? "#FFD93D33" : "#f5f5f5",
+                      border: `1px solid ${punct ? "#FFD93D66" : "#e5e5e5"}`,
+                      color: punct ? "#FFD93D" : "#999",
+                      borderRadius: "0 12px 12px 0",
+                    }}
+                  >
+                    <Clock className="w-3.5 h-3.5" />
+                  </button>
+                </div>
                 <Avatar p={p} size={30} />
                 <div className="flex-1">
                   <div
@@ -521,45 +563,31 @@ export default function AsistenciaPage() {
                 </div>
                 {here && (
                   <div className="flex gap-1 items-center">
-                    {team && (
-                      <span
-                        className="text-[10px] font-bold rounded px-2 py-0.5"
-                        style={{
-                          backgroundColor: getTeamBg(team),
-                          color: TEAM_COLORS[team],
-                        }}
-                      >
-                        {team}
-                      </span>
-                    )}
-                    <PillCheck
-                      icon={(act.socials || []).includes(p.id) ? Coffee : Zap}
-                      label={
-                        (act.socials || []).includes(p.id) ? "SOCIAL" : "RECRE"
-                      }
-                      active={true}
+                    <button
                       onClick={() => toggle("socials", p.id)}
                       disabled={locked}
-                      color={
-                        (act.socials || []).includes(p.id)
+                      className={cn(
+                        "flex items-center gap-1 h-9 min-w-9 px-3 text-sm font-semibold transition-colors",
+                        locked && "opacity-50 cursor-not-allowed pointer-events-none",
+                      )}
+                      style={{
+                        backgroundColor: (act.socials || []).includes(p.id)
+                          ? "#F59E0B33"
+                          : "color-mix(in srgb, var(--color-primary) 20%, transparent)",
+                        border: (act.socials || []).includes(p.id)
+                          ? "1px solid #F59E0B66"
+                          : "1px solid color-mix(in srgb, var(--color-primary) 40%, transparent)",
+                        color: (act.socials || []).includes(p.id)
                           ? "#F59E0B"
-                          : "#10B981"
-                      }
-                    />
-                    <PillCheck
-                      icon={Clock}
-                      active={punct}
-                      onClick={() => toggle("puntuales", p.id)}
-                      disabled={locked}
-                      color="#FFD93D"
-                    />
-                    <PillCheck
-                      icon={BookOpen}
-                      active={bib}
-                      onClick={() => toggle("biblias", p.id)}
-                      disabled={locked}
-                      color="#4ECDC4"
-                    />
+                          : "var(--color-primary)",
+                        borderRadius: "12px",
+                      }}
+                    >
+                      {(act.socials || []).includes(p.id) ? <Coffee className="w-3.5 h-3.5" /> : <Zap className="w-3.5 h-3.5" />}
+                      <span className="text-xs font-medium">
+                        {(act.socials || []).includes(p.id) ? "Social" : "Juegos"}
+                      </span>
+                    </button>
                   </div>
                 )}
               </div>

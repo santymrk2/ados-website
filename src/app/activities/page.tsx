@@ -123,7 +123,7 @@ export default function ActivitiesPage() {
                         size="icon"
                         onClick={(e) => handleEdit(a, e)}
                       >
-                        <Pencil className="w-4 h-4" />
+                        <Pencil className="w-4 h-4 text-primary" />
                       </Button>
                       <Button
                         variant="destructive"

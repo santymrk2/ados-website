@@ -17,7 +17,7 @@ import {
   LayoutGrid,
   Gamepad2,
   Mail,
-  Trophy,
+  Volleyball,
   Plus,
   ChevronLeft,
   Save,
@@ -48,7 +48,7 @@ const EDIT_TABS = [
   { value: "biblia", label: "Biblia", icon: BookOpen },
   { value: "juegos", label: "Juegos", icon: Gamepad2 },
   { value: "invitados", label: "Invitados", icon: Mail },
-  { value: "goles", label: "Goles", icon: Trophy },
+  { value: "goles", label: "Goles",   icon: Volleyball },
   { value: "extras", label: "Extras", icon: Plus },
 ] as const;
 

@@ -68,10 +68,14 @@ export function SexBadge({
     <span
       className={cn(
         "inline-block rounded-full shrink-0",
-        isM ? "bg-cyan-500" : isMX ? "bg-indigo-500" : "bg-pink-500",
         className,
       )}
-      style={{ width: "8px", height: "8px", minWidth: "8px" }}
+      style={{
+        width: "8px",
+        height: "8px",
+        minWidth: "8px",
+        backgroundColor: isM ? "#00D4FF" : isMX ? "#6366F1" : "#FF2A7A",
+      }}
       title={sex === "M" ? "Masculino" : sex === "F" ? "Femenino" : "Otro"}
     />
   );

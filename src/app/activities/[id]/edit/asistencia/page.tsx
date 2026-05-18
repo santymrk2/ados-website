@@ -26,16 +26,7 @@ import { cn } from "@/lib/utils";
 import { confirmDialog } from "@/components/ui/confirm-dialog";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { DatePicker } from "@/components/ui/calendar";
-import {
-  AlertDialog,
-  AlertDialogContent,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogCancel,
-  AlertDialogAction,
-} from "@/components/ui/alert-dialog";
+
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import type { Activity, ParticipantBasic, AppState, Participant, DBData, Invitacion, ParticipantFormData } from "@/lib/types";
 
@@ -326,8 +317,6 @@ export default function AsistenciaPage() {
   const { saveParticipant } = useApp();
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
   const [showNewPlayer, setShowNewPlayer] = useState(false);
-  const [confirmClearOpen, setConfirmClearOpen] = useState(false);
-  const [confirmAllOpen, setConfirmAllOpen] = useState(false);
 
   // Proveer filtro de orden al FloatingNav
   useEffect(() => {
@@ -483,24 +472,6 @@ export default function AsistenciaPage() {
           >
             <Plus className="w-3 h-3" /> Nuevo
           </Button>
-          <Button
-            onClick={() => setConfirmClearOpen(true)}
-            variant="ghost"
-            size="sm"
-            disabled={locked}
-            className="bg-red-50 text-red-500 text-xs"
-          >
-            Limpiar
-          </Button>
-          <Button
-            onClick={() => setConfirmAllOpen(true)}
-            variant="ghost"
-            size="sm"
-            disabled={locked}
-            className="bg-teal-50 text-teal-600 text-xs"
-          >
-            Todos
-          </Button>
         </div>
       </div>
 
@@ -523,10 +494,10 @@ export default function AsistenciaPage() {
                       locked && "opacity-50 cursor-not-allowed pointer-events-none",
                     )}
                     style={{
-                      backgroundColor: here ? "#22C55E33" : "#f5f5f5",
-                      border: `1px solid ${here ? "#22C55E66" : "#e5e5e5"}`,
+                      backgroundColor: here ? "var(--color-primary)" : "#f5f5f5",
+                      border: `1px solid ${here ? "var(--color-primary)" : "#e5e5e5"}`,
                       borderRight: "none",
-                      color: here ? "#22C55E" : "#999",
+                      color: here ? "var(--color-primary-foreground)" : "#999",
                       borderRadius: "12px 0 0 12px",
                     }}
                   >
@@ -540,9 +511,9 @@ export default function AsistenciaPage() {
                       locked && "opacity-50 cursor-not-allowed pointer-events-none",
                     )}
                     style={{
-                      backgroundColor: punct ? "#FFD93D33" : "#f5f5f5",
-                      border: `1px solid ${punct ? "#FFD93D66" : "#e5e5e5"}`,
-                      color: punct ? "#FFD93D" : "#999",
+                      backgroundColor: punct ? "var(--color-primary)" : "#f5f5f5",
+                      border: `1px solid ${punct ? "var(--color-primary)" : "#e5e5e5"}`,
+                      color: punct ? "var(--color-primary-foreground)" : "#999",
                       borderRadius: "0 12px 12px 0",
                     }}
                   >
@@ -595,72 +566,6 @@ export default function AsistenciaPage() {
           );
         })}
       </div>
-
-      <AlertDialog open={confirmClearOpen} onOpenChange={setConfirmClearOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Limpiar asistencia</AlertDialogTitle>
-            <AlertDialogDescription>
-              ¿Estás seguro que querés quitar la asistencia de todos los jugadores?
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={async () => {
-                // Update local state immediately for responsive UI
-                setLocal("asistentes", []);
-                // Sync each removal with the server
-                for (const id of act.asistentes) {
-                  try {
-                    await syncWithServer("attendance", { participantId: id, value: false }, "asistentes", (prev) => (prev || []).filter((x) => x !== id));
-                  } catch {
-                    // Non-blocking: local state already updated, server will retry via auto-save
-                  }
-                }
-                setConfirmClearOpen(false);
-                toast.success("Asistencia limpiada");
-              }}
-              className="bg-red-500 hover:bg-red-600"
-            >
-              Limpiar
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <AlertDialog open={confirmAllOpen} onOpenChange={setConfirmAllOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Seleccionar todos</AlertDialogTitle>
-            <AlertDialogDescription>
-              ¿Estás seguro que querés marcar a todos los {sorted.length} jugadores como presentes?
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={async () => {
-                const newIds = sorted.map((p) => p.id);
-                // Update local state immediately for responsive UI
-                setLocal("asistentes", newIds);
-                // Sync each addition with the server
-                for (const id of newIds) {
-                  try {
-                    await syncWithServer("attendance", { participantId: id, value: true }, "asistentes", (prev) => Array.from(new Set([...(prev || []), id])));
-                  } catch {
-                    // Non-blocking: local state already updated, server will retry via auto-save
-                  }
-                }
-                setConfirmAllOpen(false);
-                toast.success("Todos presentes");
-              }}
-            >
-              Aceptar
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }

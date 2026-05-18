@@ -1,12 +1,11 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useViewContext } from "../layout";
 import { getEdad } from "@/lib/constants";
 import { Avatar } from "@/components/ui/Avatar";
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { Users as PlayersIcon, Clock } from "lucide-react";
+import { Users as PlayersIcon, Clock, Search, X } from "lucide-react";
 import type { ParticipantBasic } from "@/lib/types";
 import { PlayerPointsModal } from "@/app/activities/_components/PlayerPointsModal";
 
@@ -15,6 +14,7 @@ export default function AsistenciaPage() {
   const participants = db.participants;
   const [selectedAges, setSelectedAges] = useState<number[]>([]);
   const [selectedPlayer, setSelectedPlayer] = useState<ParticipantBasic | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
   // Obtener edades únicas de los asistentes
   const availableAges = useMemo(() => {
@@ -53,6 +53,7 @@ export default function AsistenciaPage() {
   // Lista de asistentes filtrados
   const filteredAsistentes = useMemo(() => {
     if (!act) return [];
+    const query = searchQuery.toLowerCase().trim();
     const enriched: (ParticipantBasic & { edad: number })[] = [];
     for (const pid of act.asistentes) {
       const p = participants.find((x) => x.id === pid);
@@ -60,13 +61,18 @@ export default function AsistenciaPage() {
       const edad = getEdad(p.fechaNacimiento);
       if (edad === null) continue;
       if (selectedAges.length > 0 && !selectedAges.includes(edad)) continue;
+      if (query) {
+        const name = p.nombre.toLowerCase();
+        const lastName = p.apellido.toLowerCase();
+        if (!name.includes(query) && !lastName.includes(query)) continue;
+      }
       enriched.push({ ...p, edad });
     }
     enriched.sort((a, b) =>
       `${a.apellido} ${a.nombre}`.localeCompare(`${b.apellido} ${b.nombre}`),
     );
     return enriched;
-  }, [act, act?.asistentes, participants, selectedAges]);
+  }, [act, act?.asistentes, participants, selectedAges, searchQuery]);
 
   if (!act) return null;
 
@@ -77,6 +83,8 @@ export default function AsistenciaPage() {
   };
 
   const clearAges = () => setSelectedAges([]);
+
+  const clearSearch = useCallback(() => setSearchQuery(""), []);
 
   return (
     <div>
@@ -109,6 +117,28 @@ export default function AsistenciaPage() {
             <Clock className="w-3 h-3" />
             Puntuales
           </div>
+        </div>
+      </div>
+
+      {/* Search finder */}
+      <div className="mb-4">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-dark/50" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Buscar por nombre o apellido..."
+            className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-white/90 text-dark placeholder:text-dark/40 text-sm font-medium border border-white/50 focus:outline-none focus:ring-2 focus:ring-accent/50"
+          />
+          {searchQuery && (
+            <button
+              onClick={clearSearch}
+              className="absolute right-3 top-1/2 -translate-y-1/2 p-1 hover:bg-dark/10 rounded-full transition-colors"
+            >
+              <X className="w-4 h-4 text-dark/50" />
+            </button>
+          )}
         </div>
       </div>
 

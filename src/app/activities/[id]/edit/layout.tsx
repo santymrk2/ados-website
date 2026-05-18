@@ -391,8 +391,8 @@ export default function EditLayout({ children, mode = "edit" }: EditLayoutProps)
             href: tab.value ? `${base}/${tab.value}` : base,
           };
         })}
-        searchValue={currentTab === "equipos" ? searchQuery : undefined}
-        onSearchChange={currentTab === "equipos" ? setSearchQuery : undefined}
+        searchValue={currentTab === "asistencia" || currentTab === "equipos" ? searchQuery : undefined}
+        onSearchChange={currentTab === "asistencia" || currentTab === "equipos" ? setSearchQuery : undefined}
         searchPlaceholder="Buscar por nombre..."
         filterContent={filterContent ?? undefined}
       />

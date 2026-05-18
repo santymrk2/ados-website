@@ -36,7 +36,7 @@ function Calendar({
     <DayPicker
       showOutsideDays={showOutsideDays}
       className={cn(
-        "group/calendar bg-background p-3 [--cell-radius:var(--radius-4xl)] [--cell-size:--spacing(8)] in-data-[slot=card-content]:bg-transparent in-data-[slot=popover-content]:bg-transparent",
+        "group/calendar bg-background p-3 [--cell-radius:var(--radius-4xl)] [--cell-size:--spacing(8)] in-data-[slot=card-content]:bg-transparent in-data-[slot=popover-content]:bg-transparent min-h-[320px]",
         String.raw`rtl:**:[.rdp-button\_next>svg]:rotate-180`,
         String.raw`rtl:**:[.rdp-button\_previous>svg]:rotate-180`,
         className
@@ -238,18 +238,136 @@ const formatDateString = (date: Date) => {
   return `${year}-${month}-${day}`;
 };
 
+// ─── Selectores de día, mes, año para fechas de nacimiento ───
+
+const MONTHS_ES = [
+  "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+  "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre",
+];
+
+const currentYear = new Date().getFullYear();
+const YEARS = Array.from({ length: 36 }, (_, i) => currentYear - 35 + i);
+const DAYS = Array.from({ length: 31 }, (_, i) => i + 1);
+
+function DateSelect({
+  value,
+  disabled,
+  onChange,
+}: {
+  value: string;
+  disabled?: boolean;
+  onChange: (val: string) => void;
+}) {
+  return (
+    <div className="relative flex-1">
+      <select
+        value={value}
+        disabled={disabled}
+        onChange={(e) => onChange(e.target.value)}
+        className={cn(
+          "w-full appearance-none rounded-xl border border-border bg-white px-3 py-2.5 text-sm font-medium text-foreground",
+          "focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary",
+          "disabled:cursor-not-allowed disabled:opacity-50",
+          !value && "text-text-muted",
+        )}
+      >
+        <option value="">Día</option>
+        {DAYS.map((d) => (
+          <option key={d} value={d}>
+            {d}
+          </option>
+        ))}
+      </select>
+      <ChevronDownIcon className="pointer-events-none absolute right-2 top-1/2 size-4 -translate-y-1/2 text-text-muted" />
+    </div>
+  );
+}
+
+function MonthSelect({
+  value,
+  disabled,
+  onChange,
+}: {
+  value: string;
+  disabled?: boolean;
+  onChange: (val: string) => void;
+}) {
+  return (
+    <div className="relative flex-[2]">
+      <select
+        value={value}
+        disabled={disabled}
+        onChange={(e) => onChange(e.target.value)}
+        className={cn(
+          "w-full appearance-none rounded-xl border border-border bg-white px-3 py-2.5 text-sm font-medium text-foreground",
+          "focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary",
+          "disabled:cursor-not-allowed disabled:opacity-50",
+          !value && "text-text-muted",
+        )}
+      >
+        <option value="">Mes</option>
+        {MONTHS_ES.map((m, i) => (
+          <option key={i} value={i}>
+            {m}
+          </option>
+        ))}
+      </select>
+      <ChevronDownIcon className="pointer-events-none absolute right-2 top-1/2 size-4 -translate-y-1/2 text-text-muted" />
+    </div>
+  );
+}
+
+function YearSelect({
+  value,
+  disabled,
+  onChange,
+}: {
+  value: string;
+  disabled?: boolean;
+  onChange: (val: string) => void;
+}) {
+  return (
+    <div className="relative flex-1">
+      <select
+        value={value}
+        disabled={disabled}
+        onChange={(e) => onChange(e.target.value)}
+        className={cn(
+          "w-full appearance-none rounded-xl border border-border bg-white px-3 py-2.5 text-sm font-medium text-foreground",
+          "focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary",
+          "disabled:cursor-not-allowed disabled:opacity-50",
+          !value && "text-text-muted",
+        )}
+      >
+        <option value="">Año</option>
+        {YEARS.map((y) => (
+          <option key={y} value={y}>
+            {y}
+          </option>
+        ))}
+      </select>
+      <ChevronDownIcon className="pointer-events-none absolute right-2 top-1/2 size-4 -translate-y-1/2 text-text-muted" />
+    </div>
+  );
+}
+
+// ─── DatePicker principal ───
+
 function DatePicker({
   value,
   onChange,
   placeholder = "Seleccionar fecha",
   className,
   disabled = false,
+  mode = "calendar",
 }: {
   value?: string;
   onChange?: (date: string) => void;
   placeholder?: string;
   className?: string;
   disabled?: boolean;
+  /** "calendar" para fechas generales, "dropdown" para fechas de nacimiento */
+  mode?: "calendar" | "dropdown";
 }) {
   const [open, setOpen] = React.useState(false);
 
@@ -271,6 +389,65 @@ function DatePicker({
     }
   };
 
+  // Modo dropdown: tres selects inline (año → mes → día)
+  if (mode === "dropdown") {
+    const parsed = value ? parseLocalDate(value) : null;
+
+    const handleYearChange = (yearStr: string) => {
+      if (!yearStr) {
+        onChange?.("");
+        return;
+      }
+      const y = parseInt(yearStr);
+      const current = parsed || new Date();
+      const newDate = new Date(y, current.getMonth(), Math.min(current.getDate(), 28));
+      onChange?.(formatDateString(newDate));
+    };
+
+    const handleMonthChange = (monthStr: string) => {
+      if (!monthStr) {
+        onChange?.("");
+        return;
+      }
+      const m = parseInt(monthStr);
+      const current = parsed || new Date();
+      const newDate = new Date(current.getFullYear(), m, Math.min(current.getDate(), 28));
+      onChange?.(formatDateString(newDate));
+    };
+
+    const handleDayChange = (dayStr: string) => {
+      if (!dayStr) {
+        onChange?.("");
+        return;
+      }
+      const d = parseInt(dayStr);
+      const current = parsed || new Date();
+      const newDate = new Date(current.getFullYear(), current.getMonth(), d);
+      onChange?.(formatDateString(newDate));
+    };
+
+    return (
+      <div className={cn("flex gap-2", className)}>
+        <YearSelect
+          value={parsed ? parsed.getFullYear().toString() : ""}
+          disabled={disabled}
+          onChange={handleYearChange}
+        />
+        <MonthSelect
+          value={parsed ? parsed.getMonth().toString() : ""}
+          disabled={disabled}
+          onChange={handleMonthChange}
+        />
+        <DateSelect
+          value={parsed ? parsed.getDate().toString() : ""}
+          disabled={disabled}
+          onChange={handleDayChange}
+        />
+      </div>
+    );
+  }
+
+  // Modo calendario (default)
   return (
     <div className={className}>
       <Popover open={open} onOpenChange={setOpen}>

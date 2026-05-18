@@ -197,6 +197,7 @@ function NewPlayerModal({ act, db, onClose, onSave, setLocal, syncWithServer }: 
               setNewPlayer((p) => ({ ...p, fechaNacimiento: date }))
             }
             placeholder="Seleccionar fecha"
+            mode="dropdown"
           />
         </div>
 

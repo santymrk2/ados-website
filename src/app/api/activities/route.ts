@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { requireAuth, apiUnauthorized } from "@/lib/api-utils";
 
 export const dynamic = 'force-dynamic';
 import * as schema from "@/lib/schema";
@@ -30,6 +31,11 @@ const ALLOWED_CONFIG_KEYS = ["locked", "titulo", "cantEquipos", "fecha"] as cons
 type AllowedConfigKey = typeof ALLOWED_CONFIG_KEYS[number];
 
 export async function GET(request: NextRequest) {
+  const auth = requireAuth(request);
+  if (!auth.success) {
+    return auth.error;
+  }
+
   try {
     const allActs = await db.select().from(schema.activities);
     if (allActs.length === 0) {
@@ -163,6 +169,11 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const auth = requireAuth(request);
+  if (!auth.success) {
+    return auth.error;
+  }
+
   try {
     const body = await request.json();
     const { data, isNew } = body;
@@ -422,6 +433,11 @@ export async function POST(request: NextRequest) {
 }
 
 export async function PATCH(request: NextRequest) {
+  const auth = requireAuth(request);
+  if (!auth.success) {
+    return auth.error;
+  }
+
   try {
     const body = await request.json();
     const { activityId, type, data } = body;
@@ -797,6 +813,11 @@ case "goal_update": {
 }
 
 export async function DELETE(request: NextRequest) {
+  const auth = requireAuth(request);
+  if (!auth.success) {
+    return auth.error;
+  }
+
   try {
     const body = await request.json();
     const { id } = body;

@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { participants } from "@/lib/schema";
 import { eq } from "drizzle-orm";
 import type { Participant } from "@/lib/types";
+import { requireAuth } from "@/lib/api-utils";
 
 export const dynamic = 'force-dynamic';
 
@@ -10,6 +11,11 @@ export async function GET(
   request: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
+  const auth = requireAuth(request);
+  if (!auth.success) {
+    return auth.error;
+  }
+
   try {
     const { id } = await context.params;
 

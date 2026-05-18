@@ -4,7 +4,15 @@ import { useEffect, useCallback } from 'react';
 import { useStore } from '@nanostores/react';
 import { $isAuthenticated, $authLoading, $role } from '@/store/appStore';
 
-const AUTH_KEY = 'activados_auth';
+async function fetchAuthStatus() {
+  try {
+    const response = await fetch('/api/auth-check');
+    const data = await response.json();
+    return data;
+  } catch (e) {
+    return { authenticated: false, role: null };
+  }
+}
 
 export function useAuth() {
   const isAuthenticated = useStore($isAuthenticated);
@@ -13,23 +21,19 @@ export function useAuth() {
   useEffect(() => {
     if (typeof window === 'undefined') return;
     
-    const savedAuth = localStorage.getItem(AUTH_KEY);
-    if (savedAuth) {
-      try {
-        const { validUntil, role } = JSON.parse(savedAuth);
-        if (new Date(validUntil) > new Date()) {
-          $isAuthenticated.set(true);
-          $role.set(role || 'admin');
-        } else {
-          localStorage.removeItem(AUTH_KEY);
-          $isAuthenticated.set(false);
-          $role.set('admin');
-        }
-      } catch (e) {
-        localStorage.removeItem(AUTH_KEY);
+    const checkAuth = async () => {
+      const authData = await fetchAuthStatus();
+      if (authData.authenticated) {
+        $isAuthenticated.set(true);
+        $role.set(authData.role || 'admin');
+      } else {
+        $isAuthenticated.set(false);
+        $role.set('admin');
       }
-    }
-    $authLoading.set(false);
+      $authLoading.set(false);
+    };
+
+    checkAuth();
   }, []);
 
   const login = useCallback(async (password: string, role: string = 'admin') => {
@@ -37,22 +41,16 @@ export function useAuth() {
       const response = await fetch('/api/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ password, role })
       });
 
       const result = await response.json();
       
       if (result.success) {
-        const validUntil = new Date();
-        validUntil.setDate(validUntil.getDate() + 1);
-        const userRole = result.role || role;
-        localStorage.setItem(AUTH_KEY, JSON.stringify({ 
-          validUntil: validUntil.toISOString(),
-          role: userRole 
-        }));
         $isAuthenticated.set(true);
-        $role.set(userRole);
-        return { success: true, role: userRole };
+        $role.set(result.role || role);
+        return { success: true, role: result.role };
       }
       return { success: false, error: result.error || 'Contraseña incorrecta' };
     } catch (e) {
@@ -60,9 +58,16 @@ export function useAuth() {
     }
   }, []);
 
-  const logout = useCallback(() => {
+  const logout = useCallback(async () => {
     if (typeof window === 'undefined') return;
-    localStorage.removeItem(AUTH_KEY);
+    try {
+      await fetch('/api/logout', {
+        method: 'POST',
+        credentials: 'include',
+      });
+    } catch (e) {
+      console.error('Logout error:', e);
+    }
     $isAuthenticated.set(false);
     $role.set('admin');
   }, []);

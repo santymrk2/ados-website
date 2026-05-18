@@ -59,21 +59,42 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    let authenticatedRole: string | null = null;
+
     if (role === "admin") {
       if (password === adminPassword) {
-        return NextResponse.json({ success: true, role: "admin" });
+        authenticatedRole = "admin";
       }
     } else if (role === "viewer") {
       if (password === viewerPassword) {
-        return NextResponse.json({ success: true, role: "viewer" });
+        authenticatedRole = "viewer";
       }
     } else {
       if (password === adminPassword) {
-        return NextResponse.json({ success: true, role: "admin" });
+        authenticatedRole = "admin";
       }
     }
 
-    return NextResponse.json({ success: false, error: "Contraseña incorrecta" }, { status: 401 });
+    if (!authenticatedRole) {
+      return NextResponse.json({ success: false, error: "Contraseña incorrecta" }, { status: 401 });
+    }
+
+    const cookieOptions = {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax" as const,
+      path: "/",
+      maxAge: 60 * 60 * 24, // 24 hours
+    };
+
+    const authData = JSON.stringify({
+      role: authenticatedRole,
+      iat: Date.now(),
+    });
+
+    const response = NextResponse.json({ success: true, role: authenticatedRole });
+    response.cookies.set("activados_auth", authData, cookieOptions);
+    return response;
   } catch (e) {
     return NextResponse.json({ success: false, error: "Error en el servidor" }, { status: 500 });
   }

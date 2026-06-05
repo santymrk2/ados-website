@@ -73,6 +73,7 @@ export function AuthGate({ children, showNav = true }: AuthGateProps) {
       setLoginError(result.error);
     } else {
       setLoginError(false);
+      await refresh(true);
     }
   };
 

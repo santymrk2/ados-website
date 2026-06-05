@@ -30,8 +30,8 @@ export function useDatabase() {
   const dataVersion = useStore($dataVersion) ?? 0;
 
   // Función de refresh - llama al store que ya maneja SSE automáticamente
-  const refresh = useCallback(async () => {
-    await refreshData();
+  const refresh = useCallback(async (forceLoader = false) => {
+    await refreshData(forceLoader);
   }, []);
 
   // Guardar actividad

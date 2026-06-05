@@ -1,29 +1,89 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useViewContext } from "../layout";
 import { Trophy, Medal } from "lucide-react";
 import { Avatar } from "@/components/ui/Avatar";
 import { Empty } from "@/components/ui/Common";
 import { HelpInfo } from "@/components/ui/HelpInfo";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { cn } from "@/lib/utils";
 import type { Invitacion, Gol } from "@/lib/types";
 
-const PODIUM_COLORS = [
-  { bg: "bg-amber-400", text: "text-amber-900", border: "border-amber-200", icon: Trophy },
-  { bg: "bg-slate-300", text: "text-slate-700", border: "border-slate-100", icon: Medal },
-  { bg: "bg-orange-400", text: "text-orange-900", border: "border-orange-200", icon: Medal },
-];
-
 export default function RankingPage() {
-  const { playerRank, act } = useViewContext();
+  const { playerRank, act, setFilterContent } = useViewContext();
   const [rankingType, setRankingType] = useState("puntos");
+  const [goalSexo, setGoalSexo] = useState<string | null>(null);
+
+  // Limpiar filtro al desmontar
+  useEffect(() => {
+    return () => setFilterContent(null);
+  }, [setFilterContent]);
+
+  // Setear filtro en el FloatingNav
+  useEffect(() => {
+    setFilterContent(
+      <div className="space-y-4">
+        {/* Tipo de ranking */}
+        <div>
+          <div className="text-[10px] font-bold text-text-muted uppercase mb-2">
+            Tipo
+          </div>
+          <div className="flex gap-1">
+            {[
+              { value: "puntos", label: "Puntaje" },
+              { value: "goles", label: "Goles" },
+              { value: "invitados", label: "Invitados" },
+            ].map((opt) => (
+              <button
+                key={opt.value}
+                onClick={() => {
+                  setRankingType(opt.value);
+                  if (opt.value !== "goles") setGoalSexo(null);
+                }}
+                className={cn(
+                  "flex-1 py-2 rounded-lg text-xs font-bold transition-all",
+                  rankingType === opt.value
+                    ? "bg-primary text-white shadow-sm"
+                    : "bg-surface-light text-text-muted hover:bg-surface-dark/30"
+                )}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Sexo (solo cuando Goles está seleccionado) */}
+        {rankingType === "goles" && (
+          <div>
+            <div className="text-[10px] font-bold text-text-muted uppercase mb-2">
+              Sexo
+            </div>
+            <div className="flex gap-1">
+              {[
+                { value: null as string | null, label: "Ambos" },
+                { value: "M", label: "Varones" },
+                { value: "F", label: "Mujeres" },
+              ].map((opt) => (
+                <button
+                  key={opt.label}
+                  onClick={() => setGoalSexo(opt.value)}
+                  className={cn(
+                    "flex-1 py-2 rounded-lg text-xs font-bold transition-all",
+                    goalSexo === opt.value
+                      ? "bg-primary text-white shadow-sm"
+                      : "bg-surface-light text-text-muted hover:bg-surface-dark/30"
+                  )}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }, [rankingType, goalSexo, setFilterContent]);
 
   // Calcular goleadores traídos
   const invitedCount = useMemo(() => {
@@ -48,22 +108,25 @@ export default function RankingPage() {
         pts: invitedCount[p.id] || 0,
       })).sort((a, b) => (b.pts || 0) - (a.pts || 0));
     }
-    // Goles por tipo
-    const [tipo, sexo] = rankingType.split("_").slice(1);
+    // Goles con filtro de sexo
     return playerRank
       .map((p) => {
         const misGoles = (act.goles || [])
-          .filter((g: Gol) => g.pid === p.id && g.tipo === tipo && g.sexo === sexo)
+          .filter((g: Gol) => {
+            if (g.pid !== p.id) return false;
+            if (goalSexo && g.sexo !== goalSexo) return false;
+            return true;
+          })
           .reduce((s: number, g: Gol) => s + (g.cant || 0), 0);
         return { ...p, pts: misGoles };
       })
       .sort((a, b) => b.pts - a.pts);
-  }, [playerRank, rankingType, invitedCount, act, act?.goles]);
+  }, [playerRank, rankingType, goalSexo, invitedCount, act, act?.goles]);
 
   // Label for the points column based on ranking type
   const pointsLabel = useMemo(() => {
     if (rankingType === "invitados") return "invitados";
-    if (rankingType.startsWith("goles_")) return "goles";
+    if (rankingType === "goles") return "goles";
     return "pts";
   }, [rankingType]);
 
@@ -74,22 +137,11 @@ export default function RankingPage() {
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-4">
+      <div className="mb-4">
         <HelpInfo
           title="Ranking"
           text="Ranking general de jugadores por puntos, goles o invitados."
         />
-        <Select value={rankingType} onValueChange={setRankingType}>
-          <SelectTrigger className="w-40 bg-white/20 text-white border-white/30">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="puntos">Puntaje</SelectItem>
-            <SelectItem value="invitados">Invitados</SelectItem>
-            <SelectItem value="goles_f_m">Fútbol M</SelectItem>
-            <SelectItem value="goles_f_f">Fútbol F</SelectItem>
-          </SelectContent>
-        </Select>
       </div>
 
       {/* Podium */}

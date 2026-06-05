@@ -19,7 +19,6 @@ interface InvitacionWithId {
 interface InvitationRowProps {
   inv: InvitacionWithId;
   db: { participants: ParticipantBasic[] };
-  asistentes: number[];
   onUpdate: (id: number, key: string, value: unknown) => void;
   onDelete: (id: number) => void;
   locked: boolean;
@@ -39,7 +38,6 @@ function findParticipant(participants: ParticipantBasic[], id: number | null) {
 function InvitationRow({
   inv,
   db,
-  asistentes,
   onUpdate,
   onDelete,
   locked,
@@ -54,22 +52,14 @@ function InvitationRow({
   const [searchFilter, setSearchFilter] = useState("");
   const [searchFilterInvitado, setSearchFilterInvitado] = useState("");
 
-  // Solo asistentes pueden ser quien invita (si hay asistentes registrados)
-  const safeAsistentes = Array.isArray(asistentes) ? asistentes : [];
-  const hasAsistentes = safeAsistentes.length > 0;
-  
-  const availableInvitadores = hasAsistentes
-    ? participantesList.filter((p: ParticipantBasic) => safeAsistentes.includes(p.id))
-    : participantesList;
-    
-  // Cualquier participante puede ser invitado
+  // Cualquier participante puede ser quien invita o invitado
   const allParticipants = participantesList;
   // Filtrar por búsqueda
   const filteredInvitadores = searchFilter.trim()
-    ? availableInvitadores.filter((p: ParticipantBasic) =>
+    ? allParticipants.filter((p: ParticipantBasic) =>
         `${p.nombre} ${p.apellido}`.toLowerCase().includes(searchFilter.toLowerCase())
       )
-    : availableInvitadores;
+    : allParticipants;
   // Filtrar por búsqueda para invitado
   const filteredInvitados = searchFilterInvitado.trim()
     ? allParticipants.filter((p: ParticipantBasic) =>
@@ -148,9 +138,7 @@ function InvitationRow({
                   ))
                 ) : (
                   <div className="px-3 py-4 text-center text-xs text-text-muted">
-                    {searchFilter ? `No results for "${searchFilter}"` : (hasAsistentes
-                      ? "No hay asistentes en esta actividad"
-                      : "No hay participantes disponibles")}
+                    {searchFilter ? `Sin resultados para "${searchFilter}"` : "No hay participantes disponibles"}
                   </div>
                 )}
               </div>
@@ -176,7 +164,7 @@ function InvitationRow({
             </PopoverTrigger>
             <PopoverContent align="start" className="w-56 p-0">
               <div className="max-h-60 overflow-auto">
-                {availableInvitadores.map((p) => (
+                {allParticipants.map((p) => (
                   <button
                     key={p.id}
                     onClick={() => handleSelect("invitador", p.id)}
@@ -489,7 +477,6 @@ export default function InvitadosPage() {
               key={inv.id}
               inv={inv}
               db={db}
-              asistentes={act.asistentes}
               onUpdate={upd}
               onDelete={del}
               locked={locked}

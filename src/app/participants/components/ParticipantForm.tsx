@@ -247,6 +247,7 @@ export function ParticipantForm({ db, initial, onClose, onSave }: ParticipantFor
               value={form.fechaNacimiento ?? undefined}
               onChange={(date) => F("fechaNacimiento", date)}
               placeholder="Seleccionar fecha"
+              mode="dropdown"
             />
           </div>
 

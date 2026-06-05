@@ -181,6 +181,7 @@ export function PillCheck({
   onClick,
   color,
   disabled = false,
+  className,
 }: {
   label?: string;
   icon?: React.ComponentType<{ className?: string }>;
@@ -188,6 +189,7 @@ export function PillCheck({
   onClick: () => void;
   color: string;
   disabled?: boolean;
+  className?: string;
 }) {
   return (
     <Toggle
@@ -195,17 +197,19 @@ export function PillCheck({
       onPressedChange={onClick}
       disabled={disabled}
       className={cn(
-        "px-2 py-1 rounded-lg text-sm flex items-center gap-1 hover:bg-opacity-90 transition-colors",
-        active ? "border-opacity-40" : "border-opacity-100",
-        disabled && "opacity-50 cursor-not-allowed pointer-events-none",
-      )}
-      style={{
-        border: `1px solid ${active ? color + "66" : "#e5e5e5"}`,
-        backgroundColor: active ? color + "33" : "#f5f5f5",
-        color: active ? color : "#999",
-      }}
-    >
-      {Icon ? <Icon className="w-3.5 h-3.5" /> : label}
-    </Toggle>
+        "px-2 py-1 rounded-lg text-sm flex items-center gap-1 hover:bg-opacity-90 transition-colors font-semibold",
+        className,
+          active ? "border-opacity-40" : "border-opacity-100",
+          disabled && "opacity-50 cursor-not-allowed pointer-events-none",
+        )}
+        style={{
+          border: `1px solid ${active ? color + "66" : "#e5e5e5"}`,
+          backgroundColor: active ? color + "33" : "#f5f5f5",
+          color: active ? color : "#999",
+        }}
+      >
+        {Icon && <Icon className="w-3.5 h-3.5" />}
+        {label && <span className="text-xs font-medium">{label}</span>}
+      </Toggle>
   );
 }

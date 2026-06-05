@@ -8,13 +8,12 @@ import { $role } from "@/store/appStore";
 import { SettingsPanel } from "@/components/auth/SettingsPanel";
 import {
   Settings,
-  BarChart3,
   Trophy,
+  Volleyball,
   Calendar,
-  Eye,
-  EyeOff,
+  ChevronDown,
+  ChevronUp,
   Award,
-  Circle,
   ClipboardList,
   Users,
   X,
@@ -52,7 +51,7 @@ interface DashboardStats {
   jugadoresActivos: number;
   porcentajeActivos: number;
   totalGoles: number;
-  avgAsistencia: number;
+  totalPlayers: number;
   masGoles: { f: number; h: number; b: number };
   totalPartidos: number;
   top5ScorersM: RankingWithStats[];
@@ -69,9 +68,6 @@ const PODIUM_COLORS = [
 
 const RANKING_METRICS = [
   { key: "total", label: "Puntos", Icon: Award, cols: 2 },
-  { key: "gf", label: "Fútbol", Icon: Circle, cols: 1 },
-  { key: "gh", label: "Handball", Icon: Circle, cols: 1 },
-  { key: "gb", label: "Básquet", Icon: Circle, cols: 1 },
   { key: "acts", label: "Asist.", Icon: ClipboardList, cols: 1 },
 ] as const;
 
@@ -135,7 +131,7 @@ export default function Page() {
   const [showRanking, setShowRanking] = useState(false);
   const [showTopGoleadores, setShowTopGoleadores] = useState(false);
   const [showInvitaciones, setShowInvitaciones] = useState(false);
-  const [topGoleadoresGender, setTopGoleadoresGender] = useState<'M' | 'F'>('M');
+  const [topGoleadoresGender, setTopGoleadoresGender] = useState<'M' | 'F' | null>('M');
   const [rankingMetric, setRankingMetric] = useState<RankingMetricKey>('total');
   const [selectedActivityIds, setSelectedActivityIds] = useState<number[]>([]);
   const [selectedInviter, setSelectedInviter] = useState<InvitacionRanking | null>(null);
@@ -173,12 +169,7 @@ export default function Page() {
       0,
     );
 
-    const avgAsistencia = activities.length
-      ? Math.round(
-          activities.reduce((acc, a) => acc + (a.asistentes || []).length, 0) /
-            activities.length,
-        )
-      : 0;
+    const totalPlayers = (participants || []).length;
 
     const masGoles = {
       f: (activities || []).reduce(
@@ -232,7 +223,7 @@ export default function Page() {
         ? Math.round((jugadoresActivos / participants.length) * 100)
         : 0,
       totalGoles,
-      avgAsistencia,
+      totalPlayers,
       masGoles,
       totalPartidos: (activities || []).reduce(
         (acc, a) => acc + (a.partidos || []).length,
@@ -251,12 +242,18 @@ export default function Page() {
         .sort(
           (a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime(),
         )
-        .slice(0, 5),
+        .slice(0, 2),
     [activities],
   );
 
-  const topScorers =
-    topGoleadoresGender === "M" ? stats.top5ScorersM : stats.top5ScorersF;
+  const topScorers = useMemo(() => {
+    if (topGoleadoresGender === "M") return stats.top5ScorersM;
+    if (topGoleadoresGender === "F") return stats.top5ScorersF;
+    // Ambos: merge y top 5
+    return [...stats.top5ScorersM, ...stats.top5ScorersF]
+      .sort((a, b) => b.goals - a.goals)
+      .slice(0, 5);
+  }, [topGoleadoresGender, stats.top5ScorersM, stats.top5ScorersF]);
 
   // Por defecto, si no hay actividades seleccionadas, mostrar todas
   const activeActivityIds = selectedActivityIds.length > 0
@@ -343,10 +340,10 @@ export default function Page() {
             </div>
             <div className="bg-white/10 rounded-xl p-3 text-center border border-white/20">
               <div className="text-2xl font-black text-accent">
-                {stats.avgAsistencia}
+                {stats.totalPlayers}
               </div>
               <div className="text-xs font-bold opacity-60 text-accent">
-                Promedio/Actividad
+                Total Jugadores
               </div>
             </div>
             <div className="bg-white/10 rounded-xl p-3 text-center border border-white/20">
@@ -369,79 +366,36 @@ export default function Page() {
         </div>
 
         <div className="p-4">
-          <div className="bg-white rounded-xl p-4 border border-surface-dark mb-4">
-            <div className="font-bold text-sm mb-3 flex items-center gap-2">
-              <BarChart3 className="w-4 h-4 text-primary" />
-              ESTADÍSTICAS GENERALES
-            </div>
-            <div className="grid grid-cols-2 gap-3 text-sm">
-              <div className="flex justify-between items-center p-2 bg-surface-dark rounded-lg">
-                <span className="text-text-muted">Fútbol</span>
-                <span className="font-black text-primary">
-                  {stats.masGoles.f || 0}
-                </span>
-              </div>
-              <div className="flex justify-between items-center p-2 bg-surface-dark rounded-lg">
-                <span className="text-text-muted">Handball</span>
-                <span className="font-black text-primary">
-                  {stats.masGoles.h || 0}
-                </span>
-              </div>
-              <div className="flex justify-between items-center p-2 bg-surface-dark rounded-lg">
-                <span className="text-text-muted">Básquet</span>
-                <span className="font-black text-primary">
-                  {stats.masGoles.b || 0}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex justify-between items-center mb-4">
-            <Section icon={Trophy} title="Top Goleadores" />
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => setShowTopGoleadores(!showTopGoleadores)}
-            >
-              {showTopGoleadores ? (
-                <EyeOff className="w-5 h-5" />
-              ) : (
-                <Eye className="w-5 h-5" />
-              )}
-            </Button>
+          <div
+            className="flex justify-between items-center mb-4 cursor-pointer select-none"
+            onClick={() => setShowTopGoleadores((prev) => !prev)}
+          >
+            <Section icon={Volleyball} title="Goleadores Fútbol" />
+            {showTopGoleadores ? (
+              <ChevronUp className="w-5 h-5 text-text-muted" />
+            ) : (
+              <ChevronDown className="w-5 h-5 text-text-muted" />
+            )}
           </div>
 
           {showTopGoleadores && (
             <div className="bg-white rounded-xl p-4 border border-surface-dark mb-4">
               <div className="flex gap-2 mb-4">
                 {[
-                  {
-                    val: "M",
-                    label: "Varón",
-                    color: "text-cyan-600",
-                    bg: "bg-cyan-50",
-                    activeBg: "bg-cyan-600",
-                  },
-                  {
-                    val: "F",
-                    label: "Mujer",
-                    color: "text-pink-500",
-                    bg: "bg-pink-50",
-                    activeBg: "bg-pink-500",
-                  },
+                  { val: null, label: "Ambos" },
+                  { val: "M", label: "Varón" },
+                  { val: "F", label: "Mujer" },
                 ].map((t) => (
                   <Button
-                    key={t.val}
-                    variant={
-                      topGoleadoresGender === t.val ? "default" : "outline"
-                    }
+                    key={t.label}
+                    variant="outline"
                     size="sm"
-                    onClick={() => setTopGoleadoresGender(t.val as 'M' | 'F')}
+                    onClick={() => setTopGoleadoresGender(t.val as 'M' | 'F' | null)}
                     className={cn(
-                      "flex-1",
+                      "flex-1 border-2 transition-all",
                       topGoleadoresGender === t.val
-                        ? `${t.activeBg} text-white`
-                        : `bg-white text-text-muted`,
+                        ? "bg-primary text-white font-black border-primary"
+                        : "text-text-muted border-surface-dark",
                     )}
                   >
                     {t.label}
@@ -483,24 +437,21 @@ export default function Page() {
             </div>
           )}
 
-          <div className="flex justify-between items-center mb-4">
+          <div
+            className="flex justify-between items-center mb-4 cursor-pointer select-none"
+            onClick={() => setShowRanking((prev) => !prev)}
+          >
             <Section icon={Trophy} title="Ranking Individual" />
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => setShowRanking(!showRanking)}
-            >
-              {showRanking ? (
-                <EyeOff className="w-5 h-5" />
-              ) : (
-                <Eye className="w-5 h-5" />
-              )}
-            </Button>
+            {showRanking ? (
+              <ChevronUp className="w-5 h-5 text-text-muted" />
+            ) : (
+              <ChevronDown className="w-5 h-5 text-text-muted" />
+            )}
           </div>
 
           {showRanking && (
             <>
-              <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 mb-4">
+              <div className="grid grid-cols-2 gap-2 mb-4">
                 {RANKING_METRICS.map((metric) => {
                   const Icon = metric.Icon;
                   return (
@@ -524,7 +475,7 @@ export default function Page() {
               {calculatedRankings.length === 0 ? (
                 <Empty text="Aún no hay participantes" />
               ) : (
-                <div className="flex flex-col gap-2 mb-5">
+                <div className="flex flex-col gap-2 mb-4">
                   {calculatedRankings.slice(0, 10).map((p, i) => (
                     <RankRow
                       key={p.id}
@@ -540,19 +491,16 @@ export default function Page() {
           )}
 
           {/* Sección Invitaciones */}
-          <div className="flex justify-between items-center mb-4 mt-6">
+          <div
+            className="flex justify-between items-center mb-4 cursor-pointer select-none"
+            onClick={() => setShowInvitaciones((prev) => !prev)}
+          >
             <Section icon={Users} title="Invitaciones" />
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => setShowInvitaciones(!showInvitaciones)}
-            >
-              {showInvitaciones ? (
-                <EyeOff className="w-5 h-5" />
-              ) : (
-                <Eye className="w-5 h-5" />
-              )}
-            </Button>
+            {showInvitaciones ? (
+              <ChevronUp className="w-5 h-5 text-text-muted" />
+            ) : (
+              <ChevronDown className="w-5 h-5 text-text-muted" />
+            )}
           </div>
 
           {showInvitaciones && (
@@ -595,7 +543,7 @@ export default function Page() {
               {invitacionRanking.length === 0 ? (
                 <Empty text="No hay invitaciones registradas" />
               ) : (
-                <div className="flex flex-col gap-2 mb-5">
+                <div className="flex flex-col gap-2 mb-4">
                   {invitacionRanking.slice(0, 10).map((p, i) => (
                     <div
                       key={p.id}
@@ -628,7 +576,7 @@ export default function Page() {
           {lastActs.length > 0 && (
             <>
               <Section icon={Calendar} title="Últimas Actividades" />
-              <div className="flex flex-col gap-2">
+              <div className="flex flex-col gap-2 mb-4">
                 {lastActs.map((a) => (
                   <div
                     key={a.id}

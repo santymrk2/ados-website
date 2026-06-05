@@ -1,27 +1,23 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useEditContext, LocalSetter, ServerSync } from "../layout";
 import { useApp } from "@/hooks/useApp";
 import { toast } from "@/hooks/use-toast";
 import {
-  Search,
-  ArrowUpDown,
   X,
   Plus,
   Clock,
-  BookOpen,
   Coffee,
   Zap,
+  CalendarCheck,
+  CalendarX,
 } from "lucide-react";
 import {
-  TEAMS,
   getEdad,
-  TEAM_COLORS,
-  getTeamBg,
   newPart,
 } from "@/lib/constants";
-import { Modal, Label, Empty, PillCheck } from "@/components/ui/Common";
+import { Modal, Label, Empty } from "@/components/ui/Common";
 import { SexBadge } from "@/components/ui/Badges";
 import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/button";
@@ -30,25 +26,8 @@ import { cn } from "@/lib/utils";
 import { confirmDialog } from "@/components/ui/confirm-dialog";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { DatePicker } from "@/components/ui/calendar";
-import { Checkbox } from "@/components/ui/checkbox";
-import {
-  AlertDialog,
-  AlertDialogContent,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogCancel,
-  AlertDialogAction,
-} from "@/components/ui/alert-dialog";
-import {
-  Combobox,
-  ComboboxInput,
-  ComboboxContent,
-  ComboboxList,
-  ComboboxItem,
-  ComboboxValue,
-} from "@/components/ui/combobox";
+
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import type { Activity, ParticipantBasic, AppState, Participant, DBData, Invitacion, ParticipantFormData } from "@/lib/types";
 
 let tempIdCounter = 0;
@@ -76,14 +55,20 @@ function NewPlayerModal({ act, db, onClose, onSave, setLocal, syncWithServer }: 
     invitadorId: null,
   });
   const [isSubmittingPlayer, setIsSubmittingPlayer] = useState(false);
+  const [invitadorOpen, setInvitadorOpen] = useState(false);
+  const [invitadorSearch, setInvitadorSearch] = useState("");
 
-  const availableInvitados = useMemo(() => {
-    return db.participants
-      .filter((p: ParticipantBasic) => act.asistentes.includes(p.id))
-      .sort((a, b) =>
-        `${a.apellido} ${a.nombre}`.localeCompare(`${b.apellido} ${b.nombre}`),
-      );
-  }, [db.participants, act.asistentes]);
+  const allParticipants = useMemo(() => {
+    return [...db.participants].sort((a, b) =>
+      `${a.apellido} ${a.nombre}`.localeCompare(`${b.apellido} ${b.nombre}`),
+    );
+  }, [db.participants]);
+
+  const filteredInvitadores = invitadorSearch.trim()
+    ? allParticipants.filter((p) =>
+        `${p.nombre} ${p.apellido}`.toLowerCase().includes(invitadorSearch.toLowerCase()),
+      )
+    : allParticipants;
 
   const handleCreatePlayer = async () => {
     if (!newPlayer.nombre.trim() || !newPlayer.apellido.trim())
@@ -153,7 +138,7 @@ function NewPlayerModal({ act, db, onClose, onSave, setLocal, syncWithServer }: 
     <Dialog open={true} onOpenChange={(open) => !open && onClose()}>
       <DialogContent
         showCloseButton={false}
-        className="max-w-sm bg-surface rounded-3xl p-5 flex flex-col overflow-y-auto max-h-[90vh]"
+        className="max-w-sm bg-white rounded-3xl p-5 flex flex-col overflow-y-auto max-h-[90vh]"
       >
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-black text-lg text-dark">Nuevo Jugador</h3>
@@ -200,6 +185,7 @@ function NewPlayerModal({ act, db, onClose, onSave, setLocal, syncWithServer }: 
               setNewPlayer((p) => ({ ...p, fechaNacimiento: date }))
             }
             placeholder="Seleccionar fecha"
+            mode="dropdown"
           />
         </div>
 
@@ -212,7 +198,7 @@ function NewPlayerModal({ act, db, onClose, onSave, setLocal, syncWithServer }: 
               className={cn(
                 "flex-1",
                 newPlayer.sexo === "M"
-                  ? "bg-cyan-600 border-cyan-600"
+                  ? "bg-primary"
                   : "border-surface-dark",
               )}
             >
@@ -224,7 +210,7 @@ function NewPlayerModal({ act, db, onClose, onSave, setLocal, syncWithServer }: 
               className={cn(
                 "flex-1",
                 newPlayer.sexo === "F"
-                  ? "bg-pink-500 border-pink-500"
+                  ? "bg-primary"
                   : "border-surface-dark",
               )}
             >
@@ -235,35 +221,82 @@ function NewPlayerModal({ act, db, onClose, onSave, setLocal, syncWithServer }: 
 
         <div className="mb-4">
           <Label className="mb-1">¿Quién lo invitó?</Label>
-          <Combobox
-            value={newPlayer.invitadorId?.toString() || ""}
-            onValueChange={(val) => setNewPlayer((p) => ({ ...p, invitadorId: val ? Number(val) : null }))}
-            items={availableInvitados.map((p) => ({
-              value: p.id.toString(),
-              label: `${p.nombre} ${p.apellido}`,
-            }))}
-          >
-            <ComboboxInput placeholder="Seleccionar invitador..." />
-            <ComboboxValue>
-              {({ value }) =>
-                value
-                  ? (() => {
-                      const parts = db.participants.find((p) => p.id === Number(value));
-                      return parts ? `${parts.nombre} ${parts.apellido}` : "Seleccionar invitador...";
-                    })()
-                  : "Seleccionar invitador..."
-              }
-            </ComboboxValue>
-            <ComboboxContent>
-              <ComboboxList>
-                {availableInvitados.map((p) => (
-                  <ComboboxItem key={p.id.toString()} value={p.id.toString()}>
-                    {p.nombre} {p.apellido}
-                  </ComboboxItem>
-                ))}
-              </ComboboxList>
-            </ComboboxContent>
-          </Combobox>
+          <Popover open={invitadorOpen} onOpenChange={setInvitadorOpen}>
+            <PopoverTrigger asChild>
+              <button
+                className={cn(
+                  "flex items-center gap-2 w-full text-left",
+                  "p-3 rounded-xl border transition-colors text-sm",
+                  newPlayer.invitadorId
+                    ? "border-border bg-white"
+                    : "border-dashed border-border text-text-muted hover:border-teal-400 hover:bg-teal-50/30",
+                )}
+              >
+                {newPlayer.invitadorId ? (
+                  (() => {
+                    const p = db.participants.find((x) => x.id === newPlayer.invitadorId);
+                    return p ? (
+                      <>
+                        <Avatar p={p} size={24} />
+                        <span className="font-medium text-foreground">
+                          {p.nombre} {p.apellido}
+                        </span>
+                      </>
+                    ) : (
+                      <span>Seleccionar invitador...</span>
+                    );
+                  })()
+                ) : (
+                  <>
+                    <div className="w-6 h-6 rounded-full bg-surface-dark flex items-center justify-center text-xs font-black text-text-muted">
+                      ?
+                    </div>
+                    <span>Seleccionar invitador...</span>
+                  </>
+                )}
+              </button>
+            </PopoverTrigger>
+            <PopoverContent align="start" className="w-64 p-0">
+              <div className="p-2 border-b border-border">
+                <Input
+                  placeholder="Buscar participante..."
+                  value={invitadorSearch}
+                  onChange={(e) => setInvitadorSearch(e.target.value)}
+                  className="h-8 text-sm"
+                />
+              </div>
+              <div className="max-h-48 overflow-auto">
+                {filteredInvitadores.length > 0 ? (
+                  filteredInvitadores.map((p) => (
+                    <button
+                      key={p.id}
+                      onClick={() => {
+                        setNewPlayer((prev) => ({ ...prev, invitadorId: p.id }));
+                        setInvitadorOpen(false);
+                        setInvitadorSearch("");
+                      }}
+                      className={cn(
+                        "flex items-center gap-2 w-full px-3 py-2 text-left",
+                        "hover:bg-surface-light transition-colors",
+                        p.id === newPlayer.invitadorId && "bg-teal-50",
+                      )}
+                    >
+                      <Avatar p={p} size={24} />
+                      <span className="text-sm truncate">
+                        {p.nombre} {p.apellido}
+                      </span>
+                    </button>
+                  ))
+                ) : (
+                  <div className="px-3 py-4 text-center text-xs text-text-muted">
+                    {invitadorSearch
+                      ? `Sin resultados para "${invitadorSearch}"`
+                      : "No hay participantes disponibles"}
+                  </div>
+                )}
+              </div>
+            </PopoverContent>
+          </Popover>
         </div>
 
         <Button
@@ -280,13 +313,46 @@ function NewPlayerModal({ act, db, onClose, onSave, setLocal, syncWithServer }: 
 }
 
 export default function AsistenciaPage() {
-  const { activity: act, setLocal, syncWithServer, db, locked } = useEditContext();
+  const { activity: act, setLocal, syncWithServer, db, locked, searchQuery, setFilterContent } = useEditContext();
   const { saveParticipant } = useApp();
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
-  const [search, setSearch] = useState("");
   const [showNewPlayer, setShowNewPlayer] = useState(false);
-  const [confirmClearOpen, setConfirmClearOpen] = useState(false);
-  const [confirmAllOpen, setConfirmAllOpen] = useState(false);
+
+  // Proveer filtro de orden al FloatingNav
+  useEffect(() => {
+    setFilterContent(
+      <div>
+        <span className="text-[11px] font-bold text-text-muted uppercase tracking-wider mb-2 block">
+          Orden alfabético
+        </span>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setSortOrder("asc")}
+            className={cn(
+              "flex-1 px-3 py-2 rounded-lg text-sm font-bold transition-colors border",
+              sortOrder === "asc"
+                ? "bg-primary text-white border-primary"
+                : "bg-white text-foreground border-border hover:bg-surface-light",
+            )}
+          >
+            A→Z
+          </button>
+          <button
+            onClick={() => setSortOrder("desc")}
+            className={cn(
+              "flex-1 px-3 py-2 rounded-lg text-sm font-bold transition-colors border",
+              sortOrder === "desc"
+                ? "bg-primary text-white border-primary"
+                : "bg-white text-foreground border-border hover:bg-surface-light",
+            )}
+          >
+            Z→A
+          </button>
+        </div>
+      </div>,
+    );
+    return () => setFilterContent(null);
+  }, [sortOrder, setFilterContent]);
 
   const toggle = (key: string, id: number) => {
     if (key === "asistentes") {
@@ -324,25 +390,42 @@ export default function AsistenciaPage() {
         delete next[id];
         return next;
       });
-    } else if (key === "puntuales" || key === "biblias") {
-      const c = (act[key as "puntuales" | "biblias"] as number[]) || [];
+    } else if (key === "puntuales") {
+      const c = act.puntuales || [];
       const isIncluded = c.includes(id);
       const updateFn = (prev: number[]) => {
         const arr = prev || [];
         return arr.includes(id) ? arr.filter((x) => x !== id) : [...arr, id];
       };
-      setLocal(key as "puntuales" | "biblias", updateFn);
-      syncWithServer(key === "puntuales" ? "puntuales" : "biblias", { participantId: id, value: !isIncluded }, key as "puntuales" | "biblias", updateFn);
+
+      // Si marca como puntual, también marca como presente automáticamente
+      if (!isIncluded && !act.asistentes.includes(id)) {
+        const asistUpdateFn = (prev: number[]) => [...(prev || []), id];
+        setLocal("asistentes", asistUpdateFn);
+        syncWithServer("attendance", { participantId: id, value: true }, "asistentes", asistUpdateFn);
+      }
+
+      // syncWithServer ya actualiza el estado local internamente
+      syncWithServer("puntuales", { participantId: id, value: !isIncluded }, "puntuales", updateFn);
+    } else if (key === "biblias") {
+      const c = act.biblias || [];
+      const isIncluded = c.includes(id);
+      const updateFn = (prev: number[]) => {
+        const arr = prev || [];
+        return arr.includes(id) ? arr.filter((x) => x !== id) : [...arr, id];
+      };
+      setLocal("biblias", updateFn);
+      syncWithServer("biblias", { participantId: id, value: !isIncluded }, "biblias", updateFn);
     }
   };
 
   const sorted = useMemo<ParticipantBasic[]>(() => {
     let arr: ParticipantBasic[] = [...db.participants];
-    if (search) {
+    if (searchQuery) {
       arr = arr.filter((p) =>
         `${p.nombre} ${p.apellido}`
           .toLowerCase()
-          .includes(search.toLowerCase()),
+          .includes(searchQuery.toLowerCase()),
       );
     }
     if (sortOrder === "asc") {
@@ -355,7 +438,7 @@ export default function AsistenciaPage() {
       );
     }
     return arr;
-  }, [db.participants, sortOrder, search]);
+  }, [db.participants, sortOrder, searchQuery]);
 
   return (
     <div>
@@ -370,57 +453,25 @@ export default function AsistenciaPage() {
         />
       )}
 
-      <div className="flex flex-col gap-2 mb-3">
-        <div className="flex gap-2 mb-4 items-center">
-          <div className="relative flex-1">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted pointer-events-none" />
-            <Input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Buscar por nombre..."
-              className="pl-10"
-            />
-          </div>
+      <div className="flex items-center gap-2 mb-4">
+        <Label style={{ margin: 0 }}>
+          Asistencia
+          {searchQuery && (
+            <span className="text-text-muted text-xs font-normal ml-1">
+              (filtrado: {sorted.length})
+            </span>
+          )}
+        </Label>
+        <div className="flex gap-1 ml-auto">
           <Button
-            onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
-            title="Ordenar A→Z"
-            variant="outline"
-            size="icon"
+            onClick={() => setShowNewPlayer(true)}
+            variant="ghost"
+            size="sm"
+            disabled={locked}
+            className="bg-primary/10 text-primary text-xs flex items-center gap-1"
           >
-            <ArrowUpDown className="w-4 h-4" />
+            <Plus className="w-3 h-3" /> Nuevo
           </Button>
-        </div>
-        <div className="flex items-center gap-2">
-          <Label style={{ margin: 0 }}>Asistencia ({sorted.length})</Label>
-          <div className="flex gap-2 ml-auto">
-            <Button
-              onClick={() => setShowNewPlayer(true)}
-              variant="ghost"
-              size="sm"
-              disabled={locked}
-              className="bg-primary/10 text-primary text-xs flex items-center gap-1"
-            >
-              <Plus className="w-3 h-3" /> Nuevo
-            </Button>
-            <Button
-              onClick={() => setConfirmClearOpen(true)}
-              variant="ghost"
-              size="sm"
-              disabled={locked}
-              className="bg-red-50 text-red-500 text-xs"
-            >
-              Limpiar
-            </Button>
-            <Button
-              onClick={() => setConfirmAllOpen(true)}
-              variant="ghost"
-              size="sm"
-              disabled={locked}
-              className="bg-teal-50 text-teal-600 text-xs"
-            >
-              Todos
-            </Button>
-          </div>
         </div>
       </div>
 
@@ -428,19 +479,47 @@ export default function AsistenciaPage() {
         {sorted.map((p: ParticipantBasic) => {
           const here = act.asistentes.includes(p.id);
           const punct = (act.puntuales || []).includes(p.id);
-          const bib = (act.biblias || []).includes(p.id);
-          const team = act.equipos?.[p.id];
           return (
             <div
               key={p.id}
               className={`rounded-lg border bg-white ${here ? "border-primary shadow-md shadow-primary/20" : "border-surface-dark"}`}
             >
-              <div className="flex items-center p-3 gap-3">
-                <Checkbox
-                  checked={here}
-                  onCheckedChange={() => toggle("asistentes", p.id)}
-                  disabled={locked}
-                />
+              <div className="flex items-center p-3 gap-2">
+                <div className="flex gap-0">
+                  <button
+                    onClick={() => toggle("asistentes", p.id)}
+                    disabled={locked}
+                    className={cn(
+                      "flex items-center justify-center h-9 min-w-9 px-2 text-sm font-semibold transition-colors",
+                      locked && "opacity-50 cursor-not-allowed pointer-events-none",
+                    )}
+                    style={{
+                      backgroundColor: here ? "var(--color-primary)" : "#f5f5f5",
+                      border: `1px solid ${here ? "var(--color-primary)" : "#e5e5e5"}`,
+                      borderRight: "none",
+                      color: here ? "var(--color-primary-foreground)" : "#999",
+                      borderRadius: "12px 0 0 12px",
+                    }}
+                  >
+                    {here ? <CalendarCheck className="w-3.5 h-3.5" /> : <CalendarX className="w-3.5 h-3.5" />}
+                  </button>
+                  <button
+                    onClick={() => toggle("puntuales", p.id)}
+                    disabled={locked}
+                    className={cn(
+                      "flex items-center justify-center h-9 min-w-9 px-2 text-sm font-semibold transition-colors",
+                      locked && "opacity-50 cursor-not-allowed pointer-events-none",
+                    )}
+                    style={{
+                      backgroundColor: punct ? "var(--color-primary)" : "#f5f5f5",
+                      border: `1px solid ${punct ? "var(--color-primary)" : "#e5e5e5"}`,
+                      color: punct ? "var(--color-primary-foreground)" : "#999",
+                      borderRadius: "0 12px 12px 0",
+                    }}
+                  >
+                    <Clock className="w-3.5 h-3.5" />
+                  </button>
+                </div>
                 <Avatar p={p} size={30} />
                 <div className="flex-1">
                   <div
@@ -455,45 +534,31 @@ export default function AsistenciaPage() {
                 </div>
                 {here && (
                   <div className="flex gap-1 items-center">
-                    {team && (
-                      <span
-                        className="text-[10px] font-bold rounded px-2 py-0.5"
-                        style={{
-                          backgroundColor: getTeamBg(team),
-                          color: TEAM_COLORS[team],
-                        }}
-                      >
-                        {team}
-                      </span>
-                    )}
-                    <PillCheck
-                      icon={(act.socials || []).includes(p.id) ? Coffee : Zap}
-                      label={
-                        (act.socials || []).includes(p.id) ? "SOCIAL" : "RECRE"
-                      }
-                      active={true}
+                    <button
                       onClick={() => toggle("socials", p.id)}
                       disabled={locked}
-                      color={
-                        (act.socials || []).includes(p.id)
+                      className={cn(
+                        "flex items-center gap-1 h-9 min-w-9 px-3 text-sm font-semibold transition-colors",
+                        locked && "opacity-50 cursor-not-allowed pointer-events-none",
+                      )}
+                      style={{
+                        backgroundColor: (act.socials || []).includes(p.id)
+                          ? "#F59E0B33"
+                          : "color-mix(in srgb, var(--color-primary) 20%, transparent)",
+                        border: (act.socials || []).includes(p.id)
+                          ? "1px solid #F59E0B66"
+                          : "1px solid color-mix(in srgb, var(--color-primary) 40%, transparent)",
+                        color: (act.socials || []).includes(p.id)
                           ? "#F59E0B"
-                          : "#10B981"
-                      }
-                    />
-                    <PillCheck
-                      icon={Clock}
-                      active={punct}
-                      onClick={() => toggle("puntuales", p.id)}
-                      disabled={locked}
-                      color="#FFD93D"
-                    />
-                    <PillCheck
-                      icon={BookOpen}
-                      active={bib}
-                      onClick={() => toggle("biblias", p.id)}
-                      disabled={locked}
-                      color="#4ECDC4"
-                    />
+                          : "var(--color-primary)",
+                        borderRadius: "12px",
+                      }}
+                    >
+                      {(act.socials || []).includes(p.id) ? <Coffee className="w-3.5 h-3.5" /> : <Zap className="w-3.5 h-3.5" />}
+                      <span className="text-xs font-medium">
+                        {(act.socials || []).includes(p.id) ? "Social" : "Juegos"}
+                      </span>
+                    </button>
                   </div>
                 )}
               </div>
@@ -501,72 +566,6 @@ export default function AsistenciaPage() {
           );
         })}
       </div>
-
-      <AlertDialog open={confirmClearOpen} onOpenChange={setConfirmClearOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Limpiar asistencia</AlertDialogTitle>
-            <AlertDialogDescription>
-              ¿Estás seguro que querés quitar la asistencia de todos los jugadores?
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={async () => {
-                // Update local state immediately for responsive UI
-                setLocal("asistentes", []);
-                // Sync each removal with the server
-                for (const id of act.asistentes) {
-                  try {
-                    await syncWithServer("attendance", { participantId: id, value: false }, "asistentes", (prev) => (prev || []).filter((x) => x !== id));
-                  } catch {
-                    // Non-blocking: local state already updated, server will retry via auto-save
-                  }
-                }
-                setConfirmClearOpen(false);
-                toast.success("Asistencia limpiada");
-              }}
-              className="bg-red-500 hover:bg-red-600"
-            >
-              Limpiar
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <AlertDialog open={confirmAllOpen} onOpenChange={setConfirmAllOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Seleccionar todos</AlertDialogTitle>
-            <AlertDialogDescription>
-              ¿Estás seguro que querés marcar a todos los {sorted.length} jugadores como presentes?
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={async () => {
-                const newIds = sorted.map((p) => p.id);
-                // Update local state immediately for responsive UI
-                setLocal("asistentes", newIds);
-                // Sync each addition with the server
-                for (const id of newIds) {
-                  try {
-                    await syncWithServer("attendance", { participantId: id, value: true }, "asistentes", (prev) => Array.from(new Set([...(prev || []), id])));
-                  } catch {
-                    // Non-blocking: local state already updated, server will retry via auto-save
-                  }
-                }
-                setConfirmAllOpen(false);
-                toast.success("Todos presentes");
-              }}
-            >
-              Aceptar
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }

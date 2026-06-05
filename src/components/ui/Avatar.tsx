@@ -21,7 +21,7 @@ export function Avatar({ p, size = 36, className = "" }: AvatarProps) {
   const isM = p.sexo === "M";
   const isMX = p.sexo === "MX";
 
-  const borderColor = isM ? "#0891B2" : isMX ? "#4342FF" : "#EC4899";
+  const borderColor = isM ? "#00D4FF" : isMX ? "#4342FF" : "#FF2A7A";
 
   const fontSize = Math.round(size * 0.4);
   const borderWidth = Math.max(2, Math.round(size * 0.08));

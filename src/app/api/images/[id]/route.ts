@@ -1,10 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { GetObjectCommand } from "@aws-sdk/client-s3";
 import { s3Client, minioConfig } from "@/services/minio";
+import { requireAuth } from "@/lib/api-utils";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest, context: { params: Promise<{ id: string }> }) {
+  const auth = requireAuth(request);
+  if (!auth.success) {
+    return auth.error;
+  }
+
   try {
     const { id } = await context.params;
 

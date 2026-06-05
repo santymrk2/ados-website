@@ -1,17 +1,16 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { useViewContext } from "../layout";
 import { getEdad } from "@/lib/constants";
 import { Avatar } from "@/components/ui/Avatar";
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Users as PlayersIcon, Clock } from "lucide-react";
 import type { ParticipantBasic } from "@/lib/types";
 import { PlayerPointsModal } from "@/app/activities/_components/PlayerPointsModal";
 
 export default function AsistenciaPage() {
-  const { act, db } = useViewContext();
+  const { act, db, searchQuery, setFilterContent } = useViewContext();
   const participants = db.participants;
   const [selectedAges, setSelectedAges] = useState<number[]>([]);
   const [selectedPlayer, setSelectedPlayer] = useState<ParticipantBasic | null>(null);
@@ -53,6 +52,7 @@ export default function AsistenciaPage() {
   // Lista de asistentes filtrados
   const filteredAsistentes = useMemo(() => {
     if (!act) return [];
+    const query = searchQuery.toLowerCase().trim();
     const enriched: (ParticipantBasic & { edad: number })[] = [];
     for (const pid of act.asistentes) {
       const p = participants.find((x) => x.id === pid);
@@ -60,23 +60,67 @@ export default function AsistenciaPage() {
       const edad = getEdad(p.fechaNacimiento);
       if (edad === null) continue;
       if (selectedAges.length > 0 && !selectedAges.includes(edad)) continue;
+      if (query) {
+        const name = p.nombre.toLowerCase();
+        const lastName = p.apellido.toLowerCase();
+        if (!name.includes(query) && !lastName.includes(query)) continue;
+      }
       enriched.push({ ...p, edad });
     }
     enriched.sort((a, b) =>
       `${a.apellido} ${a.nombre}`.localeCompare(`${b.apellido} ${b.nombre}`),
     );
     return enriched;
-  }, [act, act?.asistentes, participants, selectedAges]);
+  }, [act, act?.asistentes, participants, selectedAges, searchQuery]);
 
-  if (!act) return null;
-
-  const toggleAge = (age: number) => {
+  const toggleAge = useCallback((age: number) => {
     setSelectedAges((prev) =>
       prev.includes(age) ? prev.filter((a) => a !== age) : [...prev, age],
     );
-  };
+  }, []);
 
-  const clearAges = () => setSelectedAges([]);
+  const clearAges = useCallback(() => setSelectedAges([]), []);
+
+  // Proveer filtro de edades al FloatingNav
+  useEffect(() => {
+    setFilterContent(
+      <div>
+        <span className="text-[11px] font-bold text-text-muted uppercase tracking-wider mb-2 block">
+          Filtrar por edad
+        </span>
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={clearAges}
+            className={cn(
+              "px-3 py-1.5 rounded-lg text-sm font-bold transition-colors border",
+              selectedAges.length === 0
+                ? "bg-primary text-white border-primary"
+                : "bg-white text-foreground border-border hover:bg-surface-light",
+            )}
+          >
+            Todas
+          </button>
+          {availableAges.map((age) => (
+            <button
+              key={age}
+              onClick={() => toggleAge(age)}
+              className={cn(
+                "px-3 py-1.5 rounded-lg text-sm font-bold transition-colors border",
+                selectedAges.includes(age)
+                  ? "bg-primary text-white border-primary"
+                  : "bg-white text-foreground border-border hover:bg-surface-light",
+              )}
+            >
+              {age} años
+            </button>
+          ))}
+        </div>
+      </div>,
+    );
+    return () => setFilterContent(null);
+  }, [act, availableAges, selectedAges, setFilterContent, toggleAge, clearAges]);
+
+  if (!act) return null;
 
   return (
     <div>
@@ -109,37 +153,6 @@ export default function AsistenciaPage() {
             <Clock className="w-3 h-3" />
             Puntuales
           </div>
-        </div>
-      </div>
-
-      {/* Filtro de edades */}
-      <div className="mb-4">
-        <div className="flex flex-wrap gap-2">
-          <button
-            onClick={clearAges}
-            className={cn(
-              "px-3 py-1.5 rounded-lg text-sm font-bold transition-colors",
-              selectedAges.length === 0
-                ? "bg-accent text-dark"
-                : "bg-white/20 text-white/80 hover:bg-white/30",
-            )}
-          >
-            Todas
-          </button>
-          {availableAges.map((age) => (
-            <button
-              key={age}
-              onClick={() => toggleAge(age)}
-              className={cn(
-                "px-3 py-1.5 rounded-lg text-sm font-bold transition-colors",
-                selectedAges.includes(age)
-                  ? "bg-accent text-dark"
-                  : "bg-white/20 text-white/80 hover:bg-white/30",
-              )}
-            >
-              {age} años
-            </button>
-          ))}
         </div>
       </div>
 

@@ -17,13 +17,14 @@ import {
   LayoutGrid,
   Gamepad2,
   Mail,
-  Trophy,
+  Volleyball,
   Plus,
   ChevronLeft,
   Save,
   Loader2,
   Check,
   AlertCircle,
+  BookOpen,
 } from "lucide-react";
 import { FloatingNav } from "@/components/ui/FloatingNav";
 import { toast } from "@/hooks/use-toast";
@@ -44,9 +45,10 @@ const EDIT_TABS = [
   { value: "", label: "General", icon: FileText },
   { value: "asistencia", label: "Asistencia", icon: Users },
   { value: "equipos", label: "Equipos", icon: LayoutGrid },
+  { value: "biblia", label: "Biblia", icon: BookOpen },
   { value: "juegos", label: "Juegos", icon: Gamepad2 },
   { value: "invitados", label: "Invitados", icon: Mail },
-  { value: "goles", label: "Goles", icon: Trophy },
+  { value: "goles", label: "Goles",   icon: Volleyball },
   { value: "extras", label: "Extras", icon: Plus },
 ] as const;
 
@@ -61,6 +63,10 @@ export interface EditContextValue {
   db: DbType;
   locked: boolean;
   pendingOps: Set<string>;
+  searchQuery: string;
+  setSearchQuery: (query: string) => void;
+  filterContent: React.ReactNode;
+  setFilterContent: (content: React.ReactNode) => void;
 }
 
 const EditContext = createContext<EditContextValue | null>(null);
@@ -86,6 +92,8 @@ export default function EditLayout({ children, mode = "edit" }: EditLayoutProps)
 
   const [resolvedId, setResolvedId] = useState<string | null>(null);
   const [currentTab, setCurrentTab] = useState<string>("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filterContent, setFilterContent] = useState<React.ReactNode>(null);
 
   // Resolve tab from URL pathname (more reliable than params)
   useEffect(() => {
@@ -222,7 +230,11 @@ export default function EditLayout({ children, mode = "edit" }: EditLayoutProps)
     db,
     locked,
     pendingOps,
-  }), [activity, setLocal, syncWithServer, db, locked, pendingOps]);
+    searchQuery,
+    setSearchQuery,
+    filterContent,
+    setFilterContent,
+  }), [activity, setLocal, syncWithServer, db, locked, pendingOps, searchQuery, setSearchQuery, filterContent, setFilterContent]);
 
   // Guardar toda la actividad (POST completo)
   const doSave = useCallback(async () => {
@@ -381,6 +393,10 @@ export default function EditLayout({ children, mode = "edit" }: EditLayoutProps)
             href: tab.value ? `${base}/${tab.value}` : base,
           };
         })}
+        searchValue={currentTab === "asistencia" || currentTab === "biblia" || currentTab === "equipos" ? searchQuery : undefined}
+        onSearchChange={currentTab === "asistencia" || currentTab === "biblia" || currentTab === "equipos" ? setSearchQuery : undefined}
+        searchPlaceholder="Buscar por nombre..."
+        filterContent={filterContent ?? undefined}
       />
 
       {/* Contenido del tab */}

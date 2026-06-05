@@ -3,9 +3,10 @@
 import { useMemo, useState } from "react";
 import { useEditContext } from "../layout";
 import { toast } from "@/hooks/use-toast";
+import { confirmDialog } from "@/components/ui/confirm-dialog";
 import { Button } from "@/components/ui/button";
 import { Label, Empty } from "@/components/ui/Common";
-import { Plus, Minus, Trash2, Search } from "lucide-react";
+import { Plus, Minus, X, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Avatar } from "@/components/ui/Avatar";
 import { Input } from "@/components/ui/input";
@@ -183,13 +184,20 @@ function GoalRow({
 
       {/* ELIMINAR */}
       <Button
-        onClick={() => g.id != null && onDelete(g.id)}
+        onClick={async () => {
+          if (g.id == null) return;
+          const ok = await confirmDialog(
+            "¿Eliminar este gol?",
+            { title: "Eliminar gol", confirmText: "Eliminar", isDestructive: true }
+          );
+          if (ok) onDelete(g.id);
+        }}
         variant="ghost"
         size="icon"
         disabled={locked}
         className="w-8 h-8 rounded-lg text-red-400 hover:bg-red-50 hover:text-red-500 shrink-0"
       >
-        <Trash2 className="w-4 h-4" />
+        <X className="w-4 h-4" />
       </Button>
     </div>
   );

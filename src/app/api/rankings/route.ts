@@ -1,9 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getRankingsCache, triggerRankingsRebuild } from "@/lib/cache";
+import { requireAuth } from "@/lib/api-utils";
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
+  const auth = requireAuth(request);
+  if (!auth.success) {
+    return auth.error;
+  }
+
   const rankings = getRankingsCache();
 
   if (!rankings) {

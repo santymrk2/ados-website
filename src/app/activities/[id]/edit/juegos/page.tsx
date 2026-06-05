@@ -4,6 +4,7 @@ import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { useEditContext } from "../layout";
 import { Plus, X } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { confirmDialog } from "@/components/ui/confirm-dialog";
 import { TEAMS, PTS, TEAM_COLORS, getTeamBg } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -233,136 +234,186 @@ function JuegoCard({
   const activeTeams = TEAMS.slice(0, act.cantEquipos || 4);
   const unplaced = activeTeams.filter((t) => !placed.includes(t));
   const posArray = useMemo(() => {
-    const arr: string[] = ["1", "2", "3", "4"];
-    if (act.cantEquipos === 6) arr.push("5", "6");
-    return arr;
+    return Array.from({ length: act.cantEquipos || 4 }, (_, i) => String(i + 1));
   }, [act.cantEquipos]);
 
   const isDisabled = locked || saving;
+  const [expanded, setExpanded] = useState(false);
 
   return (
     <SavingOverlay saving={saving}>
       <div className="bg-white rounded-2xl border border-surface-dark overflow-hidden shadow-sm">
-        <div className="flex items-center gap-3 p-3 border-b border-surface-dark bg-background">
-          <div className="w-7 h-7 bg-primary/10 rounded-lg flex items-center justify-center font-black text-primary text-xs">
+        {/* Header — siempre visible, toggle expand */}
+        <div
+          className="flex items-center gap-3 p-3 border-b border-surface-dark bg-background cursor-pointer"
+          onClick={() => setExpanded((prev) => !prev)}
+        >
+          <div className="w-7 h-7 bg-primary/10 rounded-lg flex items-center justify-center font-black text-primary text-xs shrink-0">
             {gi + 1}
           </div>
-          <Input
-            value={localNombre}
-            onChange={(e) => setLocalNombre(e.target.value)}
-            placeholder="Nombre del juego..."
-            className="flex-1 bg-white h-9"
-            disabled={isDisabled}
-          />
+          <div className="flex-1 min-w-0">
+            <div className="font-semibold text-sm truncate">
+              {localNombre || "Sin nombre"}
+            </div>
+            {!expanded && (
+              <div className="flex flex-wrap gap-2 mt-1.5">
+                {posArray.map((pos) => {
+                  const teamsInPos = posToTeams[String(pos)] || [];
+                  const hasTeams = Array.isArray(teamsInPos) && teamsInPos.length > 0;
+                  if (!hasTeams) return null;
+                  return (
+                    <div
+                      key={pos}
+                      className="flex items-center gap-1 px-2 py-0.5 rounded-lg border border-surface-dark bg-white shadow-sm"
+                    >
+                      <span className="text-[10px] font-bold text-text-muted w-4 text-center">{pos}°</span>
+                      <div className="flex items-center gap-0.5 ml-0.5">
+                        {teamsInPos.map((team) => (
+                          <span
+                            key={team}
+                            className="w-4 h-4 rounded flex items-center justify-center font-black text-white text-[8px]"
+                            style={{ backgroundColor: TEAM_COLORS[team] }}
+                          >
+                            {team}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
           <Button
-            onClick={onDel}
+            onClick={async (e) => {
+              e.stopPropagation();
+              const ok = await confirmDialog(
+                `¿Eliminar "${localNombre || "este juego"}"?`,
+                { title: "Eliminar juego", confirmText: "Eliminar", isDestructive: true }
+              );
+              if (ok) onDel();
+            }}
             variant="ghost"
             size="icon"
             disabled={isDisabled}
-            className="h-9 w-9 text-text-muted hover:bg-red-50 hover:text-red-500"
+            className="h-9 w-9 text-text-muted hover:bg-red-50 hover:text-red-500 shrink-0"
           >
             <X className="w-5 h-5" />
           </Button>
         </div>
 
-        <div className="p-3 bg-surface-light/30">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            {posArray.map((pos) => {
-              const teamsInPos = (posToTeams[String(pos)]) || [];
-              const hasTeams = Array.isArray(teamsInPos) && teamsInPos.length > 0;
+        {/* Cuerpo expandido — solo visible cuando expanded */}
+        {expanded && (
+          <>
+            <div className="p-3 border-b border-surface-dark bg-background">
+              <Input
+                value={localNombre}
+                onChange={(e) => setLocalNombre(e.target.value)}
+                placeholder="Nombre del juego..."
+                className="bg-white h-9"
+                disabled={isDisabled}
+              />
+            </div>
+            <div className="p-3 bg-surface-light/30">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {posArray.map((pos) => {
+                  const teamsInPos = (posToTeams[String(pos)]) || [];
+                  const hasTeams = Array.isArray(teamsInPos) && teamsInPos.length > 0;
 
-              return (
-                <div
-                  key={pos}
-                  className={cn(
-                    "flex flex-col p-2.5 rounded-xl transition-all border",
-                    hasTeams
-                      ? "bg-white border-surface-dark shadow-sm"
-                      : "bg-transparent border-dashed border-surface-dark/50"
-                  )}
-                >
-                  <div className="flex items-center justify-between gap-2 mb-2">
-                    <div className="flex items-center gap-2">
-                      <PodiumBadge pos={Number(pos) as number} />
-                      <span className="text-[10px] text-text-muted font-bold tracking-wider">
-                        +{(PTS.rec as Record<string, number>)[pos] ?? 0} PTS
-                      </span>
-                    </div>
-
-                    {unplaced.length > 0 && !isDisabled && (
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-6 px-2 text-[10px] font-black uppercase tracking-tight text-primary hover:bg-primary/5"
-                          >
-                            <Plus className="w-3 h-3 mr-1" /> Agregar
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent align="end" className="w-48 p-1 shadow-xl">
-                          <div className="text-[9px] font-black text-text-muted uppercase px-2 py-1.5 border-b border-surface-dark mb-1">
-                            Seleccionar Equipo
-                          </div>
-                          <div className="grid grid-cols-1 gap-0.5">
-                            {unplaced.map((t) => (
-                              <button
-                                key={t}
-                                onClick={() => onPos(t, String(pos))}
-                                className="flex items-center justify-between px-2 py-2 rounded-lg hover:bg-surface-light transition-colors text-left"
-                              >
-                                <div className="flex items-center gap-2">
-                                  <div
-                                    className="w-5 h-5 rounded flex items-center justify-center font-black text-white text-[10px]"
-                                    style={{ backgroundColor: TEAM_COLORS[t] }}
-                                  >
-                                    {t}
-                                  </div>
-                                  <span className="text-xs font-bold" style={{ color: TEAM_COLORS[t] }}>Equipo {t}</span>
-                                </div>
-                              </button>
-                            ))}
-                          </div>
-                        </PopoverContent>
-                      </Popover>
-                    )}
-                  </div>
-
-                  <div className="flex gap-2 flex-wrap min-h-[32px]">
-                    {hasTeams ? (
-                      teamsInPos.map((team) => (
-                        <div
-                          key={team}
-                          className="flex items-center gap-2 pl-3 pr-1 py-1 rounded-lg border shadow-sm group animate-in zoom-in-95 duration-200"
-                          style={{
-                            backgroundColor: getTeamBg(team),
-                            borderColor: TEAM_COLORS[team],
-                          }}
-                        >
-                          <span className="font-black text-xs" style={{ color: TEAM_COLORS[team] }}>
-                            {team}
+                  return (
+                    <div
+                      key={pos}
+                      className={cn(
+                        "flex flex-col p-2.5 rounded-xl transition-all border",
+                        hasTeams
+                          ? "bg-white border-surface-dark shadow-sm"
+                          : "bg-transparent border-dashed border-surface-dark/50"
+                      )}
+                    >
+                      <div className="flex items-center justify-between gap-2 mb-2">
+                        <div className="flex items-center gap-2">
+                          <PodiumBadge pos={Number(pos) as number} />
+                          <span className="text-[10px] text-text-muted font-bold tracking-wider">
+                            +{(PTS.rec as Record<string, number>)[pos] ?? 0} PTS
                           </span>
-                          <button
-                            onClick={() => !isDisabled && onPos(team, String(pos))}
-                            disabled={isDisabled}
-                            className="p-1 rounded-md hover:bg-black/10 transition-colors text-current/60 hover:text-current"
-                            style={{ color: TEAM_COLORS[team] }}
-                          >
-                            <X className="w-3 h-3" />
-                          </button>
                         </div>
-                      ))
-                    ) : (
-                      <div className="flex-1 flex items-center justify-center py-2 opacity-30">
-                        <span className="text-[9px] font-bold uppercase tracking-tighter text-text-muted">Sin asignar</span>
+
+                        {unplaced.length > 0 && !isDisabled && (
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 px-2 text-[10px] font-black uppercase tracking-tight text-primary hover:bg-primary/5"
+                              >
+                                <Plus className="w-3 h-3 mr-1" /> Agregar
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent align="end" className="w-48 p-1 shadow-xl">
+                              <div className="text-[9px] font-black text-text-muted uppercase px-2 py-1.5 border-b border-surface-dark mb-1">
+                                Seleccionar Equipo
+                              </div>
+                              <div className="grid grid-cols-1 gap-0.5">
+                                {unplaced.map((t) => (
+                                  <button
+                                    key={t}
+                                    onClick={() => onPos(t, String(pos))}
+                                    className="flex items-center justify-between px-2 py-2 rounded-lg hover:bg-surface-light transition-colors text-left"
+                                  >
+                                    <div className="flex items-center gap-2">
+                                      <div
+                                        className="w-5 h-5 rounded flex items-center justify-center font-black text-white text-[10px]"
+                                        style={{ backgroundColor: TEAM_COLORS[t] }}
+                                      >
+                                        {t}
+                                      </div>
+                                      <span className="text-xs font-bold" style={{ color: TEAM_COLORS[t] }}>Equipo {t}</span>
+                                    </div>
+                                  </button>
+                                ))}
+                              </div>
+                            </PopoverContent>
+                          </Popover>
+                        )}
                       </div>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
+
+                      <div className="flex gap-2 flex-wrap min-h-[32px]">
+                        {hasTeams ? (
+                          teamsInPos.map((team) => (
+                            <div
+                              key={team}
+                              className="flex items-center gap-2 pl-3 pr-1 py-1 rounded-lg border shadow-sm group animate-in zoom-in-95 duration-200"
+                              style={{
+                                backgroundColor: getTeamBg(team),
+                                borderColor: TEAM_COLORS[team],
+                              }}
+                            >
+                              <span className="font-black text-xs" style={{ color: TEAM_COLORS[team] }}>
+                                {team}
+                              </span>
+                              <button
+                                onClick={() => !isDisabled && onPos(team, String(pos))}
+                                disabled={isDisabled}
+                                className="p-1 rounded-md hover:bg-black/10 transition-colors text-current/60 hover:text-current"
+                                style={{ color: TEAM_COLORS[team] }}
+                              >
+                                <X className="w-3 h-3" />
+                              </button>
+                            </div>
+                          ))
+                        ) : (
+                          <div className="flex-1 flex items-center justify-center py-2 opacity-30">
+                            <span className="text-[9px] font-bold uppercase tracking-tighter text-text-muted">Sin asignar</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </>
+        )}
       </div>
     </SavingOverlay>
   );

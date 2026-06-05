@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { requireAuth } from "@/lib/api-utils";
 
 export const dynamic = 'force-dynamic';
 import { participants, activityParticipants, goles, extras, invitaciones } from "@/lib/schema";
@@ -10,6 +11,11 @@ import { uploadBase64Image, minioConfig } from "@/services/minio";
 const generateUniqueFilename = (prefix: string) => `${prefix}_${Date.now()}_${Math.random().toString(36).substring(7)}.jpg`;
 
 export async function GET(request: NextRequest) {
+  const auth = requireAuth(request);
+  if (!auth.success) {
+    return auth.error;
+  }
+
   try {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");
@@ -74,6 +80,11 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const auth = requireAuth(request);
+  if (!auth.success) {
+    return auth.error;
+  }
+
   try {
     // Check MinIO is configured
     if (!minioConfig.isConfigured) {
@@ -121,6 +132,11 @@ export async function POST(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
+  const auth = requireAuth(request);
+  if (!auth.success) {
+    return auth.error;
+  }
+
   try {
     const body = await request.json();
     const { id } = body;

@@ -5,8 +5,6 @@ import { sendBirthdayNotification, isWebPushConfigured, type PushMultiResult } f
 import { getEdad } from "@/lib/constants";
 import { inArray } from "drizzle-orm";
 
-const CRON_SECRET = process.env.CRON_SECRET;
-
 function getArgentinaDate() {
   const now = new Date();
   const formatter = new Intl.DateTimeFormat('es-AR', {
@@ -20,11 +18,6 @@ function getArgentinaDate() {
   const [day, month, year] = formatted.split('/');
 
   return new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-}
-
-function checkCronSecret(request: NextRequest): boolean {
-  if (!CRON_SECRET) return true;
-  return request.headers.get('x-cron-secret') === CRON_SECRET;
 }
 
 async function sendBirthdayNotifications(clientDate: string | null = null) {
@@ -92,10 +85,6 @@ async function sendBirthdayNotifications(clientDate: string | null = null) {
 
 export async function POST(request: NextRequest) {
   try {
-    if (!checkCronSecret(request)) {
-      return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
-    }
-
     const body = await request.json();
     const { action, date: clientDate } = body;
     const isInternal = request.headers.get('x-internal-trigger') === 'true';
@@ -113,10 +102,6 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
-    if (!checkCronSecret(request)) {
-      return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
-    }
-
     const { searchParams } = new URL(request.url);
     const trigger = searchParams.get('trigger');
     const clientDate = searchParams.get('date');

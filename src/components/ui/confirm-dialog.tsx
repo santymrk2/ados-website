@@ -6,6 +6,7 @@ import {
   AlertDialog,
   AlertDialogContent,
   AlertDialogHeader,
+  AlertDialogTitle,
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogCancel,
@@ -15,6 +16,7 @@ import {
 export interface ConfirmOptions {
   confirmText?: string;
   isDestructive?: boolean;
+  title?: string;
 }
 
 export interface ConfirmState {
@@ -53,18 +55,23 @@ function ConfirmDialog() {
     <AlertDialog open={isOpen} onOpenChange={(open) => !open && close(false)}>
       <AlertDialogContent>
         <AlertDialogHeader>
+          {options.title && (
+            <AlertDialogTitle className="text-lg font-black text-foreground">
+              {options.title}
+            </AlertDialogTitle>
+          )}
           <AlertDialogDescription className="text-foreground font-medium text-base text-center sm:text-left mt-2">
             {message}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter className="flex gap-2 sm:gap-0 mt-4">
-          <AlertDialogCancel onClick={() => close(false)} className="flex-1 mt-0">
+          <AlertDialogCancel onClick={() => close(false)} className="flex-1 mt-0 py-3">
             Cancelar
           </AlertDialogCancel>
           <AlertDialogAction 
             onClick={() => close(true)}
             variant={isDestructive ? 'destructive' : 'default'}
-            className="flex-1"
+            className="flex-1 py-3"
           >
             {confirmText}
           </AlertDialogAction>

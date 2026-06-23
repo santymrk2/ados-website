@@ -38,7 +38,7 @@ type DbType = DBData;
 // Tipos exports para los tabs
 export type LocalSetter = <K extends keyof Activity>(key: K, value: Activity[K] | ((prev: Activity[K]) => Activity[K]), skipSave?: boolean) => void;
 export type ServerSync = <K extends keyof Activity>(operation: string, data: unknown, field: K, newValue: Activity[K] | ((prev: Activity[K]) => Activity[K])) => Promise<unknown>;
-export type SaveStatus = "saved" | "saving" | "error";
+export type SaveStatus = "saved" | "unsaved" | "saving" | "error";
 
 // Constantes
 const EDIT_TABS = [
@@ -166,7 +166,7 @@ export default function EditLayout({ children, mode = "edit" }: EditLayoutProps)
       return updated;
     });
     if (!skipSave) {
-      setSaveStatus("saving");
+      setSaveStatus("unsaved");
     }
   }, []);
 
@@ -200,10 +200,10 @@ export default function EditLayout({ children, mode = "edit" }: EditLayoutProps)
         // We pass the resolved value to quickUpdate if needed, but quickUpdate doesn't seem to use it?
         // Actually quickUpdate only takes operationType and data.
         const result = await quickUpdate(currentActivity.id, operationType, data, skipRefresh);
-        toast.success("Cambios sincronizados");
         return result;
       } catch (e) {
         const err = e as Error;
+        setSaveStatus("error");
         toast.error("Error al sincronizar: " + err.message);
         throw err;
       } finally {
@@ -264,7 +264,7 @@ export default function EditLayout({ children, mode = "edit" }: EditLayoutProps)
 
   // Guardado automático en cambios
   useEffect(() => {
-    if (saveStatus !== "saved" && activity.id) {
+    if (saveStatus === "unsaved" && activity.id) {
       const timer = setTimeout(doSave, 2000);
       return () => clearTimeout(timer);
     }
@@ -330,11 +330,14 @@ export default function EditLayout({ children, mode = "edit" }: EditLayoutProps)
   }
 
   // Status indicator - siempre color secondary
+  const displaySaveStatus: SaveStatus = pendingOps.size > 0 ? "saving" : saveStatus;
+
   const statusConfig = {
     saved: { label: "Guardado", icon: Check, animate: false },
+    unsaved: { label: "Sin guardar", icon: Save, animate: false },
     saving: { label: "Guardando...", icon: Loader2, animate: true },
     error: { label: "Error", icon: AlertCircle, animate: false },
-  }[saveStatus] ?? { label: "", icon: Check, animate: false };
+  }[displaySaveStatus] ?? { label: "", icon: Check, animate: false };
 
   const StatusIcon = statusConfig.icon;
 
@@ -365,7 +368,7 @@ export default function EditLayout({ children, mode = "edit" }: EditLayoutProps)
               onClick={doSave}
               variant="ghost"
               size="sm"
-              disabled={saveStatus === "saving"}
+              disabled={displaySaveStatus === "saving"}
               className={cn(
                 "gap-1.5 bg-secondary/20 text-secondary hover:bg-secondary/30 group"
               )}

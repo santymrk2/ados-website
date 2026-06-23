@@ -17,14 +17,16 @@ export default function BibliaPage() {
   // Edades disponibles de TODOS los participantes
   const availableAges = useMemo(() => {
     const ages = new Set<number>();
-    db.participants.forEach((p) => {
+    db.participants
+      .filter((p) => act.asistentes.includes(p.id))
+      .forEach((p) => {
       if (p.fechaNacimiento) {
         const edad = getEdad(p.fechaNacimiento);
         if (edad !== null) ages.add(edad);
       }
     });
     return Array.from(ages).sort((a, b) => a - b);
-  }, [db.participants]);
+  }, [db.participants, act.asistentes]);
 
   const toggleAge = useCallback((age: number) => {
     setSelectedAges((prev) =>
@@ -112,12 +114,14 @@ export default function BibliaPage() {
       const arr = prev || [];
       return arr.includes(id) ? arr.filter((x) => x !== id) : [...arr, id];
     };
-    setLocal("biblias", updateFn);
-    syncWithServer("biblias", { participantId: id, value: !isIncluded }, "biblias", updateFn);
+    setLocal("biblias", updateFn, true);
+    syncWithServer("biblias", { participantId: id, value: !isIncluded });
   };
 
   const sorted = useMemo<ParticipantBasic[]>(() => {
-    let arr: ParticipantBasic[] = [...db.participants];
+    let arr: ParticipantBasic[] = db.participants.filter((p) =>
+      act.asistentes.includes(p.id),
+    );
 
     // Filtro por búsqueda
     if (searchQuery) {
@@ -144,7 +148,7 @@ export default function BibliaPage() {
     });
 
     return arr;
-  }, [db.participants, searchQuery, selectedAges, sortOrder]);
+  }, [db.participants, act.asistentes, searchQuery, selectedAges, sortOrder]);
 
   return (
     <div>

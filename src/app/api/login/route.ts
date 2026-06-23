@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createAuthCookieValue } from "@/lib/api-utils";
 
 // In-memory rate limiting: { ip: { count: number, resetTime: number } }
 const rateLimitStore = new Map<string, { count: number; resetTime: number }>();
@@ -87,13 +88,8 @@ export async function POST(request: NextRequest) {
       maxAge: 60 * 60 * 24, // 24 hours
     };
 
-    const authData = JSON.stringify({
-      role: authenticatedRole,
-      iat: Date.now(),
-    });
-
     const response = NextResponse.json({ success: true, role: authenticatedRole });
-    response.cookies.set("activados_auth", authData, cookieOptions);
+    response.cookies.set("activados_auth", createAuthCookieValue(authenticatedRole), cookieOptions);
     return response;
   } catch (e) {
     return NextResponse.json({ success: false, error: "Error en el servidor" }, { status: 500 });

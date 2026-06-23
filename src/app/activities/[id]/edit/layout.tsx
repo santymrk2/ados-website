@@ -37,7 +37,7 @@ type DbType = DBData;
 
 // Tipos exports para los tabs
 export type LocalSetter = <K extends keyof Activity>(key: K, value: Activity[K] | ((prev: Activity[K]) => Activity[K]), skipSave?: boolean) => void;
-export type ServerSync = <K extends keyof Activity>(operation: string, data: unknown, field: K, newValue: Activity[K] | ((prev: Activity[K]) => Activity[K])) => Promise<unknown>;
+export type ServerSync = (operation: string, data: unknown) => Promise<unknown>;
 export type SaveStatus = "saved" | "saving" | "error";
 
 // Constantes
@@ -120,6 +120,7 @@ export default function EditLayout({ children, mode = "edit" }: EditLayoutProps)
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("saved");
   const [pendingOps, setPendingOps] = useState<Set<string>>(new Set());
   const [locked, setLocked] = useState<boolean>(false);
+  const contentRef = useRef<HTMLDivElement>(null);
 
   const activityRef = useRef(activity);
   // eslint-disable-next-line react-hooks/rules-of-hooks
@@ -171,40 +172,27 @@ export default function EditLayout({ children, mode = "edit" }: EditLayoutProps)
   }, []);
 
   // Sincroniza cambio al servidor (PATCH atómico)
-  const syncWithServer: ServerSync = useCallback(async <K extends keyof Activity>(operationType: string, data: unknown, field: K, newValue: Activity[K] | ((prev: Activity[K]) => Activity[K])) => {
+  const syncWithServer: ServerSync = useCallback(async (operationType: string, data: unknown) => {
     const opData = data as { juegoId?: number | string; id?: number | string; participantId?: number | string; pid?: number | string };
     const opId = opData?.juegoId || opData?.id || opData?.participantId || opData?.pid || "";
     const opKey = `${operationType}:${opId}`;
 
     setPendingOps((prev) => new Set([...prev, opKey]));
     
-    // Resolve newValue using functional update if needed
-    let resolvedValue: Activity[K];
-    setActivity((prev) => {
-      resolvedValue = typeof newValue === "function" 
-        ? (newValue as (prev: Activity[K]) => Activity[K])(prev[field]) 
-        : newValue;
-      return { ...prev, [field]: resolvedValue };
-    });
-
-    // Also update locked state if field is "locked"
-    if (field === "locked") {
-      setLocked(newValue as boolean);
-    }
-
     // Usar activityRef para evitar closure stale
     const currentActivity = activityRef.current;
     if (currentActivity.id) {
       try {
-        const skipRefresh = ["game_pos", "game_add", "game_delete", "goal_add", "goal_remove", "goal_update", "extra_add", "extra_delete", "extra_update"].includes(operationType);
-        // We pass the resolved value to quickUpdate if needed, but quickUpdate doesn't seem to use it?
-        // Actually quickUpdate only takes operationType and data.
-        const result = await quickUpdate(currentActivity.id, operationType, data, skipRefresh);
+        const result = await quickUpdate(currentActivity.id, operationType, data, currentActivity.version);
         toast.success("Cambios sincronizados");
         return result;
       } catch (e) {
         const err = e as Error;
-        toast.error("Error al sincronizar: " + err.message);
+        if (err.message.startsWith("VERSION_CONFLICT:")) {
+          toast.error("Otro dispositivo actualizó esta actividad. Recargamos la versión nueva.");
+        } else {
+          toast.error("Error al sincronizar: " + err.message);
+        }
         throw err;
       } finally {
         setPendingOps((prev) => {
@@ -236,12 +224,34 @@ export default function EditLayout({ children, mode = "edit" }: EditLayoutProps)
     setFilterContent,
   }), [activity, setLocal, syncWithServer, db, locked, pendingOps, searchQuery, setSearchQuery, filterContent, setFilterContent]);
 
+  const handleSearchModeChange = useCallback((open: boolean) => {
+    if (!open) return;
+    contentRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+  }, []);
+
   // Guardar toda la actividad (POST completo)
   const doSave = useCallback(async () => {
     if (!activity.fecha) return;
     setSaveStatus("saving");
     try {
       const isNew = !activity.id;
+
+      if (!isNew) {
+        await quickUpdate(
+          activity.id,
+          "config_bulk",
+          {
+            titulo: activity.titulo,
+            fecha: activity.fecha,
+            cantEquipos: activity.cantEquipos,
+            locked: activity.locked,
+          },
+          activity.version,
+        );
+        setSaveStatus("saved");
+        return;
+      }
+
       const saved = isNew ? { ...activity, id: db.nextAid } : activity;
       const realId = await saveActivity(saved, isNew);
       if (isNew && realId) {
@@ -260,7 +270,7 @@ export default function EditLayout({ children, mode = "edit" }: EditLayoutProps)
         toast.error("Error al guardar: " + err.message);
       }
     }
-  }, [activity, db.nextAid, saveActivity, router]);
+  }, [activity, db.nextAid, quickUpdate, saveActivity, router]);
 
   // Guardado automático en cambios
   useEffect(() => {
@@ -273,7 +283,7 @@ export default function EditLayout({ children, mode = "edit" }: EditLayoutProps)
   // Sincronizar con datos del servidor solo después de que se guarde
   // Agregar delay para evitar sobrescribir datos locales antes de que el servidor-process
   useEffect(() => {
-    if (!activity.id || saveStatus !== "saved") return;
+    if (!activity.id || saveStatus !== "saved" || pendingOps.size > 0) return;
     const timer = setTimeout(() => {
       const initialActivity = db?.activities?.find((a: Activity) => a.id === activity.id);
       if (initialActivity) {
@@ -281,7 +291,7 @@ export default function EditLayout({ children, mode = "edit" }: EditLayoutProps)
       }
     }, 500); // 500ms delay para permitir que el servidor procese completamente
     return () => clearTimeout(timer);
-  }, [db?.activities, activity.id, saveStatus]);
+  }, [db?.activities, activity.id, saveStatus, pendingOps.size]);
 
   // Cambio de tab
   const handleTabChange = (newTab: string) => {
@@ -397,10 +407,11 @@ export default function EditLayout({ children, mode = "edit" }: EditLayoutProps)
         onSearchChange={currentTab === "asistencia" || currentTab === "biblia" || currentTab === "equipos" ? setSearchQuery : undefined}
         searchPlaceholder="Buscar por nombre..."
         filterContent={filterContent ?? undefined}
+        onSearchModeChange={handleSearchModeChange}
       />
 
       {/* Contenido del tab */}
-      <div className="flex-1 overflow-y-auto p-4 pb-20">
+      <div ref={contentRef} className="flex-1 overflow-y-auto p-4 pb-20">
         {/* Proveer contexto a los children */}
         <EditContext.Provider value={contextValue}>
           {children}

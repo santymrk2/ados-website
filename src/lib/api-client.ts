@@ -58,12 +58,16 @@ export async function saveActivity(activity: Activity, isNewProvided?: boolean) 
   return isNew ? result.id : activity.id;
 }
 
-export async function quickUpdateActivity(activityId: number, type: string, data: unknown) {
+export async function quickUpdateActivity(activityId: number, type: string, data: unknown, version?: number) {
   const res = await fetch(`${API_BASE}/activities`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ activityId, type, data }),
+    body: JSON.stringify({ activityId, type, data, version }),
   });
+  if (res.status === 409) {
+    const errorData = await res.json();
+    throw new Error(`VERSION_CONFLICT:${errorData.currentVersion}`);
+  }
   if (!res.ok) throw new Error('Failed to quick update activity');
   return res.json();
 }

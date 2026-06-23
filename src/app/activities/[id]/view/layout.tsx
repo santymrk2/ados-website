@@ -1,7 +1,7 @@
 // Layout para la vista de actividad - provee contexto
 "use client";
 
-import { createContext, useContext, useEffect, useMemo, useState, use } from "react";
+import { createContext, useContext, useEffect, useMemo, useState, useCallback, use } from "react";
 import { useRouter, useSearchParams, useParams, usePathname } from "next/navigation";
 import {
   LayoutGrid,
@@ -68,6 +68,10 @@ export default function ViewLayout({
   const [resolvedParams, setResolvedParams] = useState<{ id: string } | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterContent, setFilterContent] = useState<React.ReactNode>(null);
+  const handleSearchModeChange = useCallback((open: boolean) => {
+    if (!open) return;
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, []);
 
   useEffect(() => {
     params.then(setResolvedParams);
@@ -218,6 +222,7 @@ export default function ViewLayout({
           onSearchChange={currentTab === "asistencia" ? setSearchQuery : undefined}
           searchPlaceholder="Buscar por nombre..."
           filterContent={filterContent ?? undefined}
+          onSearchModeChange={handleSearchModeChange}
         />
       </div>
     </ViewContext.Provider>

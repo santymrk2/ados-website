@@ -98,20 +98,16 @@ function NewPlayerModal({ act, db, onClose, onSave, setLocal, syncWithServer }: 
       const playerId = newId || p.id;
 
       const updateAsistentes = (prev: number[]) => Array.from(new Set([...(prev || []), playerId]));
-      setLocal("asistentes", updateAsistentes);
+      setLocal("asistentes", updateAsistentes, true);
       syncWithServer(
         "attendance",
         { participantId: playerId, value: true },
-        "asistentes",
-        updateAsistentes,
       );
 
       if (newPlayer.invitadorId && act.id) {
         syncWithServer(
           "invitacion_add",
           { invitador: Number(newPlayer.invitadorId), invitadoId: playerId },
-          "invitaciones",
-          (prev: Invitacion[]) => [...(prev || []), { id: -Date.now(), invitador: newPlayer.invitadorId, invitadoId: playerId }],
         );
       } else {
         setLocal("invitaciones", (prev: Invitacion[]) => [
@@ -354,7 +350,7 @@ export default function AsistenciaPage() {
     return () => setFilterContent(null);
   }, [sortOrder, setFilterContent]);
 
-  const toggle = (key: string, id: number) => {
+  const toggle = async (key: string, id: number) => {
     if (key === "asistentes") {
       const c = act.asistentes || [];
       const isIncluded = c.includes(id);
@@ -362,19 +358,19 @@ export default function AsistenciaPage() {
         const arr = prev || [];
         return arr.includes(id) ? arr.filter((x) => x !== id) : [...arr, id];
       };
-      setLocal("asistentes", updateFn);
-      syncWithServer("attendance", { participantId: id, value: !isIncluded }, "asistentes", updateFn);
+      setLocal("asistentes", updateFn, true);
+      await syncWithServer("attendance", { participantId: id, value: !isIncluded });
 
       if (isIncluded) {
         // Clear all related flags in a single batched update
-        setLocal("socials", (prev: number[]) => (prev || []).filter((x) => x !== id));
-        setLocal("puntuales", (prev: number[]) => (prev || []).filter((x) => x !== id));
-        setLocal("biblias", (prev: number[]) => (prev || []).filter((x) => x !== id));
+        setLocal("socials", (prev: number[]) => (prev || []).filter((x) => x !== id), true);
+        setLocal("puntuales", (prev: number[]) => (prev || []).filter((x) => x !== id), true);
+        setLocal("biblias", (prev: number[]) => (prev || []).filter((x) => x !== id), true);
         setLocal("equipos", (prev: Record<string, string>) => {
           const next = { ...(prev || {}) };
           delete next[id];
           return next;
-        });
+        }, true);
       }
     } else if (key === "socials") {
       const c = act.socials || [];
@@ -383,13 +379,13 @@ export default function AsistenciaPage() {
         const arr = prev || [];
         return arr.includes(id) ? arr.filter((x) => x !== id) : [...arr, id];
       };
-      setLocal("socials", updateFn);
-      syncWithServer("socials", { participantId: id, value: !isIncluded }, "socials", updateFn);
+      setLocal("socials", updateFn, true);
+      await syncWithServer("socials", { participantId: id, value: !isIncluded });
       setLocal("equipos", (prev: Record<string, string>) => {
         const next = { ...(prev || {}) };
         delete next[id];
         return next;
-      });
+      }, true);
     } else if (key === "puntuales") {
       const c = act.puntuales || [];
       const isIncluded = c.includes(id);
@@ -401,12 +397,12 @@ export default function AsistenciaPage() {
       // Si marca como puntual, también marca como presente automáticamente
       if (!isIncluded && !act.asistentes.includes(id)) {
         const asistUpdateFn = (prev: number[]) => [...(prev || []), id];
-        setLocal("asistentes", asistUpdateFn);
-        syncWithServer("attendance", { participantId: id, value: true }, "asistentes", asistUpdateFn);
+        setLocal("asistentes", asistUpdateFn, true);
+        await syncWithServer("attendance", { participantId: id, value: true });
       }
 
-      // syncWithServer ya actualiza el estado local internamente
-      syncWithServer("puntuales", { participantId: id, value: !isIncluded }, "puntuales", updateFn);
+      setLocal("puntuales", updateFn, true);
+      await syncWithServer("puntuales", { participantId: id, value: !isIncluded });
     } else if (key === "biblias") {
       const c = act.biblias || [];
       const isIncluded = c.includes(id);
@@ -414,8 +410,8 @@ export default function AsistenciaPage() {
         const arr = prev || [];
         return arr.includes(id) ? arr.filter((x) => x !== id) : [...arr, id];
       };
-      setLocal("biblias", updateFn);
-      syncWithServer("biblias", { participantId: id, value: !isIncluded }, "biblias", updateFn);
+      setLocal("biblias", updateFn, true);
+      await syncWithServer("biblias", { participantId: id, value: !isIncluded });
     }
   };
 
@@ -470,7 +466,7 @@ export default function AsistenciaPage() {
             disabled={locked}
             className="bg-primary/10 text-primary text-xs flex items-center gap-1"
           >
-            <Plus className="w-3 h-3" /> Nuevo
+            <Plus className="w-3 h-3" /> Nuevo Jugador
           </Button>
         </div>
       </div>

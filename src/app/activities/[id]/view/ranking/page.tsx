@@ -10,17 +10,21 @@ import { cn } from "@/lib/utils";
 import type { Invitacion, Gol } from "@/lib/types";
 
 export default function RankingPage() {
-  const { playerRank, act, setFilterContent } = useViewContext();
+  const { playerRank, act, setFilterContent, setFiltersActive } = useViewContext();
   const [rankingType, setRankingType] = useState("puntos");
   const [goalSexo, setGoalSexo] = useState<string | null>(null);
 
   // Limpiar filtro al desmontar
   useEffect(() => {
-    return () => setFilterContent(null);
-  }, [setFilterContent]);
+    return () => {
+      setFilterContent(null);
+      setFiltersActive(false);
+    };
+  }, [setFilterContent, setFiltersActive]);
 
   // Setear filtro en el FloatingNav
   useEffect(() => {
+    setFiltersActive(rankingType !== "puntos" || goalSexo !== null);
     setFilterContent(
       <div className="space-y-4">
         {/* Tipo de ranking */}
@@ -83,7 +87,7 @@ export default function RankingPage() {
         )}
       </div>
     );
-  }, [rankingType, goalSexo, setFilterContent]);
+  }, [rankingType, goalSexo, setFilterContent, setFiltersActive]);
 
   // Calcular goleadores traídos
   const invitedCount = useMemo(() => {

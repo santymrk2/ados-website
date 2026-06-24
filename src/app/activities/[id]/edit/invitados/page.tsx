@@ -346,7 +346,6 @@ export default function InvitadosPage() {
       ...currentList,
       { id: tempId, invitador: null, invitadoId: null },
     ], true);
-    toast.success("Invitación agregada");
   };
 
   const del = async (id: number) => {
@@ -397,7 +396,6 @@ export default function InvitadosPage() {
             invitadoId: k === "invitadoId" ? v : inv.invitadoId,
           },
         );
-        toast.success("Invitación actualizada");
       } catch (e) {
         const err = e as Error;
         toast.error("Error: " + err.message);
@@ -426,7 +424,6 @@ export default function InvitadosPage() {
           ),
           true
         );
-        toast.success("Invitación guardada");
       } catch (e) {
         const err = e as Error;
         toast.error("Error al guardar: " + err.message);

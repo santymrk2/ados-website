@@ -30,6 +30,7 @@ export interface ViewContextValue {
   setSearchQuery: (query: string) => void;
   filterContent: React.ReactNode;
   setFilterContent: (content: React.ReactNode) => void;
+  setFiltersActive: (active: boolean) => void;
 }
 
 const ViewContext = createContext<ViewContextValue | null>(null);
@@ -68,6 +69,7 @@ export default function ViewLayout({
   const [resolvedParams, setResolvedParams] = useState<{ id: string } | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterContent, setFilterContent] = useState<React.ReactNode>(null);
+  const [filtersActive, setFiltersActive] = useState(false);
   const handleSearchModeChange = useCallback((open: boolean) => {
     if (!open) return;
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -177,7 +179,7 @@ export default function ViewLayout({
   }
 
   return (
-    <ViewContext.Provider value={{ act, db, teamRank, maxTeamPts, playerRank, searchQuery, setSearchQuery, filterContent, setFilterContent }}>
+    <ViewContext.Provider value={{ act, db, teamRank, maxTeamPts, playerRank, searchQuery, setSearchQuery, filterContent, setFilterContent, setFiltersActive }}>
       <div className="min-h-screen bg-primary flex flex-col">
         <div className="pt-safe">
           <div className="text-white p-4">
@@ -220,6 +222,8 @@ export default function ViewLayout({
           items={TABS}
           searchValue={currentTab === "asistencia" ? searchQuery : undefined}
           onSearchChange={currentTab === "asistencia" ? setSearchQuery : undefined}
+          hasActiveSearch={currentTab === "asistencia" && searchQuery.trim().length > 0}
+          hasActiveFilters={filtersActive}
           searchPlaceholder="Buscar por nombre..."
           filterContent={filterContent ?? undefined}
           onSearchModeChange={handleSearchModeChange}

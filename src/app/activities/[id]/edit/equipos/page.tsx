@@ -23,7 +23,7 @@ import {
 import type { Activity, ParticipantBasic } from "@/lib/types";
 
 export default function EquiposPage() {
-  const { activity: act, setLocal, syncWithServer, db, locked, searchQuery, setFilterContent } = useEditContext();
+  const { activity: act, setLocal, syncWithServer, db, locked, searchQuery, setFilterContent, setFiltersActive } = useEditContext();
   const [selectedTeam, setSelectedTeam] = useState<string | null>(null);
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
   const [confirmChange, setConfirmChange] = useState<{
@@ -34,6 +34,7 @@ export default function EquiposPage() {
 
   // Proveer filtro de orden al FloatingNav
   useEffect(() => {
+    setFiltersActive(sortOrder !== "asc");
     setFilterContent(
       <div>
         <span className="text-[11px] font-bold text-text-muted uppercase tracking-wider mb-2 block">
@@ -45,7 +46,7 @@ export default function EquiposPage() {
             className={cn(
               "flex-1 px-3 py-2 rounded-lg text-sm font-bold transition-colors border",
               sortOrder === "asc"
-                ? "bg-primary text-white border-primary"
+                ? "bg-primary text-white border-primary shadow-sm ring-2 ring-primary/20"
                 : "bg-white text-foreground border-border hover:bg-surface-light",
             )}
           >
@@ -65,8 +66,11 @@ export default function EquiposPage() {
         </div>
       </div>,
     );
-    return () => setFilterContent(null);
-  }, [sortOrder, setFilterContent]);
+    return () => {
+      setFilterContent(null);
+      setFiltersActive(false);
+    };
+  }, [sortOrder, setFilterContent, setFiltersActive]);
 
   const activeTeams = useMemo(
     () => TEAMS.slice(0, act.cantEquipos || 4),
@@ -128,7 +132,6 @@ export default function EquiposPage() {
       const currentTeam = act.equipos?.[pid];
       const finalTeam = currentTeam === team ? null : team;
       await syncWithServer("team", { participantId: pid, team: finalTeam });
-      toast.success("Equipo actualizado");
     } catch (e) {
       setLocal("equipos", () => previousEquipos, true);
       const err = e as Error;
@@ -188,7 +191,6 @@ export default function EquiposPage() {
       if (act.id) {
         await syncWithServer("teams_bulk", { equipos: nextEquipos });
       }
-      toast.success(resetAll ? "Equipos redistribuidos" : "Equipos completados");
     } catch (e) {
       setLocal("equipos", () => previousEquipos, true);
       const err = e as Error;

@@ -24,6 +24,8 @@ interface FloatingNavProps {
   searchPlaceholder?: string;
   /** Si se provee, habilita el modo filtros con contenido personalizado */
   filterContent?: React.ReactNode;
+  hasActiveSearch?: boolean;
+  hasActiveFilters?: boolean;
   onSearchModeChange?: (open: boolean) => void;
 }
 
@@ -42,6 +44,8 @@ export function FloatingNav({
   onSearchChange,
   searchPlaceholder = "Buscar...",
   filterContent,
+  hasActiveSearch,
+  hasActiveFilters,
   onSearchModeChange,
 }: FloatingNavProps) {
   const [isOpen, setIsOpen] = useState(false);
@@ -54,6 +58,8 @@ export function FloatingNav({
   const showSearch = searchValue !== undefined && onSearchChange !== undefined;
   const showFilter = filterContent !== undefined;
   const hasExtras = showSearch || showFilter;
+  const isSearchActive = hasActiveSearch ?? Boolean(searchValue?.trim());
+  const isFilterActive = Boolean(hasActiveFilters);
 
   const rows = Math.ceil(items.length / 3);
   const expandedHeight = rows * 72 + 16;
@@ -178,6 +184,7 @@ export function FloatingNav({
         className={cn(
           "rounded-2xl border border-border bg-white shadow-lg overflow-hidden",
           (isOpen || searchMode || filterMode) && "border-primary",
+          (isSearchActive || isFilterActive) && "ring-2 ring-primary/20",
           !searchMode && !filterMode && "cursor-pointer",
         )}
         animate={{
@@ -307,7 +314,7 @@ export function FloatingNav({
                         className={cn(
                           "flex flex-col items-center justify-center gap-1 rounded-2xl border border-border py-2 px-3 text-sm font-medium transition-colors",
                           isActive
-                            ? "bg-primary text-white border-primary"
+                            ? "bg-primary text-white border-primary shadow-sm ring-2 ring-primary/20"
                             : "hover:bg-muted",
                         )}
                       >
@@ -330,7 +337,7 @@ export function FloatingNav({
                       className={cn(
                         "flex flex-col items-center justify-center gap-1 rounded-2xl border border-border py-2 px-3 text-sm font-medium transition-colors",
                         isActive
-                          ? "bg-primary text-white border-primary"
+                          ? "bg-primary text-white border-primary shadow-sm ring-2 ring-primary/20"
                           : "hover:bg-muted",
                       )}
                     >

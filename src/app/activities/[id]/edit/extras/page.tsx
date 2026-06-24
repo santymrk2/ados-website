@@ -334,7 +334,6 @@ export default function ExtrasPage() {
       setLocal(listKey, (prev: Extra[]) => (prev || []).map((e) => 
         e.id === tempId ? { ...e, id: realId, pid: finalPid, team: finalTeam } : e
       ), true);
-      toast.success("Guardado");
     } catch (e) {
       const err = e as Error;
       toast.error("Error al guardar: " + err.message);
@@ -373,7 +372,6 @@ export default function ExtrasPage() {
       setLocal(listKey, (prev: Extra[]) => (prev || []).map((e) => 
         e.id === tempId ? { ...e, id: realId } : e
       ), true);
-      toast.success("Agregado");
     } catch (e) {
       toast.error("Error al agregar");
       setLocal(listKey, (prev: Extra[]) => (prev || []).filter((e) => e.id !== tempId), true);

@@ -120,7 +120,6 @@ function NewPlayerModal({ act, db, onClose, onSave, setLocal, syncWithServer }: 
       }
 
       onClose();
-      toast.success("Jugador agregado y registrado");
     } catch (e) {
       const err = e as Error;
       toast.error("Error al guardar: " + err.message);
@@ -312,13 +311,14 @@ function NewPlayerModal({ act, db, onClose, onSave, setLocal, syncWithServer }: 
 }
 
 export default function AsistenciaPage() {
-  const { activity: act, setLocal, syncWithServer, db, locked, searchQuery, setFilterContent } = useEditContext();
+  const { activity: act, setLocal, syncWithServer, db, locked, searchQuery, setFilterContent, setFiltersActive } = useEditContext();
   const { saveParticipant } = useApp();
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
   const [showNewPlayer, setShowNewPlayer] = useState(false);
 
   // Proveer filtro de orden al FloatingNav
   useEffect(() => {
+    setFiltersActive(sortOrder !== "asc");
     setFilterContent(
       <div>
         <span className="text-[11px] font-bold text-text-muted uppercase tracking-wider mb-2 block">
@@ -350,8 +350,11 @@ export default function AsistenciaPage() {
         </div>
       </div>,
     );
-    return () => setFilterContent(null);
-  }, [sortOrder, setFilterContent]);
+    return () => {
+      setFilterContent(null);
+      setFiltersActive(false);
+    };
+  }, [sortOrder, setFilterContent, setFiltersActive]);
 
   const toggle = async (key: string, id: number) => {
     if (key === "asistentes") {

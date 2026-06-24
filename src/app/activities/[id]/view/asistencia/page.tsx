@@ -10,7 +10,7 @@ import type { ParticipantBasic } from "@/lib/types";
 import { PlayerPointsModal } from "@/app/activities/_components/PlayerPointsModal";
 
 export default function AsistenciaPage() {
-  const { act, db, searchQuery, setFilterContent } = useViewContext();
+  const { act, db, searchQuery, setFilterContent, setFiltersActive } = useViewContext();
   const participants = db.participants;
   const [selectedAges, setSelectedAges] = useState<number[]>([]);
   const [selectedPlayer, setSelectedPlayer] = useState<ParticipantBasic | null>(null);
@@ -83,6 +83,7 @@ export default function AsistenciaPage() {
 
   // Proveer filtro de edades al FloatingNav
   useEffect(() => {
+    setFiltersActive(selectedAges.length > 0);
     setFilterContent(
       <div>
         <span className="text-[11px] font-bold text-text-muted uppercase tracking-wider mb-2 block">
@@ -117,8 +118,11 @@ export default function AsistenciaPage() {
         </div>
       </div>,
     );
-    return () => setFilterContent(null);
-  }, [act, availableAges, selectedAges, setFilterContent, toggleAge, clearAges]);
+    return () => {
+      setFilterContent(null);
+      setFiltersActive(false);
+    };
+  }, [act, availableAges, selectedAges, setFilterContent, setFiltersActive, toggleAge, clearAges]);
 
   if (!act) return null;
 

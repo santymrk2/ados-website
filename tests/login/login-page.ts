@@ -46,7 +46,7 @@ export class LoginPage extends BasePage {
   }
 
   async expectAuthenticatedHome(): Promise<void> {
-    await expect(this.page.getByText("ACTIVADOS")).toBeVisible();
+    await expect(this.page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
   }
 }
 

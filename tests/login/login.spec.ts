@@ -91,7 +91,7 @@ test.describe("Login", () => {
 
   test(
     "Login with invalid credentials shows error",
-    { tag: ["@critical", "@e2e", "@login", "@LOGIN-E2E-004"] },
+    { tag: ["@high", "@e2e", "@login", "@LOGIN-E2E-004"] },
     async () => {
       await loginPage.goto();
       await loginPage.login("wrongpassword", "viewer");

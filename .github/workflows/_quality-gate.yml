@@ -101,7 +101,7 @@ jobs:
             sleep 1
           done
 
-          bun run test:e2e
+          bun run test:e2e:quality
 
       - name: Upload Playwright report
         if: always()

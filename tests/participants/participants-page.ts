@@ -1,6 +1,5 @@
-import { Page, Locator, expect } from "@playwright/test";
+import { Page, Locator } from "@playwright/test";
 import { BasePage } from "../base-page";
-import { LoginPage, TEST_USERS } from "../login/login-page";
 import { DashboardPage } from "../dashboard/dashboard-page";
 
 export class ParticipantsPage extends BasePage {
@@ -21,7 +20,7 @@ export class ParticipantsPage extends BasePage {
 
   async loginAsAdmin(): Promise<void> {
     const dashboardPage = new DashboardPage(this.page);
-    await dashboardPage.loginAsViewer();
+    await dashboardPage.loginAsAdmin();
   }
 
   async getParticipantCount(): Promise<number> {

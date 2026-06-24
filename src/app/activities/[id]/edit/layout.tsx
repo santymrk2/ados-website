@@ -67,6 +67,7 @@ export interface EditContextValue {
   setSearchQuery: (query: string) => void;
   filterContent: React.ReactNode;
   setFilterContent: (content: React.ReactNode) => void;
+  setFiltersActive: (active: boolean) => void;
 }
 
 const EditContext = createContext<EditContextValue | null>(null);
@@ -94,6 +95,7 @@ export default function EditLayout({ children, mode = "edit" }: EditLayoutProps)
   const [currentTab, setCurrentTab] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState("");
   const [filterContent, setFilterContent] = useState<React.ReactNode>(null);
+  const [filtersActive, setFiltersActive] = useState(false);
 
   // Resolve tab from URL pathname (more reliable than params)
   useEffect(() => {
@@ -184,7 +186,6 @@ export default function EditLayout({ children, mode = "edit" }: EditLayoutProps)
     if (currentActivity.id) {
       try {
         const result = await quickUpdate(currentActivity.id, operationType, data, currentActivity.version);
-        toast.success("Cambios sincronizados");
         return result;
       } catch (e) {
         const err = e as Error;
@@ -222,7 +223,8 @@ export default function EditLayout({ children, mode = "edit" }: EditLayoutProps)
     setSearchQuery,
     filterContent,
     setFilterContent,
-  }), [activity, setLocal, syncWithServer, db, locked, pendingOps, searchQuery, setSearchQuery, filterContent, setFilterContent]);
+    setFiltersActive,
+  }), [activity, setLocal, syncWithServer, db, locked, pendingOps, searchQuery, setSearchQuery, filterContent, setFilterContent, setFiltersActive]);
 
   const handleSearchModeChange = useCallback((open: boolean) => {
     if (!open) return;
@@ -410,11 +412,20 @@ export default function EditLayout({ children, mode = "edit" }: EditLayoutProps)
         onSearchChange={currentTab === "asistencia" || currentTab === "biblia" || currentTab === "equipos" ? setSearchQuery : undefined}
         searchPlaceholder="Buscar por nombre..."
         filterContent={filterContent ?? undefined}
+        hasActiveSearch={searchQuery.trim().length > 0}
+        hasActiveFilters={filtersActive}
         onSearchModeChange={handleSearchModeChange}
       />
 
       {/* Contenido del tab */}
       <div ref={contentRef} className="flex-1 overflow-y-auto p-4 pb-20">
+        {locked && (
+          <div className="mb-3 rounded-2xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-900">
+            La actividad está bloqueada. Desbloqueala desde General para editar
+            datos, asistencia, equipos y puntajes.
+          </div>
+        )}
+
         {/* Proveer contexto a los children */}
         <EditContext.Provider value={contextValue}>
           {children}

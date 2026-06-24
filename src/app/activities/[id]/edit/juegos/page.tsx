@@ -64,7 +64,6 @@ export default function JuegosPage() {
         setLocal("juegos", (prev: Juego[]) => (prev || []).map((j) =>
           j.id === tempId ? { ...j, id: finalId } : j,
         ), true);
-        toast.success("Juego agregado");
       } else {
         // Rollback si el servidor no devolvió id
         setLocal("juegos", () => prevJuegos, true);

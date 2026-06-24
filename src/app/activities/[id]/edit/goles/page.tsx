@@ -217,7 +217,6 @@ export default function GolesPage() {
   const add = () => {
     const ng: Gol = { id: generateTempId(), pid: null, tipo: "f", cant: 1 };
     setLocal("goles", (prev: Gol[]) => [...(prev || []), ng], true);
-    toast.success("Fila de gol agregada");
   };
 
   const del = async (id: number) => {

@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 import type { ParticipantBasic } from "@/lib/types";
 
 export default function BibliaPage() {
-  const { activity: act, setLocal, syncWithServer, db, locked, searchQuery, setFilterContent } = useEditContext();
+  const { activity: act, setLocal, syncWithServer, db, locked, searchQuery, setFilterContent, setFiltersActive } = useEditContext();
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
   const [selectedAges, setSelectedAges] = useState<number[]>([]);
 
@@ -38,6 +38,7 @@ export default function BibliaPage() {
 
   // Proveer filtros al FloatingNav
   useEffect(() => {
+    setFiltersActive(sortOrder !== "asc" || selectedAges.length > 0);
     setFilterContent(
       <div className="space-y-3">
         <div>
@@ -104,8 +105,11 @@ export default function BibliaPage() {
         </div>
       </div>,
     );
-    return () => setFilterContent(null);
-  }, [sortOrder, selectedAges, availableAges, setFilterContent, toggleAge, clearAges]);
+    return () => {
+      setFilterContent(null);
+      setFiltersActive(false);
+    };
+  }, [sortOrder, selectedAges, availableAges, setFilterContent, setFiltersActive, toggleAge, clearAges]);
 
   const toggle = (id: number) => {
     const c = act.biblias || [];

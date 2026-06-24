@@ -12,11 +12,15 @@ test.describe("Dashboard", () => {
     bottomNav = new BottomNav(page);
   });
 
-  test("Dashboard loads with header", async ({ page }) => {
+  test(
+    "Dashboard loads with header",
+    { tag: ["@critical", "@e2e", "@dashboard", "@DASHBOARD-E2E-001"] },
+    async ({ page }) => {
     await dashboardPage.loginAsViewer();
     await dashboardPage.goto();
     await expect(dashboardPage.header).toBeVisible();
-  });
+    },
+  );
 
   test.skip("Bottom navigation is visible", async ({ page }) => {
     await dashboardPage.loginAsViewer();

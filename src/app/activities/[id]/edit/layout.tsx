@@ -38,7 +38,7 @@ type DbType = DBData;
 // Tipos exports para los tabs
 export type LocalSetter = <K extends keyof Activity>(key: K, value: Activity[K] | ((prev: Activity[K]) => Activity[K]), skipSave?: boolean) => void;
 export type ServerSync = (operation: string, data: unknown) => Promise<unknown>;
-export type SaveStatus = "saved" | "saving" | "error";
+export type SaveStatus = "saved" | "saving" | "unsaved" | "error";
 
 // Constantes
 const EDIT_TABS = [

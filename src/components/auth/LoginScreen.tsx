@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type Dispatch, type FormEvent, type SetStateAction } from "react";
 import { Lock, Eye, EyeOff } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "../ui/button";
@@ -8,12 +8,19 @@ import { Input } from "../ui/input";
 import { Switch } from "../ui/switch";
 import { Label } from "../ui/label";
 
-export function LoginScreen({ onLogin, error, showPass, setShowPass }) {
+interface LoginScreenProps {
+  onLogin: (password: string, role: string) => void;
+  error: string | false;
+  showPass: boolean;
+  setShowPass: Dispatch<SetStateAction<boolean>>;
+}
+
+export function LoginScreen({ onLogin, error, showPass, setShowPass }: LoginScreenProps) {
   const [password, setPassword] = useState("");
   const [role, setRole] = useState("viewer");
   const [showAdminToggle, setShowAdminToggle] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     onLogin(password, role);
   };
@@ -23,13 +30,15 @@ export function LoginScreen({ onLogin, error, showPass, setShowPass }) {
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
       <div className="bg-surface rounded-3xl p-8 w-full max-w-sm border border-surface-dark shadow-xl">
-        <div 
-          className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-6 cursor-pointer select-none transition-transform active:scale-95"
+        <button
+          type="button"
+          aria-label="Mostrar selector de rol"
+          className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-6 cursor-pointer select-none transition-transform active:scale-95 border-0"
           onDoubleClick={() => setShowAdminToggle(!showAdminToggle)}
           title="Doble click"
         >
           <Lock className="w-8 h-8 text-primary pointer-events-none" />
-        </div>
+        </button>
         <h2 className="text-2xl font-black text-center mb-2">Acceso</h2>
         
         {showAdminToggle ? (
@@ -51,6 +60,7 @@ export function LoginScreen({ onLogin, error, showPass, setShowPass }) {
         <form onSubmit={handleSubmit}>
           <div className="relative mb-4">
             <Input
+              aria-label="Contraseña"
               type={showPass ? "text" : "password"}
               placeholder={`Contraseña de ${roleText}`}
               value={password}
@@ -61,6 +71,7 @@ export function LoginScreen({ onLogin, error, showPass, setShowPass }) {
             />
             <Button
               type="button"
+              aria-label={showPass ? "Ocultar contraseña" : "Mostrar contraseña"}
               variant="ghost"
               size="icon"
               className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-dark"

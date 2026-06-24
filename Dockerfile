@@ -52,10 +52,8 @@ COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
-# Copiamos todas las dependencias (incluye drizzle-kit y drizzle-orm para migraciones)
+# Copiamos dependencias externas requeridas por serverExternalPackages.
 COPY --from=deps /app/node_modules ./node_modules
-COPY --from=builder --chown=nextjs:nodejs /app/drizzle.config.ts ./
-COPY --from=builder --chown=nextjs:nodejs /app/src/lib/schema.ts ./src/lib/
 
 # Exponemos el puerto
 EXPOSE 3000
@@ -63,6 +61,4 @@ EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
-# Ejecutamos migraciones primero y luego el servidor
-# db:push es idempotente - puede ejecutarse múltiples veces sin problemas
-CMD ["sh", "-c", "bunx drizzle-kit push --config=drizzle.config.ts && bun run server.js"]
+CMD ["bun", "run", "server.js"]

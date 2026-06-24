@@ -7,8 +7,10 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "typecheck": "tsc --noEmit --incremental false",
     "db:push": "drizzle-kit push",
-    "db:migrate": "drizzle-kit migrate"
+    "db:migrate": "drizzle-kit migrate",
+    "db:harden": "psql \"$DATABASE_URL\" -f db-hardening.sql"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1032.0",

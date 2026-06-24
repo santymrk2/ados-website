@@ -52,7 +52,7 @@ export function AuthGate({ children, showNav = true }: AuthGateProps) {
 
   const {
     isAuthenticated,
-    isLoading,
+    authLoading,
     login,
     dbError,
     dbConnected,
@@ -60,8 +60,8 @@ export function AuthGate({ children, showNav = true }: AuthGateProps) {
     refresh,
   } = useApp();
 
-  // Initialize database connection and SSE - with proper cleanup
-  useDatabaseInitialization();
+  // Initialize database connection and SSE only after auth - with proper cleanup
+  useDatabaseInitialization(isAuthenticated);
 
   const [loginError, setLoginError] = useState<string | false>(false);
   const [showPass, setShowPass] = useState(false);
@@ -100,18 +100,8 @@ export function AuthGate({ children, showNav = true }: AuthGateProps) {
     }
   }, []);
 
-  if (isLoading || isRetrying || !dbChecked) {
+  if (authLoading || isRetrying) {
     return <Loader />;
-  }
-
-  if (dbChecked && !dbConnected && dbError) {
-    return (
-      <>
-        <div className="min-h-screen bg-background">
-          <DbErrorScreen error={dbError} onRetry={handleRetry} />
-        </div>
-      </>
-    );
   }
 
   if (!isAuthenticated) {
@@ -124,6 +114,20 @@ export function AuthGate({ children, showNav = true }: AuthGateProps) {
             showPass={showPass}
             setShowPass={setShowPass}
           />
+        </div>
+      </>
+    );
+  }
+
+  if (!dbChecked) {
+    return <Loader />;
+  }
+
+  if (!dbConnected && dbError) {
+    return (
+      <>
+        <div className="min-h-screen bg-background">
+          <DbErrorScreen error={dbError} onRetry={handleRetry} />
         </div>
       </>
     );

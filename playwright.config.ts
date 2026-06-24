@@ -24,10 +24,17 @@ export default defineConfig({
 
   webServer: process.env.CI
     ? undefined
-    : {
-        command: "bun dev",
-        url: "http://localhost:3000",
-        reuseExistingServer: !process.env.CI,
-        timeout: 120 * 1000,
+      : {
+          command: "bun dev",
+          env: {
+            ...process.env,
+            ADMIN_PASSWORD: process.env.ADMIN_PASSWORD || "admin123",
+            VIEWER_PASSWORD: process.env.VIEWER_PASSWORD || "viewer123",
+            AUTH_SECRET: process.env.AUTH_SECRET || "playwright-auth-secret",
+            CRON_SECRET: process.env.CRON_SECRET || "playwright-cron-secret",
+          },
+          url: "http://localhost:3000",
+          reuseExistingServer: !process.env.CI,
+          timeout: 120 * 1000,
       },
 });

@@ -9,8 +9,9 @@ export class BasePage {
   }
 
   async waitForNavigation(callback: () => Promise<void>): Promise<void> {
+    const currentUrl = this.page.url();
     await Promise.all([
-      this.page.waitForURL((url) => !url.toString().includes("localhost") || true),
+      this.page.waitForURL((url) => url.toString() !== currentUrl),
       callback(),
     ]);
   }

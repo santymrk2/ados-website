@@ -11,10 +11,22 @@
 import { useEffect, useRef, useCallback } from "react";
 import { checkDbConnection, refreshData } from "@/store/appStore";
 
-export function useDatabaseInitialization() {
+export function useDatabaseInitialization(enabled = true) {
   const eventSourceRef = useRef<EventSource | null>(null);
   const isInitializedRef = useRef(false);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const cleanup = useCallback(() => {
+    if (reconnectTimeoutRef.current) {
+      clearTimeout(reconnectTimeoutRef.current);
+      reconnectTimeoutRef.current = null;
+    }
+
+    if (eventSourceRef.current) {
+      eventSourceRef.current.close();
+      eventSourceRef.current = null;
+    }
+  }, []);
 
   const connectSSE = useCallback(() => {
     // Clean up existing connection
@@ -57,6 +69,7 @@ export function useDatabaseInitialization() {
   }, []);
 
   const initialize = useCallback(async () => {
+    if (!enabled) return;
     if (isInitializedRef.current) return;
     isInitializedRef.current = true;
 
@@ -65,26 +78,24 @@ export function useDatabaseInitialization() {
       await refreshData();
       connectSSE();
     }
-  }, [connectSSE]);
+  }, [connectSSE, enabled]);
 
   useEffect(() => {
+    if (!enabled) {
+      isInitializedRef.current = false;
+      cleanup();
+      return cleanup;
+    }
+
     // Small delay to ensure React is ready
     const timeoutId = setTimeout(initialize, 100);
 
     return () => {
       // Cleanup on unmount
       clearTimeout(timeoutId);
-
-      if (reconnectTimeoutRef.current) {
-        clearTimeout(reconnectTimeoutRef.current);
-      }
-
-      if (eventSourceRef.current) {
-        eventSourceRef.current.close();
-        eventSourceRef.current = null;
-      }
+      cleanup();
     };
-  }, [initialize]);
+  }, [cleanup, enabled, initialize]);
 
   return {
     reconnect: connectSSE,

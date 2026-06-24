@@ -42,15 +42,16 @@ export function NotificationsModal({
     try {
       const response = await fetch("/api/participants");
       if (response.ok) {
-        const participants = await response.json();
+        const payload = await response.json();
+        const participants = Array.isArray(payload) ? payload : payload.data ?? [];
         const today = new Date();
         const month = String(today.getMonth() + 1).padStart(2, "0");
         const day = String(today.getDate()).toString().padStart(2, "0");
 
         const birthdays = (participants || []).filter((p: Participant) => {
           if (!p.fechaNacimiento) return false;
-          const [, , birthMonthDay] = p.fechaNacimiento.split("-");
-          return birthMonthDay === `${month}-${day}`;
+          const [, birthMonth, birthDay] = p.fechaNacimiento.split("-");
+          return `${birthMonth}-${birthDay}` === `${month}-${day}`;
         });
 
         setBirthdaysToday(birthdays);

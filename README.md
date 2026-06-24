@@ -45,11 +45,14 @@ docker-compose logs -f app
 ### Database
 
 ```bash
-# Push schema to database
+# Local development only: push schema to a disposable database
 bun run db:push
 
 # Run migrations
 bun run db:migrate
+
+# Apply hardening constraints after schema creation
+bun run db:harden
 ```
 
 ## Testing
@@ -85,12 +88,21 @@ DATABASE_URL=
 
 # Authentication
 AUTH_SECRET=
+ADMIN_PASSWORD=
+VIEWER_PASSWORD=
+CRON_SECRET=
 
-# AWS S3 (for image uploads)
-AWS_ACCESS_KEY_ID=
-AWS_SECRET_ACCESS_KEY=
-AWS_REGION=
-AWS_BUCKET_NAME=
+# MinIO/S3-compatible image storage
+MINIO_ENDPOINT=
+MINIO_PUBLIC_URL=
+MINIO_ROOT_USER=
+MINIO_ROOT_PASSWORD=
+MINIO_BUCKET_NAME=
+
+# Web Push
+VAPID_PUBLIC_KEY=
+VAPID_PRIVATE_KEY=
+VAPID_SUBJECT=
 
 # Other
 NEXT_PUBLIC_APP_URL=
@@ -119,8 +131,10 @@ NEXT_PUBLIC_APP_URL=
 | `bun build` | Build for production |
 | `bun start` | Start production server |
 | `bun lint` | Run ESLint |
-| `bun run db:push` | Push Drizzle schema |
+| `bun run typecheck` | Run TypeScript without emitting files |
+| `bun run db:push` | Push Drizzle schema for local/disposable databases |
 | `bun run db:migrate` | Run Drizzle migrations |
+| `bun run db:harden` | Apply DB integrity hardening SQL |
 | `bunx playwright test` | Run E2E tests |
 
 ## CodeGraph Index

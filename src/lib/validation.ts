@@ -12,6 +12,15 @@ export const stringSchema = z.string().min(1);
 
 export const optionalStringSchema = z.string().optional();
 
+export const MAX_IMAGE_DATA_URL_LENGTH = 12 * 1024 * 1024;
+
+const roleSchema = z.enum(["admin", "viewer"]);
+const imageReferenceSchema = z
+  .string()
+  .max(MAX_IMAGE_DATA_URL_LENGTH, { error: "La imagen es demasiado grande" })
+  .optional()
+  .nullable();
+
 /**
  * Participant schemas
  */
@@ -20,13 +29,23 @@ export const participantSchema = z.object({
   apellido: stringSchema.min(1),
   fechaNacimiento: z.string().optional().nullable(),
   sexo: z.enum(["M", "F"]),
-  foto: optionalStringSchema,
-  fotoAltaCalidad: optionalStringSchema,
-  invitadosPor: z.number().optional().nullable(),
+  foto: imageReferenceSchema,
+  fotoAltaCalidad: imageReferenceSchema,
+  invitadoPor: z.number().int().positive().optional().nullable(),
 });
 
 export const participantInputSchema = participantSchema.extend({
-  id: z.number().optional(),
+  id: z.number().int().positive().optional(),
+});
+
+export const participantSaveSchema = z.object({
+  data: participantInputSchema,
+  isNew: z.boolean(),
+  invitadorId: z.number().int().positive().optional().nullable(),
+});
+
+export const deleteByIdSchema = z.object({
+  id: z.number().int().positive(),
 });
 
 /**
@@ -35,9 +54,23 @@ export const participantInputSchema = participantSchema.extend({
 export const activitySchema = z.object({
   fecha: stringSchema,
   titulo: optionalStringSchema,
-  cantEquipos: z.number().min(2).max(10).default(4),
+  cantEquipos: z.number().int().min(2).max(10).default(4),
   locked: z.boolean().default(false),
-  version: z.number().default(1),
+  version: z.number().int().positive().default(1),
+});
+
+export const activitySaveSchema = z.object({
+  data: activitySchema.extend({
+    id: z.number().int().positive().optional(),
+  }).passthrough(),
+  isNew: z.boolean(),
+});
+
+export const activityPatchSchema = z.object({
+  activityId: z.number().int().positive(),
+  type: stringSchema,
+  data: z.record(z.string(), z.unknown()),
+  version: z.number().int().positive().optional(),
 });
 
 /**
@@ -63,17 +96,47 @@ export const configUpdateSchema = z.object({
  */
 export const loginSchema = z.object({
   password: stringSchema.min(1),
-  role: z.enum(["admin", "viewer"]).optional(),
+  role: roleSchema.optional(),
 });
 
 /**
  * Push subscription schema
  */
 export const pushSubscriptionSchema = z.object({
-  participantId: z.number().positive(),
-  endpoint: stringSchema.url(),
+  participantId: z.number().int().positive().optional().nullable(),
+  endpoint: z.url(),
   p256dh: stringSchema,
   auth: stringSchema,
+});
+
+export const pushUnsubscribeSchema = z.object({
+  endpoint: z.url(),
+});
+
+export const subscriptionActionSchema = z.discriminatedUnion("action", [
+  z.object({
+    action: z.literal("subscribe"),
+    participantId: z.number().int().positive().optional().nullable(),
+    endpoint: z.url(),
+    p256dh: stringSchema,
+    auth: stringSchema,
+  }),
+  z.object({
+    action: z.literal("unsubscribe"),
+    endpoint: z.url(),
+  }),
+  z.object({
+    action: z.literal("delete_all"),
+  }),
+]);
+
+export const notificationTriggerSchema = z.object({
+  action: z.literal("send_birthday_notifications"),
+  date: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, { error: "Fecha inválida" })
+    .optional()
+    .nullable(),
 });
 
 /**

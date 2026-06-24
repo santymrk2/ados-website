@@ -57,13 +57,22 @@ jobs:
           DATABASE_URL: postgresql://ados:ados_password@localhost:5432/ados
           ADMIN_PASSWORD: admin123
           VIEWER_PASSWORD: viewer123
+          AUTH_SECRET: ci-auth-secret
+          CRON_SECRET: ci-cron-secret
         run: bun run db:push
+
+      - name: Apply database hardening constraints
+        env:
+          DATABASE_URL: postgresql://ados:ados_password@localhost:5432/ados
+        run: bun run db:harden
 
       - name: Run Playwright tests
         env:
           DATABASE_URL: postgresql://ados:ados_password@localhost:5432/ados
           ADMIN_PASSWORD: admin123
           VIEWER_PASSWORD: viewer123
+          AUTH_SECRET: ci-auth-secret
+          CRON_SECRET: ci-cron-secret
         run: |
           bun run dev &
           echo "Waiting for dev server to start (max 45s)..."

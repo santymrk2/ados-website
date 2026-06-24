@@ -1,12 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { requireAdmin, requireAuth } from "@/lib/api-utils";
+import { parseBody, requireAdmin, requireAuth } from "@/lib/api-utils";
 
 export const dynamic = 'force-dynamic';
 import * as schema from "@/lib/schema";
 import { eq, inArray, and, gt, sql } from "drizzle-orm";
 import { eventBus } from "@/lib/eventBus";
-import { validate, configUpdateSchema } from "@/lib/validation";
+import {
+  activityPatchSchema,
+  activitySaveSchema,
+  configUpdateSchema,
+  deleteByIdSchema,
+  validate,
+} from "@/lib/validation";
 import { TEAMS } from "@/lib/constants";
 
 // Helper function to return server errors without exposing details
@@ -45,6 +51,96 @@ type AllowedConfigKey = typeof ALLOWED_CONFIG_KEYS[number];
 
 type ActivityParticipantRow = typeof schema.activityParticipants.$inferSelect;
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+type PositionMap = Record<string, string[]>;
+
+interface ActivityGamePayload {
+  id?: number | string;
+  nombre?: string | null;
+  pos?: PositionMap | null;
+}
+
+interface ActivityMatchPayload {
+  id?: number | string;
+  deporte?: string | null;
+  genero?: string | null;
+  eq1: string;
+  eq2: string;
+  resultado?: string | null;
+}
+
+interface ActivityGoalPayload {
+  id?: number;
+  pid?: number | null;
+  tipo: string;
+  cant: number;
+  matchId?: number | string | null;
+  team?: string | null;
+}
+
+interface ActivityExtraPayload {
+  id?: number;
+  pid?: number | null;
+  team?: string | null;
+  puntos: number;
+  motivo?: string | null;
+}
+
+interface ActivityInvitationPayload {
+  id?: number;
+  invitador?: number | null;
+  invitadoId?: number | null;
+  invitado_id?: number | null;
+}
+
+interface ActivitySavePayload extends Record<string, unknown> {
+  id?: number;
+  fecha: string;
+  titulo?: string | null;
+  cantEquipos?: number;
+  locked?: boolean;
+  version?: number;
+  asistentes?: number[];
+  equipos?: Record<string, string>;
+  puntuales?: number[];
+  biblias?: number[];
+  socials?: number[];
+  juegos?: ActivityGamePayload[];
+  partidos?: ActivityMatchPayload[];
+  goles?: ActivityGoalPayload[];
+  extras?: ActivityExtraPayload[];
+  descuentos?: ActivityExtraPayload[];
+  invitaciones?: ActivityInvitationPayload[];
+}
+
+interface ActivityPatchPayload extends Record<string, unknown> {
+  k: AllowedConfigKey;
+  v: boolean | string | number;
+  locked?: boolean;
+  titulo?: string | null;
+  fecha?: string | null;
+  cantEquipos?: number | string | null;
+  participantId: number;
+  value: boolean;
+  team: string | null;
+  equipos?: Record<string, string>;
+  pid: number | null;
+  tipo: string;
+  cant: number;
+  matchId: number | null;
+  id: number;
+  puntos: number;
+  motivo: string | null;
+  nombre: string;
+  juegoId: number;
+  pos: PositionMap;
+  deporte: string;
+  genero: string;
+  eq1: string;
+  eq2: string;
+  resultado: string | null;
+  invitador: number | null;
+  invitadoId: number | null;
+}
 
 function getActiveTeams(cantEquipos: number | null | undefined) {
   return TEAMS.slice(0, cantEquipos || 4);
@@ -317,8 +413,13 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const body = await request.json();
-    const { data, isNew } = body;
+    const parsed = await parseBody(request, activitySaveSchema);
+    if (!parsed.success) {
+      return parsed.error;
+    }
+
+    const { isNew } = parsed.data;
+    const data = parsed.data.data as ActivitySavePayload;
 
     if (!data) {
       return clientError("Datos inválidos");
@@ -422,14 +523,18 @@ export async function POST(request: NextRequest) {
       );
 
       if (attendeeIds.length > 0) {
-        const apData = attendeeIds.map((pid: number) => ({
-          activityId: currentActId,
-          participantId: pid,
-          equipo: data.equipos && activeTeams.includes(data.equipos[pid]) ? data.equipos[pid] : null,
-          esPuntual: (data.puntuales || []).includes(pid),
-          tieneBiblia: (data.biblias || []).includes(pid),
-          esSocial: (data.socials || []).includes(pid),
-        }));
+        const apData = attendeeIds.map((pid: number) => {
+          const assignedTeam = data.equipos?.[String(pid)];
+
+          return {
+            activityId: currentActId,
+            participantId: pid,
+            equipo: assignedTeam && activeTeams.includes(assignedTeam) ? assignedTeam : null,
+            esPuntual: (data.puntuales || []).includes(pid),
+            tieneBiblia: (data.biblias || []).includes(pid),
+            esSocial: (data.socials || []).includes(pid),
+          };
+        });
         await tx.insert(schema.activityParticipants).values(apData);
       }
 
@@ -583,13 +688,16 @@ export async function PATCH(request: NextRequest) {
   }
 
   try {
-    const body = await request.json();
-    const { activityId, type, data, version } = body;
+    const parsed = await parseBody(request, activityPatchSchema);
+    if (!parsed.success) {
+      return parsed.error;
+    }
+
+    const { activityId, type, version } = parsed.data;
+    const data = parsed.data.data as ActivityPatchPayload;
     const fail = (message: string, status = 400, details?: Record<string, unknown>): never => {
       throw new ClientError(message, status, details);
     };
-
-    if (!activityId) fail("Activity ID is required");
 
     const result = await db.transaction(async (tx) => {
       const clientVersion = Number(version || 1);
@@ -612,9 +720,8 @@ export async function PATCH(request: NextRequest) {
       switch (type) {
         case "config": {
           const validation = validate(configUpdateSchema, { id: activityId, data });
-          if (!validation.success) fail(validation.error);
-
-          const { k, v } = data;
+          const config = validation.success ? validation.data : fail(validation.error);
+          const { k, v } = config.data;
           if (!ALLOWED_CONFIG_KEYS.includes(k as AllowedConfigKey)) {
             console.warn(`[SECURITY] Blocked attempt to set disallowed config key: ${k}`);
             fail("Clave de configuración no permitida");
@@ -850,13 +957,15 @@ export async function PATCH(request: NextRequest) {
           if (data.id) {
             await tx.delete(schema.goles).where(eq(schema.goles.id, data.id));
           } else {
+            const participantId = data.pid ?? fail("ID de participante requerido");
+
             const existing = await tx
               .select()
               .from(schema.goles)
               .where(
                 and(
                   eq(schema.goles.activityId, activityId),
-                  eq(schema.goles.participantId, data.pid),
+                  eq(schema.goles.participantId, participantId),
                   eq(schema.goles.tipo, data.tipo),
                 ),
               )
@@ -901,7 +1010,7 @@ export async function PATCH(request: NextRequest) {
             participantId: number | null;
             team: string | null;
             puntos: number;
-            motivo: string;
+            motivo: string | null;
           }> = {};
           if (pid !== undefined) updateData.participantId = pid;
           if (team !== undefined) updateData.team = team;
@@ -1139,8 +1248,12 @@ export async function DELETE(request: NextRequest) {
   }
 
   try {
-    const body = await request.json();
-    const { id } = body;
+    const parsed = await parseBody(request, deleteByIdSchema);
+    if (!parsed.success) {
+      return parsed.error;
+    }
+
+    const { id } = parsed.data;
 
     await db
       .delete(schema.activityParticipants)

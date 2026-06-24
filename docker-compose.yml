@@ -33,6 +33,8 @@ services:
     environment:
       DATABASE_URL: postgresql://ados:ados_password@db:5432/ados
       NODE_ENV: development
+      AUTH_SECRET: local-dev-auth-secret-change-me
+      CRON_SECRET: local-dev-cron-secret-change-me
     depends_on:
       db:
         condition: service_healthy

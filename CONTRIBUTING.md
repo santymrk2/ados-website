@@ -23,9 +23,18 @@ hotfix/*      -> main
 
 ## Pull Requests
 
-Every PR must pass CI before merge. CI validates branch rules, lint, typecheck, build, database schema push, and Playwright tests.
+Every PR must pass CI before merge. CI validates branch rules, lint, typecheck, build, database schema push, database hardening, and Playwright tests.
 
 Do not merge broken CI because "it works locally". Locally is not production. Cut the crap and fix the real failure.
+
+## Agent Workflow
+
+Before editing this repository with Codex or another agent, load the project skill that matches the work:
+
+- `$ados-website`: app code, docs, env vars, local Docker, Drizzle, MinIO, Playwright, and project conventions.
+- `$ados-ci-dokploy`: GitHub Actions, GHCR tags, Dokploy webhooks, branch protection, deploys, hotfixes, and backports.
+
+Framework-specific work still needs the framework skill too: Next.js, React, TypeScript, Tailwind, or Playwright. One skill does not magically replace fundamentals.
 
 ## Testing Deploys
 

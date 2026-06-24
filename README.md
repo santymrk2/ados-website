@@ -13,6 +13,24 @@ Plataforma web para gestionar talleres, actividades y participantes de ADOS (Ass
 - **Testing**: Playwright
 - **Deployment**: Docker + GHCR + Dokploy
 
+## Agent Skills
+
+This project has machine-local Codex skills that coders and agents must load before touching the repo:
+
+| Skill | Use it for |
+| --- | --- |
+| `$ados-website` | App code, docs, env vars, local Docker, Drizzle, MinIO, Playwright, and project conventions |
+| `$ados-ci-dokploy` | GitHub Actions, GHCR image tags, Dokploy webhooks, branch protection, releases, hotfixes, and backports |
+
+The skill files live at:
+
+```text
+~/.codex/skills/ados-website/SKILL.md
+~/.codex/skills/ados-ci-dokploy/SKILL.md
+```
+
+`AGENTS.md` is the repo-level entrypoint for agent behavior. Keep it aligned with this README and `CONTRIBUTING.md`.
+
 ## Local Development
 
 ### Prerequisites
@@ -157,7 +175,8 @@ The quality gate runs:
 3. TypeScript typecheck;
 4. production build;
 5. Drizzle schema push against a CI PostgreSQL service;
-6. Playwright tests.
+6. database hardening against CI PostgreSQL;
+7. Playwright tests.
 
 ## Dokploy
 

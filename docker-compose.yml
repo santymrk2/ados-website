@@ -1,11 +1,9 @@
-# Local Development Compose
-# Uso: docker compose up --build
+# Local development stack.
+# Usage: docker compose up --build
 
 services:
-  # PostgreSQL database
   db:
     image: postgres:18-alpine
-    container_name: ados-db
     restart: unless-stopped
     environment:
       POSTGRES_USER: ados
@@ -21,26 +19,58 @@ services:
       timeout: 5s
       retries: 5
 
-  # Next.js app - Desarrollo local
+  minio:
+    image: minio/minio:latest
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+
+  minio-init:
+    image: minio/mc:latest
+    depends_on:
+      - minio
+    entrypoint: ["/bin/sh", "-c"]
+    command: >
+      "until mc alias set local http://minio:9000 minioadmin minioadmin; do sleep 2; done;
+      mc mb --ignore-existing local/activados;
+      mc anonymous set download local/activados"
+
   app:
     build:
       context: .
       dockerfile: Dockerfile.dev
-    container_name: ados-app
     restart: unless-stopped
     ports:
       - "3000:3000"
     environment:
       DATABASE_URL: postgresql://ados:ados_password@db:5432/ados
       NODE_ENV: development
+      MINIO_ENDPOINT: http://minio:9000
+      MINIO_PUBLIC_URL: http://localhost:9000
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+      MINIO_BUCKET_NAME: activados
+      ADMIN_PASSWORD: admin123
+      VIEWER_PASSWORD: viewer123
+      NEXT_PUBLIC_APP_URL: http://localhost:3000
     depends_on:
       db:
         condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
     volumes:
       - .:/app
       - /app/node_modules
       - /app/.next
-    command: sh -c "npm run db:push && npx next dev --turbopack"
+    command: sh -c "bun run db:push && bun run dev -- --hostname 0.0.0.0"
 
 volumes:
   postgres_data:
+  minio_data:

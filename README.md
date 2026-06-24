@@ -1,6 +1,6 @@
 # ADOS Website
 
-Plataforma web para la gestión de talleres y actividades de ADOS (Associació de Down Catalunya).
+Plataforma web para gestionar talleres, actividades y participantes de ADOS (Associacio de Down Catalunya).
 
 ## Tech Stack
 
@@ -9,192 +9,236 @@ Plataforma web para la gestión de talleres y actividades de ADOS (Associació d
 - **Runtime**: Bun
 - **Styling**: Tailwind CSS 4 + shadcn/ui
 - **Database**: PostgreSQL + Drizzle ORM
-- **Testing**: Playwright (E2E)
-- **Deployment**: Docker + Dokploy
+- **Object storage**: MinIO through S3-compatible APIs
+- **Testing**: Playwright
+- **Deployment**: Docker + GHCR + Dokploy
 
-## Getting Started
+## Local Development
 
 ### Prerequisites
 
-- Bun >= 1.0
-- Node.js >= 20 (solo para desarrollo local con docker-compose)
-- Docker & Docker Compose
+- Bun 1.3.13
+- Docker and Docker Compose for the full local stack
 
-### Local Development
+### App Only
 
 ```bash
-# Install dependencies
 bun install
-
-# Run development server
 bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000)
+Open `http://localhost:3000`.
 
-### Docker Development
-
-```bash
-# Start all services (app + database)
-docker-compose up -d
-
-# View logs
-docker-compose logs -f app
-```
-
-### Database
+### Full Docker Stack
 
 ```bash
-# Push schema to database
-bun run db:push
-
-# Run migrations
-bun run db:migrate
+docker compose up --build
 ```
 
-## Testing
+This starts:
 
-```bash
-# Run all tests
-bunx playwright test
+- Next.js app: `http://localhost:3000`
+- PostgreSQL: `localhost:5432`
+- MinIO API: `http://localhost:9000`
+- MinIO console: `http://localhost:9001`
 
-# Run tests with UI
-bunx playwright test --ui
+Default local credentials:
 
-# Run specific test file
-bunx playwright test tests/example.spec.ts
-```
+- PostgreSQL: `ados` / `ados_password`
+- MinIO: `minioadmin` / `minioadmin`
+- App viewer password: `viewer123`
+- App admin password: `admin123`
 
-## Build
+## Scripts
 
-### Docker Production
-
-```bash
-# Build image
-docker build -t adosh-website .
-
-# Run container
-docker run -p 3000:3000 adosh-website
-```
+| Command | Description |
+| --- | --- |
+| `bun dev` | Start the development server |
+| `bun build` | Build the production app |
+| `bun start` | Start the production server |
+| `bun lint` | Run ESLint |
+| `bun run typecheck` | Run TypeScript checks without emitting files |
+| `bun run test:e2e` | Run Playwright E2E tests |
+| `bun run db:push` | Push Drizzle schema changes |
+| `bun run db:migrate` | Run Drizzle migrations |
 
 ## Environment Variables
+
+Required in Dokploy:
 
 ```env
 # Database
 DATABASE_URL=
 
 # Authentication
-AUTH_SECRET=
+ADMIN_PASSWORD=
+VIEWER_PASSWORD=
 
-# AWS S3 (for image uploads)
-AWS_ACCESS_KEY_ID=
-AWS_SECRET_ACCESS_KEY=
-AWS_REGION=
-AWS_BUCKET_NAME=
+# MinIO
+MINIO_ENDPOINT=
+MINIO_PUBLIC_URL=
+MINIO_ROOT_USER=
+MINIO_ROOT_PASSWORD=
+MINIO_BUCKET_NAME=activados
 
-# Other
+# Web Push
+VAPID_PUBLIC_KEY=
+VAPID_PRIVATE_KEY=
+VAPID_SUBJECT=mailto:admin@example.com
+
+# Public app URL
 NEXT_PUBLIC_APP_URL=
 ```
 
+`MINIO_ENDPOINT` should be the internal service URL reachable by the app container. `MINIO_PUBLIC_URL` should be the browser-reachable URL used for signed image URLs.
+
 ## Project Structure
 
-```
-├── app/                    # Next.js App Router
-├── components/             # React components
-│   ├── ui/                 # shadcn/ui components
-│   └── ...
-├── lib/                    # Utilities & configs
-├── db/                     # Drizzle ORM setup
-│   ├── schema/             # Database tables
-│   └── migrations/        # SQL migrations
-├── public/                 # Static assets
-└── tests/                  # Playwright E2E tests
-```
+```text
+src/
+├── app/          # Next.js App Router routes and API handlers
+├── components/   # UI and feature components
+├── hooks/        # React hooks
+├── lib/          # Database, schema, utilities, cache, logger
+├── services/     # MinIO and web-push services
+├── store/        # Client state
+└── types/        # Shared TypeScript types
 
-## Scripts
-
-| Command | Description |
-|---------|-------------|
-| `bun dev` | Start development server |
-| `bun build` | Build for production |
-| `bun start` | Start production server |
-| `bun lint` | Run ESLint |
-| `bun run db:push` | Push Drizzle schema |
-| `bun run db:migrate` | Run Drizzle migrations |
-| `bunx playwright test` | Run E2E tests |
-
-## CodeGraph Index
-
-Este proyecto usa [CodeGraph](https://opencode.ai) para indexar el AST del código y permitir búsquedas estructurales rápidas desde el asistente AI.
-
-```bash
-# Reindexar después de cambios grandes (nuevos archivos, refactors, etc.)
-codegraph init -i
-
-# Verificar estado del índice
-codegraph status
+tests/            # Playwright tests and page objects
+public/           # Static assets and PWA files
 ```
 
-El watcher de CodeGraph detecta cambios en tiempo real con ~500ms de delay, pero después de cambios estructurales grandes conviene reindexar manualmente.
+## Branch Model
 
-## Git Workflow
+This repository uses two long-lived branches:
 
+- `develop`: integration and testing
+- `main`: production
+
+Allowed pull request flows:
+
+```text
+feature/*     -> develop
+fix/*         -> develop
+refactor/*    -> develop
+enhancement/* -> develop
+dependabot/*  -> develop
+backport/*    -> develop
+
+develop       -> main
+hotfix/*      -> main
 ```
-develop → (PR) → main → tag → deploy
-```
 
-- **develop**: Branch de desarrollo
-- **main**: Branch de producción
-- **tags**: Versiones (v1.0.0, etc.)
+Do not push directly to `develop` or `main`. Open a pull request and let CI validate it.
 
-El CI corre en todo push/PR. El CD (Docker push a ghcr.io) solo corre en push a `main` o con tags.
+## CI/CD
 
-## Deploy with Dokploy
+GitHub Actions is split by responsibility:
+
+- `CI`: validates pull requests into `develop` and `main`.
+- `Deploy Staging`: validates and deploys every push to `develop`.
+- `Deploy Production`: validates and deploys every push to `main`.
+- `Hotfix Backport`: opens a backport PR to `develop` after a merged `hotfix/* -> main` PR.
+
+The quality gate runs:
+
+1. dependency install with `bun install --frozen-lockfile`;
+2. ESLint;
+3. TypeScript typecheck;
+4. production build;
+5. Drizzle schema push against a CI PostgreSQL service;
+6. Playwright tests.
+
+## Dokploy
+
+### Testing
+
+| Field | Value |
+| --- | --- |
+| Image | `ghcr.io/santymrk2/ados-website:staging` |
+| Registry | GitHub Container Registry |
+| Dockerfile | `./Dockerfile` |
+| GitHub environment | `staging` |
+| GitHub secret | `DOKPLOY_STAGING_WEBHOOK_URL` |
 
 ### Production
 
-| Campo | Valor |
-|-------|-------|
-| Image | `ghcr.io/santymrk2/ados-website` |
-| Tag | `latest` |
+| Field | Value |
+| --- | --- |
+| Image | `ghcr.io/santymrk2/ados-website:latest` |
 | Registry | GitHub Container Registry |
 | Dockerfile | `./Dockerfile` |
+| GitHub environment | `production` |
+| GitHub secret | `DOKPLOY_PRODUCTION_WEBHOOK_URL` |
 
-### Staging/Test Environment
+In Dokploy, configure registry authentication for `ghcr.io` with a GitHub token that can read packages.
 
-| Campo | Valor |
-|-------|-------|
-| Image | `ghcr.io/santymrk2/ados-website` |
-| Tag | `staging` |
-| Registry | GitHub Container Registry |
-| Dockerfile | `./Dockerfile` |
+The production image still runs `drizzle-kit push` on container startup. That keeps the current deploy behavior, but it is technical debt: production should eventually move to controlled migrations.
 
-### Registry Authentication in Dokploy
+## Release Workflow
 
-En Dokploy, vas a **Settings → Registry** y agregás:
+### Normal Release
 
-- **Registry URL**: `ghcr.io`
-- **Username**: Tu username de GitHub
-- **Password**: GitHub Personal Access Token (con permisos `read:packages`)
+1. Merge day-to-day work into `develop`.
+2. Confirm testing deploy from `ghcr.io/santymrk2/ados-website:staging`.
+3. Open a PR from `develop` to `main`.
+4. Merge after CI and review.
+5. GitHub Actions publishes `ghcr.io/santymrk2/ados-website:latest`.
+6. Dokploy production redeploys from `latest`.
 
-### Release Workflow
+No backport is needed for normal releases because production receives code that already came from `develop`.
+
+### Hotfix
+
+1. Branch from `main` using `hotfix/<short-description>`.
+2. Open a PR to `main`.
+3. Merge after CI and review.
+4. GitHub Actions publishes `latest` and redeploys production.
+5. GitHub Actions opens a `backport/* -> develop` PR.
+6. Review and merge the backport PR so testing catches up with production.
+
+## Required GitHub Repository Settings
+
+### Actions
+
+- Set workflow permissions to **Read and write permissions**.
+- Enable **Allow GitHub Actions to create and approve pull requests**.
+- Verify GitHub Actions can publish packages to GHCR.
+
+### Environments
+
+Create:
+
+- `staging` with secret `DOKPLOY_STAGING_WEBHOOK_URL`.
+- `production` with secret `DOKPLOY_PRODUCTION_WEBHOOK_URL`.
+
+Recommended for `production`: require reviewer approval before deployment.
+
+### Branch Protection
+
+Protect `develop`:
+
+- require pull request before merging;
+- require status checks `Branch Rules` and `Quality Gate`;
+- block force pushes;
+- block branch deletion.
+
+Protect `main`:
+
+- require pull request before merging;
+- require status checks `Branch Rules` and `Quality Gate`;
+- require at least one approval;
+- block force pushes;
+- block branch deletion.
+
+## CodeGraph Index
+
+This project uses CodeGraph for structural code search.
 
 ```bash
-# Para PRODUCCIÓN (dispara build + push latest a ghcr.io)
-git checkout main
-git pull
-git push origin main
-
-# O con tag (dispara build + push latest + v1.0.0 a ghcr.io)
-git tag v1.0.0
-git push origin v1.0.0
-
-# Para STAGING (dispara build + push staging a ghcr.io)
-git checkout develop
-git push origin develop
+codegraph init -i
+codegraph status
 ```
-
-El CI/CD llama al webhook de Dokploy automáticamente para redeploy.
 
 ## License
 

@@ -53,7 +53,7 @@ jobs:
                   echo "OK: release or hotfix branch targeting main."
                   ;;
                 *)
-                  echo "::error::Only develop or hotfix/* may target main."
+                  echo "::error::Only develop or hotfix/* may target main. Day-to-day branches like feature/*, fix/*, refactor/*, enhancement/*, dependabot/*, and backport/* must target develop."
                   exit 1
                   ;;
               esac

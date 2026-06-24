@@ -20,6 +20,10 @@ import {
 } from "@/lib/api-client";
 import type { Activity, Participant, DBData } from "@/lib/types";
 
+type ActivityDraft = Omit<Activity, "id"> & {
+  id?: number | null;
+};
+
 const RETRYABLE_QUICK_UPDATE_TYPES = new Set([
   "attendance",
   "puntuales",
@@ -56,7 +60,7 @@ export function useDatabase() {
   }, []);
 
   // Guardar actividad
-  const saveActivity = useCallback(async (activity: Activity, isNew: boolean) => {
+  const saveActivity = useCallback(async (activity: ActivityDraft, isNew: boolean) => {
     const id = await dbSaveActivity(activity, isNew);
     await refreshData(false);
     return id;

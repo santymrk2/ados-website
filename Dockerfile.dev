@@ -1,19 +1,15 @@
-# Development Dockerfile for Activados
-# Uso local con docker compose
+# Development Dockerfile for ADOS Website.
+# Used by docker compose for local development.
 
-FROM node:22-alpine
+FROM oven/bun:1-alpine
 
 WORKDIR /app
 
-# Instalar dependencias
-COPY package.json bun.lock* ./
-RUN npm install
+COPY package.json bun.lock ./
+RUN bun install --frozen-lockfile
 
-# Copiar código fuente
 COPY . .
 
-# Exponer puerto
 EXPOSE 3000
 
-# Comando para desarrollo - usa node/npx para consistencia
-CMD ["npx", "next", "dev", "--turbopack"]
+CMD ["bun", "run", "dev", "--", "--hostname", "0.0.0.0"]

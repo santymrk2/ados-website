@@ -15,7 +15,7 @@ export class LoginPage extends BasePage {
     this.submitButton = page.getByRole("button", { name: /Ingresar como/ });
     this.adminToggle = page.getByRole("switch", { name: /admin/i });
     this.lockIcon = page.getByRole("button", { name: "Mostrar selector de rol" });
-    this.errorMessage = page.getByText(/contraseña/i);
+    this.errorMessage = page.getByText("Contraseña incorrecta");
     this.showPasswordButton = page.getByRole("button", { name: "Mostrar contraseña" });
   }
 
@@ -32,9 +32,15 @@ export class LoginPage extends BasePage {
     }
 
     await this.passwordInput.fill(password);
+
+    const loginResponse = this.page.waitForResponse(
+      (response) =>
+        response.url().includes("/api/login") &&
+        response.request().method() === "POST",
+    );
+
     await this.submitButton.click();
-    // Don't wait for networkidle - SSE keeps connection open
-    await this.page.waitForLoadState("domcontentloaded");
+    await loginResponse;
   }
 
   async togglePasswordVisibility(): Promise<void> {
@@ -46,7 +52,9 @@ export class LoginPage extends BasePage {
   }
 
   async expectAuthenticatedHome(): Promise<void> {
-    await expect(this.page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
+    await expect(this.page.getByRole("heading", { name: "Dashboard" })).toBeVisible({
+      timeout: 15_000,
+    });
   }
 }
 

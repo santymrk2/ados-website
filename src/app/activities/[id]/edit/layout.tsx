@@ -167,7 +167,7 @@ export default function EditLayout({ children, mode = "edit" }: EditLayoutProps)
       return updated;
     });
     if (!skipSave) {
-      setSaveStatus("saving");
+      setSaveStatus("unsaved");
     }
   }, []);
 
@@ -274,7 +274,7 @@ export default function EditLayout({ children, mode = "edit" }: EditLayoutProps)
 
   // Guardado automático en cambios
   useEffect(() => {
-    if (saveStatus !== "saved" && activity.id) {
+    if (saveStatus === "unsaved" && activity.id) {
       const timer = setTimeout(doSave, 2000);
       return () => clearTimeout(timer);
     }
@@ -340,11 +340,14 @@ export default function EditLayout({ children, mode = "edit" }: EditLayoutProps)
   }
 
   // Status indicator - siempre color secondary
+  const displaySaveStatus: SaveStatus = pendingOps.size > 0 ? "saving" : saveStatus;
+
   const statusConfig = {
     saved: { label: "Guardado", icon: Check, animate: false },
+    unsaved: { label: "Sin guardar", icon: Save, animate: false },
     saving: { label: "Guardando...", icon: Loader2, animate: true },
     error: { label: "Error", icon: AlertCircle, animate: false },
-  }[saveStatus] ?? { label: "", icon: Check, animate: false };
+  }[displaySaveStatus] ?? { label: "", icon: Check, animate: false };
 
   const StatusIcon = statusConfig.icon;
 
@@ -375,7 +378,7 @@ export default function EditLayout({ children, mode = "edit" }: EditLayoutProps)
               onClick={doSave}
               variant="ghost"
               size="sm"
-              disabled={saveStatus === "saving"}
+              disabled={displaySaveStatus === "saving"}
               className={cn(
                 "gap-1.5 bg-secondary/20 text-secondary hover:bg-secondary/30 group"
               )}

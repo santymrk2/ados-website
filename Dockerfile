@@ -52,8 +52,12 @@ COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
-# Copiamos dependencias externas requeridas por serverExternalPackages.
+# Copiamos dependencias externas requeridas por serverExternalPackages y migraciones
+# para poder ejecutar Drizzle contra staging/produccion desde la imagen desplegada.
 COPY --from=deps /app/node_modules ./node_modules
+COPY --from=builder --chown=nextjs:nodejs /app/package.json ./package.json
+COPY --from=builder --chown=nextjs:nodejs /app/drizzle.config.ts ./drizzle.config.ts
+COPY --from=builder --chown=nextjs:nodejs /app/drizzle ./drizzle
 
 # Exponemos el puerto
 EXPOSE 3000

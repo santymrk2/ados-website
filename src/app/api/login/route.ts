@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import {
   AUTH_COOKIE_MAX_AGE_SECONDS,
   AUTH_ROLES,
+  REQUIRED_AUTH_ENV_VARS,
   createAuthCookieValue,
+  getMissingEnvVars,
   parseBody,
   type AuthRole,
 } from "@/lib/api-utils";
@@ -70,12 +72,20 @@ export async function POST(request: NextRequest) {
     const { password, role } = parsed.data;
 
     // Require environment variables - no defaults!
+    const missingEnvVars = getMissingEnvVars(REQUIRED_AUTH_ENV_VARS);
+    if (missingEnvVars.length > 0) {
+      console.error(`[AUTH] Missing required environment variables: ${missingEnvVars.join(", ")}`);
+      return NextResponse.json(
+        { success: false, error: "Error de configuración del servidor" },
+        { status: 500 }
+      );
+    }
+
     const adminPassword = process.env.ADMIN_PASSWORD;
     const viewerPassword = process.env.VIEWER_PASSWORD;
 
-    // If passwords not configured, fail securely
+    // Keep TypeScript honest even though the environment was checked above.
     if (!adminPassword || !viewerPassword) {
-      console.error("[AUTH] Passwords not configured in environment variables");
       return NextResponse.json(
         { success: false, error: "Error de configuración del servidor" },
         { status: 500 }

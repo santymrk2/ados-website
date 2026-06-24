@@ -74,6 +74,9 @@ bun run db:migrate
 bun run db:harden
 ```
 
+Use `db:push` only for local or disposable databases. Shared environments must use
+versioned migrations with `bun run db:migrate`.
+
 ## Scripts
 
 | Command | Description |
@@ -174,7 +177,7 @@ The quality gate runs:
 2. ESLint;
 3. TypeScript typecheck;
 4. production build;
-5. Drizzle schema push against a CI PostgreSQL service;
+5. Drizzle migrations against a CI PostgreSQL service;
 6. database hardening against CI PostgreSQL;
 7. Playwright tests.
 
@@ -203,6 +206,25 @@ The quality gate runs:
 In Dokploy, configure registry authentication for `ghcr.io` with a GitHub token that can read packages.
 
 The production image starts the standalone Next.js server directly. Schema changes and hardening must be handled explicitly as part of your deployment process instead of relying on container startup side effects.
+
+### Database Migrations
+
+Deploys do not run database migrations automatically at container startup. Run
+the migrations explicitly against the target environment before relying on the
+new app image:
+
+```bash
+bun run db:migrate
+```
+
+For staging, run migrations against the testing database before or immediately
+after deploying `ghcr.io/santymrk2/ados-website:staging`.
+
+For production, run the same migration command against the production database
+before or during the `develop -> main` release. The image includes
+`drizzle.config.ts` and the `drizzle/` migration directory so operators can run
+Drizzle from the deployed container or another trusted environment with database
+network access.
 
 ## Release Workflow
 

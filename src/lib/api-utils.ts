@@ -16,6 +16,14 @@ export const AUTH_ROLES = {
 
 export type AuthRole = (typeof AUTH_ROLES)[keyof typeof AUTH_ROLES];
 
+export const REQUIRED_AUTH_ENV_VARS = [
+  "AUTH_SECRET",
+  "ADMIN_PASSWORD",
+  "VIEWER_PASSWORD",
+] as const;
+
+export type RequiredAuthEnvVar = (typeof REQUIRED_AUTH_ENV_VARS)[number];
+
 interface AuthCookiePayload {
   role: AuthRole;
   iat: number;
@@ -234,6 +242,10 @@ export function requireAdmin(request: NextRequest): { success: true } | { succes
   }
 
   return { success: true };
+}
+
+export function getMissingEnvVars(envVars: readonly string[]) {
+  return envVars.filter((envVar) => !process.env[envVar]);
 }
 
 export function createAuthCookieValue(role: AuthRole) {

@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { participants } from "@/lib/schema";
 
@@ -7,6 +7,7 @@ export async function GET() {
     await db.select().from(participants).limit(1);
     return NextResponse.json({ status: 'ok' });
   } catch (e) {
-    return NextResponse.json({ status: 'error', message: (e as Error).message }, { status: 503 });
+    console.error("[Health] Database check failed:", e);
+    return NextResponse.json({ status: 'error' }, { status: 503 });
   }
 }

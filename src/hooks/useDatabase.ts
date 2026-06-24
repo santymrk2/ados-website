@@ -20,6 +20,27 @@ import {
 } from "@/lib/api-client";
 import type { Activity, Participant, DBData } from "@/lib/types";
 
+const RETRYABLE_QUICK_UPDATE_TYPES = new Set([
+  "attendance",
+  "puntuales",
+  "biblias",
+  "team",
+  "socials",
+  "goal_add",
+  "goal_remove",
+  "goal_update",
+  "extra_add",
+  "extra_update",
+  "extra_delete",
+  "extra_toggle",
+  "game_add",
+  "game_update",
+  "game_delete",
+  "invitacion_add",
+  "invitacion_update",
+  "invitacion_delete",
+]);
+
 export function useDatabase() {
   // Always provide default values to prevent undefined errors
   const participants = useStore($participants) ?? [];
@@ -48,12 +69,33 @@ export function useDatabase() {
   }, []);
 
   // Quick update (asistencia, equipos, etc)
-  const quickUpdate = useCallback(async (activityId: number, type: string, data: unknown, skipRefresh = false) => {
-    const result = await quickUpdateActivity(activityId, type, data);
-    if (!skipRefresh) {
-      await refreshData(false);
+  const quickUpdate = useCallback(async (activityId: number, type: string, data: unknown, version?: number, skipRefresh = false) => {
+    const perform = async (currentVersion?: number) => quickUpdateActivity(activityId, type, data, currentVersion);
+
+    try {
+      const result = await perform(version);
+      if (!skipRefresh) {
+        await refreshData(false);
+      }
+      return result;
+    } catch (error) {
+      const isConflict = error instanceof Error && error.message.startsWith("VERSION_CONFLICT:");
+
+      if (isConflict && RETRYABLE_QUICK_UPDATE_TYPES.has(type)) {
+        await refreshData(false);
+        const freshVersion = $activities.get().find((activity) => activity.id === activityId)?.version;
+        const retriedResult = await perform(freshVersion);
+        if (!skipRefresh) {
+          await refreshData(false);
+        }
+        return retriedResult;
+      }
+
+      if (isConflict) {
+        await refreshData(false);
+      }
+      throw error;
     }
-    return result;
   }, []);
 
   // Guardar participante

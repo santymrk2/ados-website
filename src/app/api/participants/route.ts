@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { requireAuth } from "@/lib/api-utils";
+import { requireAdmin, requireAuth } from "@/lib/api-utils";
 
 export const dynamic = 'force-dynamic';
 import { participants, activityParticipants, goles, extras, invitaciones } from "@/lib/schema";
 import { eq, or } from "drizzle-orm";
 import { eventBus } from "@/lib/eventBus";
 import { uploadBase64Image, minioConfig } from "@/services/minio";
+import { apiServerError, parseBody } from "@/lib/api-utils";
+import { deleteByIdSchema, participantSaveSchema } from "@/lib/validation";
 
 const generateUniqueFilename = (prefix: string) => `${prefix}_${Date.now()}_${Math.random().toString(36).substring(7)}.jpg`;
 
@@ -75,24 +77,30 @@ export async function GET(request: NextRequest) {
       }
     });
   } catch (e) {
-    return NextResponse.json({ success: false, error: "Error interno" }, { status: 500 });
+    return apiServerError(e);
   }
 }
 
 export async function POST(request: NextRequest) {
-  const auth = requireAuth(request);
+  const auth = requireAdmin(request);
   if (!auth.success) {
     return auth.error;
   }
 
   try {
-    // Check MinIO is configured
-    if (!minioConfig.isConfigured) {
-      return NextResponse.json({ error: "MinIO not configured. Please set MINIO_ENDPOINT, MINIO_ROOT_USER, and MINIO_ROOT_PASSWORD" }, { status: 500 });
+    const parsed = await parseBody(request, participantSaveSchema);
+    if (!parsed.success) {
+      return parsed.error;
     }
-    
-    const body = await request.json();
-    const { data, isNew, invitadorId } = body;
+
+    const { data, isNew, invitadorId } = parsed.data;
+    const needsImageUpload =
+      data.foto?.startsWith('data:image') ||
+      data.fotoAltaCalidad?.startsWith('data:image');
+
+    if (needsImageUpload && !minioConfig.isConfigured) {
+      return NextResponse.json({ error: "Image storage is not configured" }, { status: 503 });
+    }
     
     // Handle image uploads
     if (data.foto && data.foto.startsWith('data:image')) {
@@ -100,7 +108,7 @@ export async function POST(request: NextRequest) {
         data.foto = await uploadBase64Image(data.foto, generateUniqueFilename('thumb'));
       } catch (uploadError) {
         console.error('[MinIO] Image upload failed:', uploadError);
-        return NextResponse.json({ error: `Error uploading image: ${uploadError instanceof Error ? uploadError.message : 'Unknown error'}` }, { status: 500 });
+        return NextResponse.json({ error: "Error uploading image" }, { status: 500 });
       }
     }
     if (data.fotoAltaCalidad && data.fotoAltaCalidad.startsWith('data:image')) {
@@ -108,38 +116,51 @@ export async function POST(request: NextRequest) {
         data.fotoAltaCalidad = await uploadBase64Image(data.fotoAltaCalidad, generateUniqueFilename('full'));
       } catch (uploadError) {
         console.error('[MinIO] Image upload failed:', uploadError);
-        return NextResponse.json({ error: `Error uploading image: ${uploadError instanceof Error ? uploadError.message : 'Unknown error'}` }, { status: 500 });
+        return NextResponse.json({ error: "Error uploading image" }, { status: 500 });
       }
     }
     
     if (isNew) {
-      delete data.id;
       const participantData = {
-        ...data,
+        nombre: data.nombre,
+        apellido: data.apellido,
+        fechaNacimiento: data.fechaNacimiento,
+        sexo: data.sexo,
+        foto: data.foto ?? null,
+        fotoAltaCalidad: data.fotoAltaCalidad ?? null,
         invitadoPor: invitadorId || null,
       };
       const result = await db.insert(participants).values(participantData).returning({ id: participants.id });
       eventBus.emit('data-changed');
       return NextResponse.json({ id: result[0].id }, { status: 200 });
     } else {
-      await db.update(participants).set(data).where(eq(participants.id, data.id));
+      const { id, ...participantData } = data;
+      if (!id) {
+        return NextResponse.json({ error: "Participant ID is required" }, { status: 422 });
+      }
+
+      await db.update(participants).set(participantData).where(eq(participants.id, id));
       eventBus.emit('data-changed');
       return NextResponse.json({ success: true }, { status: 200 });
     }
   } catch (e) {
-    return NextResponse.json({ error: (e as Error).message }, { status: 500 });
+    return apiServerError(e);
   }
 }
 
 export async function DELETE(request: NextRequest) {
-  const auth = requireAuth(request);
+  const auth = requireAdmin(request);
   if (!auth.success) {
     return auth.error;
   }
 
   try {
-    const body = await request.json();
-    const { id } = body;
+    const parsed = await parseBody(request, deleteByIdSchema);
+    if (!parsed.success) {
+      return parsed.error;
+    }
+
+    const { id } = parsed.data;
 
     await db.delete(activityParticipants).where(eq(activityParticipants.participantId, id));
     await db.delete(goles).where(eq(goles.participantId, id));
@@ -155,6 +176,6 @@ export async function DELETE(request: NextRequest) {
     eventBus.emit('data-changed');
     return NextResponse.json({ success: true }, { status: 200 });
   } catch (e) {
-    return NextResponse.json({ error: (e as Error).message }, { status: 500 });
+    return apiServerError(e);
   }
 }

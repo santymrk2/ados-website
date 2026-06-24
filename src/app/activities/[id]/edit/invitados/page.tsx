@@ -362,11 +362,10 @@ export default function InvitadosPage() {
     }
 
     try {
+      setLocal("invitaciones", newList, true);
       await syncWithServer(
         "invitacion_delete",
         { id },
-        "invitaciones",
-        newList,
       );
       toast.success("Invitación eliminada");
     } catch (e) {
@@ -397,8 +396,6 @@ export default function InvitadosPage() {
             invitador: k === "invitador" ? v : inv.invitador,
             invitadoId: k === "invitadoId" ? v : inv.invitadoId,
           },
-          "invitaciones",
-          newList,
         );
         toast.success("Invitación actualizada");
       } catch (e) {
@@ -418,8 +415,6 @@ export default function InvitadosPage() {
             invitador: updatedInv.invitador,
             invitadoId: updatedInv.invitadoId,
           },
-          "invitaciones",
-          newList,
         );
         
         // Actualizar el ID temporal por el real del servidor

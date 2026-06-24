@@ -111,6 +111,7 @@ export default function EquiposPage() {
   }, [present, searchQuery, sortOrder]);
 
   const setTeam = async (pid: number, team: string) => {
+    const previousEquipos = { ...(act.equipos || {}) };
     const updateFn = (prev: Record<string, string>) => {
       const next = { ...(prev || {}) };
       if (next[pid] === team) {
@@ -121,52 +122,78 @@ export default function EquiposPage() {
       return next;
     };
 
-    setLocal("equipos", updateFn);
+    setLocal("equipos", updateFn, true);
 
     try {
       const currentTeam = act.equipos?.[pid];
       const finalTeam = currentTeam === team ? null : team;
-      await syncWithServer("team", { participantId: pid, team: finalTeam }, "equipos", updateFn);
+      await syncWithServer("team", { participantId: pid, team: finalTeam });
       toast.success("Equipo actualizado");
     } catch (e) {
+      setLocal("equipos", () => previousEquipos, true);
       const err = e as Error;
       toast.error("Error al actualizar equipo: " + err.message);
     }
   };
 
-  const autoBalance = (resetAll = false) => {
-    setLocal("equipos", (prev: Record<string, string>) => {
-      const eq = resetAll ? {} : { ...(prev || {}) };
-      const counts: Record<string, { M: number; F: number; total: number }> = {};
-      activeTeams.forEach((t) => {
-        counts[t] = { M: 0, F: 0, total: 0 };
-      });
-
-      present.forEach((p) => {
-        const t = eq[p.id];
-        if (t && activeTeams.includes(t)) {
-          counts[t][p.sexo as "M" | "F"]++;
-          counts[t].total++;
-        }
-      });
-
-      const unassigned = present.filter((p) => !eq[p.id]);
-      const masc = unassigned.filter((p) => p.sexo === "M");
-      const fem = unassigned.filter((p) => p.sexo === "F");
-
-      [...masc, ...fem].forEach((p: ParticipantBasic) => {
-        const best = [...activeTeams].sort(
-          (a, b) =>
-            counts[a][p.sexo as "M" | "F"] - counts[b][p.sexo as "M" | "F"] ||
-            counts[a].total - counts[b].total,
-        )[0];
-        eq[p.id] = best;
-        counts[best][p.sexo as "M" | "F"]++;
-        counts[best].total++;
-      });
-      return eq;
+  const buildBalancedTeams = (resetAll = false) => {
+    const eq: Record<string, string> = resetAll
+      ? {}
+      : Object.fromEntries(
+        Object.entries(act.equipos || {}).filter(
+          ([participantId, team]) =>
+            activeTeams.includes(team) &&
+            present.some((participant) => participant.id === Number(participantId)),
+        ),
+      ) as Record<string, string>;
+    const counts: Record<string, { M: number; F: number; total: number }> = {};
+    activeTeams.forEach((t) => {
+      counts[t] = { M: 0, F: 0, total: 0 };
     });
-    toast.success(resetAll ? "Equipos redistribuidos" : "Equipos completados");
+
+    present.forEach((p) => {
+      const t = eq[p.id];
+      if (t && activeTeams.includes(t)) {
+        counts[t][p.sexo as "M" | "F"]++;
+        counts[t].total++;
+      }
+    });
+
+    const unassigned = present.filter((p) => !eq[p.id]);
+    const masc = unassigned.filter((p) => p.sexo === "M");
+    const fem = unassigned.filter((p) => p.sexo === "F");
+
+    [...masc, ...fem].forEach((p: ParticipantBasic) => {
+      const best = [...activeTeams].sort(
+        (a, b) =>
+          counts[a][p.sexo as "M" | "F"] - counts[b][p.sexo as "M" | "F"] ||
+          counts[a].total - counts[b].total,
+      )[0];
+      if (!best) return;
+      eq[p.id] = best;
+      counts[best][p.sexo as "M" | "F"]++;
+      counts[best].total++;
+    });
+
+    return eq;
+  };
+
+  const autoBalance = async (resetAll = false) => {
+    const previousEquipos = { ...(act.equipos || {}) };
+    const nextEquipos = buildBalancedTeams(resetAll);
+
+    setLocal("equipos", () => nextEquipos, true);
+
+    try {
+      if (act.id) {
+        await syncWithServer("teams_bulk", { equipos: nextEquipos });
+      }
+      toast.success(resetAll ? "Equipos redistribuidos" : "Equipos completados");
+    } catch (e) {
+      setLocal("equipos", () => previousEquipos, true);
+      const err = e as Error;
+      toast.error("Error al actualizar equipos: " + err.message);
+    }
   };
 
   const handleCompletar = async () => {
@@ -176,7 +203,7 @@ export default function EquiposPage() {
       { title: "Completar equipos", confirmText: "Completar", isDestructive: false },
     );
     if (!confirmed) return;
-    autoBalance(false);
+    await autoBalance(false);
   };
 
   const handleRedistribuir = async () => {
@@ -186,7 +213,7 @@ export default function EquiposPage() {
       { title: "Redistribuir equipos", confirmText: "Redistribuir", isDestructive: true },
     );
     if (!confirmed) return;
-    autoBalance(true);
+    await autoBalance(true);
   };
 
   const teamStats = activeTeams.map((t) => ({

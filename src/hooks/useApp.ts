@@ -41,6 +41,7 @@ export function useApp() {
   return {
     db,
     isLoading,
+    authLoading,
     isAuthenticated,
     login,
     logout,

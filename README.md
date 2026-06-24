@@ -43,11 +43,18 @@ This starts:
 - MinIO console: `http://localhost:9001`
 
 Default local credentials:
-
 - PostgreSQL: `ados` / `ados_password`
 - MinIO: `minioadmin` / `minioadmin`
 - App viewer password: `viewer123`
 - App admin password: `admin123`
+
+Database helpers for local or disposable environments:
+
+```bash
+bun run db:push
+bun run db:migrate
+bun run db:harden
+```
 
 ## Scripts
 
@@ -61,6 +68,7 @@ Default local credentials:
 | `bun run test:e2e` | Run Playwright E2E tests |
 | `bun run db:push` | Push Drizzle schema changes |
 | `bun run db:migrate` | Run Drizzle migrations |
+| `bun run db:harden` | Apply database hardening SQL |
 
 ## Environment Variables
 
@@ -71,10 +79,12 @@ Required in Dokploy:
 DATABASE_URL=
 
 # Authentication
+AUTH_SECRET=
 ADMIN_PASSWORD=
 VIEWER_PASSWORD=
+CRON_SECRET=
 
-# MinIO
+# MinIO/S3-compatible image storage
 MINIO_ENDPOINT=
 MINIO_PUBLIC_URL=
 MINIO_ROOT_USER=
@@ -173,7 +183,7 @@ The quality gate runs:
 
 In Dokploy, configure registry authentication for `ghcr.io` with a GitHub token that can read packages.
 
-The production image still runs `drizzle-kit push` on container startup. That keeps the current deploy behavior, but it is technical debt: production should eventually move to controlled migrations.
+The production image starts the standalone Next.js server directly. Schema changes and hardening must be handled explicitly as part of your deployment process instead of relying on container startup side effects.
 
 ## Release Workflow
 

@@ -7,6 +7,8 @@ const MINIO_PUBLIC_URL = process.env.MINIO_PUBLIC_URL; // Public URL for browser
 const MINIO_ROOT_USER = process.env.MINIO_ROOT_USER;
 const MINIO_ROOT_PASSWORD = process.env.MINIO_ROOT_PASSWORD;
 const BUCKET_NAME = process.env.MINIO_BUCKET_NAME || 'activados';
+const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
+const ALLOWED_IMAGE_TYPES = new Set(["jpeg", "jpg", "png", "webp"]);
 
 // Check configuration at module load time
 if (!MINIO_ENDPOINT || !MINIO_ROOT_USER || !MINIO_ROOT_PASSWORD) {
@@ -70,11 +72,20 @@ export const getImageUrl = async (key: string | null) => {
 
 export const uploadBase64Image = async (base64String: string, filename: string) => {
   try {
-    // Extract format and actual bas64 string
-    const match = base64String.match(/^data:image\/([a-zA-Z0-9]+);base64,(.+)$/);
+    const match = base64String.match(/^data:image\/([a-zA-Z0-9]+);base64,([A-Za-z0-9+/=]+)$/);
     if (!match) throw new Error('Invalid base64 string');
+
+    const imageType = match[1].toLowerCase();
+    if (!ALLOWED_IMAGE_TYPES.has(imageType)) {
+      throw new Error('Unsupported image type');
+    }
+
+    const sizeBytes = Buffer.byteLength(match[2], 'base64');
+    if (sizeBytes > MAX_IMAGE_BYTES) {
+      throw new Error('Image too large');
+    }
     
-    const mimeType = `image/${match[1]}`;
+    const mimeType = imageType === 'jpg' ? 'image/jpeg' : `image/${imageType}`;
     const buffer = Buffer.from(match[2], 'base64');
     
     const command = new PutObjectCommand({

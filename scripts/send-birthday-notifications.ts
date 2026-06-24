@@ -1,4 +1,5 @@
 const API_URL = process.env.API_URL || 'http://localhost:3000';
+const CRON_SECRET = process.env.CRON_SECRET;
 
 async function sendBirthdayNotifications() {
   console.log('Checking for birthdays...');
@@ -6,7 +7,10 @@ async function sendBirthdayNotifications() {
   try {
     const response = await fetch(`${API_URL}/api/notifications`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...(CRON_SECRET ? { 'x-cron-secret': CRON_SECRET } : {}),
+      },
       body: JSON.stringify({ action: 'send_birthday_notifications' }),
     });
 

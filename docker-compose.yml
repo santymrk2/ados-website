@@ -59,6 +59,8 @@ services:
       MINIO_BUCKET_NAME: activados
       ADMIN_PASSWORD: admin123
       VIEWER_PASSWORD: viewer123
+      AUTH_SECRET: local-dev-auth-secret-change-me
+      CRON_SECRET: local-dev-cron-secret-change-me
       NEXT_PUBLIC_APP_URL: http://localhost:3000
     depends_on:
       db:

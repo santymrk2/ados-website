@@ -28,8 +28,10 @@ jobs:
 
     env:
       DATABASE_URL: postgresql://ados:ados_password@localhost:5432/ados
+      AUTH_SECRET: ci-auth-secret
       ADMIN_PASSWORD: admin123
       VIEWER_PASSWORD: viewer123
+      CRON_SECRET: ci-cron-secret
       MINIO_ENDPOINT: http://localhost:9000
       MINIO_PUBLIC_URL: http://localhost:9000
       MINIO_ROOT_USER: minioadmin
@@ -64,6 +66,9 @@ jobs:
 
       - name: Push database schema
         run: bun run db:push
+
+      - name: Apply database hardening constraints
+        run: bun run db:harden
 
       - name: Run Playwright tests
         shell: bash

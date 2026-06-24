@@ -11,12 +11,12 @@ export class LoginPage extends BasePage {
 
   constructor(page: Page) {
     super(page);
-    this.passwordInput = page.locator('input[type="password"], input[type="text"]').first();
+    this.passwordInput = page.getByRole("textbox", { name: "Contraseña" });
     this.submitButton = page.getByRole("button", { name: /Ingresar como/ });
-    this.adminToggle = page.locator("#admin-mode");
-    this.lockIcon = page.locator(".min-h-screen .bg-primary\\/10");
+    this.adminToggle = page.getByRole("switch", { name: /admin/i });
+    this.lockIcon = page.getByRole("button", { name: "Mostrar selector de rol" });
     this.errorMessage = page.getByText(/contraseña/i);
-    this.showPasswordButton = page.locator('button[type="button"]').filter({ has: page.locator("svg") }).first();
+    this.showPasswordButton = page.getByRole("button", { name: "Mostrar contraseña" });
   }
 
   async goto(): Promise<void> {
@@ -45,9 +45,8 @@ export class LoginPage extends BasePage {
     await expect(this.errorMessage).toBeVisible();
   }
 
-  async expectRedirectToDashboard(): Promise<void> {
-    await expect(this.page).not.toHaveURL(/\/api\/auth/);
-    await this.page.waitForLoadState("domcontentloaded");
+  async expectAuthenticatedHome(): Promise<void> {
+    await expect(this.page.getByText("ACTIVADOS")).toBeVisible();
   }
 }
 

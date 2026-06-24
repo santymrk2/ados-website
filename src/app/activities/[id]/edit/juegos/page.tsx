@@ -57,7 +57,8 @@ export default function JuegosPage() {
     const prevJuegos = [...(act.juegos || [])];
 
     try {
-      const result = await syncWithServer("game_add", nj, "juegos", (prev) => [...(prev || []), nj]);
+      setLocal("juegos", (prev: Juego[]) => [...(prev || []), nj], true);
+      const result = await syncWithServer("game_add", nj);
       if (result && typeof result === "object" && "id" in result) {
         const finalId = (result as { id: number }).id;
         setLocal("juegos", (prev: Juego[]) => (prev || []).map((j) =>
@@ -90,7 +91,7 @@ export default function JuegosPage() {
     setLocal("juegos", updateFn, true);
 
     try {
-      await syncWithServer("game_delete", { id }, "juegos", updateFn);
+      await syncWithServer("game_delete", { id });
       toast.success("Juego eliminado");
     } catch (e) {
       // Rollback al estado anterior
@@ -108,7 +109,7 @@ export default function JuegosPage() {
     if (typeof id === "string" && id.startsWith("temp")) return;
 
     try {
-      await syncWithServer("game_update", { id, nombre: v }, "juegos", updateFn);
+      await syncWithServer("game_update", { id, nombre: v });
     } catch (e) {
       setLocal("juegos", () => prevJuegos, true);
       const err = e as Error;
@@ -134,7 +135,7 @@ export default function JuegosPage() {
         if (!currentJuego) return;
 
         const newPos = computeNewPos(currentJuego.pos || {}, team, pos);
-        await syncWithServer("game_pos", { juegoId: jid, pos: newPos }, "juegos", updateFn);
+        await syncWithServer("game_pos", { juegoId: jid, pos: newPos });
       } catch (e) {
         setLocal("juegos", () => prevJuegos, true);
         const err = e as Error;
@@ -224,14 +225,14 @@ function JuegoCard({
   }, [localNombre, j.id]);
 
   const posToTeams = j.pos || {};
+  const activeTeams = TEAMS.slice(0, act.cantEquipos || 4);
   const placed: string[] = [];
   Object.values(posToTeams).forEach((equipos) => {
     if (Array.isArray(equipos)) {
-      placed.push(...(equipos as string[]));
+      placed.push(...(equipos as string[]).filter((team) => activeTeams.includes(team)));
     }
   });
 
-  const activeTeams = TEAMS.slice(0, act.cantEquipos || 4);
   const unplaced = activeTeams.filter((t) => !placed.includes(t));
   const posArray = useMemo(() => {
     return Array.from({ length: act.cantEquipos || 4 }, (_, i) => String(i + 1));
@@ -258,7 +259,7 @@ function JuegoCard({
             {!expanded && (
               <div className="flex flex-wrap gap-2 mt-1.5">
                 {posArray.map((pos) => {
-                  const teamsInPos = posToTeams[String(pos)] || [];
+                  const teamsInPos = (posToTeams[String(pos)] || []).filter((team) => activeTeams.includes(team));
                   const hasTeams = Array.isArray(teamsInPos) && teamsInPos.length > 0;
                   if (!hasTeams) return null;
                   return (
@@ -317,7 +318,7 @@ function JuegoCard({
             <div className="p-3 bg-surface-light/30">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {posArray.map((pos) => {
-                  const teamsInPos = (posToTeams[String(pos)]) || [];
+                  const teamsInPos = (posToTeams[String(pos)] || []).filter((team) => activeTeams.includes(team));
                   const hasTeams = Array.isArray(teamsInPos) && teamsInPos.length > 0;
 
                   return (

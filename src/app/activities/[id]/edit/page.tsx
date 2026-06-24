@@ -34,7 +34,8 @@ export default function EditPage() {
   const handleLockToggle = (checked: boolean) => {
     if (checked) {
       if (act.id) {
-        syncWithServer("config", { k: "locked", v: true }, "locked", true);
+        setLocal("locked", true, true);
+        syncWithServer("config", { k: "locked", v: true });
       } else {
         setLocal("locked", true);
       }
@@ -48,7 +49,8 @@ export default function EditPage() {
 
   const confirmUnlock = () => {
     if (act.id) {
-      syncWithServer("config", { k: "locked", v: false }, "locked", false);
+      setLocal("locked", false, true);
+      syncWithServer("config", { k: "locked", v: false });
     } else {
       setLocal("locked", false);
     }
@@ -135,14 +137,13 @@ export default function EditPage() {
               value={String(act.cantEquipos || 4)}
               onValueChange={(v) => {
                 const val = Number(v);
-                if (act.id)
+                if (act.id) {
+                  setLocal("cantEquipos", val, true);
                   syncWithServer(
                     "config",
                     { k: "cantEquipos", v: val },
-                    "cantEquipos",
-                    val,
                   );
-                else setLocal("cantEquipos", val);
+                } else setLocal("cantEquipos", val);
               }}
               className="flex gap-4 mt-2"
               disabled={locked}

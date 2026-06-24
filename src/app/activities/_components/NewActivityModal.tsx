@@ -18,7 +18,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { newAct } from "@/lib/constants";
 import { useApp } from "@/hooks/useApp";
-import type { Activity } from "@/lib/types";
 
 interface NewActivityModalProps {
   open: boolean;
@@ -27,7 +26,7 @@ interface NewActivityModalProps {
 
 export function NewActivityModal({ open, onOpenChange }: NewActivityModalProps) {
   const router = useRouter();
-  const { db, saveActivity } = useApp();
+  const { saveActivity } = useApp();
   
   const [titulo, setTitulo] = useState("");
   const [fecha, setFecha] = useState<string | undefined>(undefined);
@@ -40,9 +39,8 @@ export function NewActivityModal({ open, onOpenChange }: NewActivityModalProps) 
     
     setIsSubmitting(true);
     try {
-      const newActivity: Activity = {
+      const newActivity = {
         ...newAct(),
-        id: 0,
         titulo: titulo.trim(),
         fecha: fecha!,
         cantEquipos,

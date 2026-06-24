@@ -3,6 +3,10 @@ import type { Activity, Participant } from './types';
 
 const API_BASE = '/api';
 
+type ActivityDraft = Omit<Activity, 'id'> & {
+  id?: number | null;
+};
+
 export async function checkDatabaseConnection() {
   const res = await fetch(`${API_BASE}/health`);
   if (!res.ok) {
@@ -42,12 +46,19 @@ export async function getActivities() {
   return Array.isArray(json) ? json : (json.data ?? []);
 }
 
-export async function saveActivity(activity: Activity, isNewProvided?: boolean) {
+export async function saveActivity(activity: ActivityDraft, isNewProvided?: boolean) {
   const isNew = isNewProvided !== undefined ? isNewProvided : !activity.id;
+  const payload = isNew
+    ? {
+        ...activity,
+        id: undefined,
+      }
+    : activity;
+
   const res = await fetch(`${API_BASE}/activities`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ data: activity, isNew }),
+    body: JSON.stringify({ data: payload, isNew }),
   });
   if (res.status === 409) {
     const errorData = await res.json();

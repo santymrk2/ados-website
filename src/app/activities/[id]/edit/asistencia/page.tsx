@@ -17,18 +17,17 @@ import {
   getEdad,
   newPart,
 } from "@/lib/constants";
-import { Modal, Label, Empty } from "@/components/ui/Common";
-import { SexBadge } from "@/components/ui/Badges";
+import { Label } from "@/components/ui/Common";
 import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { confirmDialog } from "@/components/ui/confirm-dialog";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { DatePicker } from "@/components/ui/calendar";
 
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import type { Activity, ParticipantBasic, AppState, Participant, DBData, Invitacion, ParticipantFormData } from "@/lib/types";
+import type { Activity, ParticipantBasic, Participant, DBData, Invitacion } from "@/lib/types";
 
 let tempIdCounter = 0;
 const generateTempId = () => -1 - tempIdCounter++;
@@ -92,7 +91,7 @@ function NewPlayerModal({ act, db, onClose, onSave, setLocal, syncWithServer }: 
     if (isSubmittingPlayer) return;
     setIsSubmittingPlayer(true);
     try {
-      const p = { ...newPart(), ...newPlayer, id: 0 };
+      const p = { ...newPart(), ...newPlayer, id: db.nextPid };
       const { invitadorId, ...participantData } = p;
       const newId = await onSave(participantData, true, invitadorId);
       const playerId = newId || p.id;
@@ -109,7 +108,7 @@ function NewPlayerModal({ act, db, onClose, onSave, setLocal, syncWithServer }: 
           "invitacion_add",
           { invitador: Number(newPlayer.invitadorId), invitadoId: playerId },
         );
-      } else {
+      } else if (newPlayer.invitadorId) {
         setLocal("invitaciones", (prev: Invitacion[]) => [
           ...(prev || []),
           {
@@ -136,6 +135,10 @@ function NewPlayerModal({ act, db, onClose, onSave, setLocal, syncWithServer }: 
         showCloseButton={false}
         className="max-w-sm bg-white rounded-3xl p-5 flex flex-col overflow-y-auto max-h-[90vh]"
       >
+        <DialogTitle className="sr-only">Nuevo jugador</DialogTitle>
+        <DialogDescription className="sr-only">
+          Crea un jugador y lo registra como asistente de la actividad.
+        </DialogDescription>
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-black text-lg text-dark">Nuevo Jugador</h3>
           <Button

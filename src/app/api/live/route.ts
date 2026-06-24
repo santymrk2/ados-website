@@ -21,8 +21,8 @@ export async function GET(request: NextRequest) {
         }
       };
 
-      // Listen to data-changed events
       eventBus.on("data-changed", notify);
+      eventBus.on("rankings-changed", notify);
 
 
       // Send ping every 5 seconds to keep connection alive
@@ -38,6 +38,7 @@ export async function GET(request: NextRequest) {
 
         isClosed = true;
         eventBus.off("data-changed", notify);
+        eventBus.off("rankings-changed", notify);
         clearInterval(interval);
         try {
           controller.close();
@@ -48,6 +49,7 @@ export async function GET(request: NextRequest) {
 
       isClosed = true;
       eventBus.off("data-changed", notify);
+      eventBus.off("rankings-changed", notify);
       clearInterval(interval);
     },
   });

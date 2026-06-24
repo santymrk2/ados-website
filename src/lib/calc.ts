@@ -53,11 +53,13 @@ export function actPts(pid: number, a: Activity, participants: AnyParticipant[])
     }
   }
 
-  for (const e of a.extras || []) {
-    if (e.pid === pid || (team && e.team === team)) pts += e.puntos;
-  }
-  for (const d of a.descuentos || []) {
-    if (d.pid === pid || (team && d.team === team)) pts -= d.puntos;
+  if (here) {
+    for (const e of a.extras || []) {
+      if (e.pid === pid || (team && e.team === team)) pts += e.puntos;
+    }
+    for (const d of a.descuentos || []) {
+      if (d.pid === pid || (team && d.team === team)) pts -= d.puntos;
+    }
   }
 
   return pts;
@@ -77,10 +79,11 @@ export function calcPts(pid: number, activities: Activity[], participants: AnyPa
     acts = 0;
 
   for (const a of activities) {
-    if (a.asistentes.includes(pid)) acts++;
+    const here = a.asistentes.includes(pid);
+    if (here) acts++;
     total += actPts(pid, a, participants);
     for (const g of a.goles || []) {
-      if (g.pid === pid) {
+      if (here && g.pid === pid) {
         if (g.tipo === "f") gf += g.cant;
         else if (g.tipo === "h") gh += g.cant;
         else gb += g.cant;

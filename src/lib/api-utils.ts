@@ -5,6 +5,7 @@
 
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { createHmac, timingSafeEqual } from "crypto";
 
 /**
  * Pagination utility
@@ -180,8 +181,7 @@ export function getAuthUser(request: NextRequest): { role: string } | null {
   }
 
   try {
-    // Parse the auth cookie (JSON format)
-    const authData = JSON.parse(authCookie.value);
+    const authData = parseAuthCookieValue(authCookie.value);
     if (authData?.role) {
       return { role: authData.role };
     }
@@ -219,4 +219,43 @@ export function requireAdmin(request: NextRequest): { success: true } | { succes
   }
 
   return { success: true };
+}
+
+export function createAuthCookieValue(role: string) {
+  const payload = Buffer.from(
+    JSON.stringify({
+      role,
+      iat: Date.now(),
+    }),
+  ).toString("base64url");
+
+  return `${payload}.${signAuthPayload(payload)}`;
+}
+
+function parseAuthCookieValue(value: string): { role?: string } | null {
+  const [payload, signature] = value.split(".");
+
+  if (!payload || !signature) {
+    return null;
+  }
+
+  const expectedSignature = signAuthPayload(payload);
+  const provided = Buffer.from(signature);
+  const expected = Buffer.from(expectedSignature);
+
+  if (provided.length !== expected.length || !timingSafeEqual(provided, expected)) {
+    return null;
+  }
+
+  return JSON.parse(Buffer.from(payload, "base64url").toString("utf8"));
+}
+
+function signAuthPayload(payload: string) {
+  const secret = process.env.AUTH_SECRET || process.env.ADMIN_PASSWORD;
+
+  if (!secret) {
+    throw new Error("AUTH_SECRET or ADMIN_PASSWORD is required for signed auth cookies");
+  }
+
+  return createHmac("sha256", secret).update(payload).digest("base64url");
 }

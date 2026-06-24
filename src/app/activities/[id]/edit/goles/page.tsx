@@ -228,7 +228,8 @@ export default function GolesPage() {
     }
 
     try {
-      await syncWithServer("goal_remove", { id }, "goles", updateFn);
+      setLocal("goles", updateFn, true);
+      await syncWithServer("goal_remove", { id });
       toast.success("Gol eliminado");
     } catch (e) {
       const err = e as Error;
@@ -245,7 +246,7 @@ export default function GolesPage() {
     if (id < 0) return;
 
     try {
-      await syncWithServer("goal_update", { id, [k]: v }, "goles", updateFn);
+      await syncWithServer("goal_update", { id, [k]: v });
     } catch (e) {
       const err = e as Error;
       toast.error("Error al actualizar: " + err.message);
@@ -257,7 +258,8 @@ export default function GolesPage() {
     const updateFn = (prev: Gol[]) => (prev || []).map(g => g.id === tempId ? goal : g);
     
     try {
-      const result = await syncWithServer("goal_add", { pid: goal.pid, tipo: goal.tipo, cant: goal.cant }, "goles", updateFn);
+      setLocal("goles", updateFn, true);
+      const result = await syncWithServer("goal_add", { pid: goal.pid, tipo: goal.tipo, cant: goal.cant });
       const realId = (result as { id: number }).id;
       setLocal("goles", (prev: Gol[]) => (prev || []).map(g => g.id === tempId ? { ...g, id: realId } : g), true);
     } catch (e) {

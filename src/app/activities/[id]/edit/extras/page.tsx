@@ -281,7 +281,8 @@ export default function ExtrasPage() {
     }
 
     try {
-      await syncWithServer("extra_delete", { id }, listKey, updateFn);
+      setLocal(listKey, updateFn, true);
+      await syncWithServer("extra_delete", { id });
       toast.success("Eliminado");
     } catch (e) {
       const err = e as Error;
@@ -305,7 +306,7 @@ export default function ExtrasPage() {
         team: k === "team" ? v : item.team,
         puntos: k === "puntos" ? v : item.puntos,
         motivo: k === "motivo" ? v : item.motivo,
-      }, listKey, updateFn);
+      });
     } catch (e) {
       const err = e as Error;
       toast.error("Error: " + err.message);
@@ -316,13 +317,14 @@ export default function ExtrasPage() {
     const updateFn = (prev: Extra[]) => (prev || []).map(e => e.id === tempId ? extra : e);
 
     try {
+      setLocal(listKey, updateFn, true);
       const result = await syncWithServer("extra_add", {
         pid: extra.pid,
         team: extra.team,
         tipo: extra.tipo,
         puntos: extra.puntos,
         motivo: extra.motivo,
-      }, listKey, updateFn);
+      });
       
       const resultTyped = result as ExtraResult;
       const realId = resultTyped.id;
@@ -364,7 +366,7 @@ export default function ExtrasPage() {
         tipo,
         puntos: 1,
         motivo: newItem.motivo,
-      }, listKey, addFn);
+      });
       
       const resultTyped = result as ExtraResult;
       const realId = resultTyped.id;

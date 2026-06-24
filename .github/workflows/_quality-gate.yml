@@ -64,8 +64,8 @@ jobs:
       - name: Install Playwright browsers
         run: bunx playwright install --with-deps chromium
 
-      - name: Push database schema
-        run: bun run db:push
+      - name: Run database migrations
+        run: bun run db:migrate
 
       - name: Apply database hardening constraints
         run: bun run db:harden

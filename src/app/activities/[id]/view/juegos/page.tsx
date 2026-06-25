@@ -15,7 +15,6 @@ function gameTypeLabel(tipo: string | undefined) {
 export default function JuegosPage() {
   const { act, db } = useViewContext();
   const participants = db.participants;
-  const juegos = act.juegos || [];
 
   const participantById = useMemo(() => {
     const map = new Map<number, (typeof participants)[number]>();
@@ -24,6 +23,9 @@ export default function JuegosPage() {
     }
     return map;
   }, [participants]);
+
+  if (!act) return null;
+  const juegos = act.juegos || [];
 
   const labelFor = (game: Juego, value: string) => {
     if (game.tipo === "individual") {

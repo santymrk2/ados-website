@@ -65,10 +65,6 @@ function fillRemainingPos(
   return next;
 }
 
-function participantLabel(p: ParticipantBasic) {
-  return `${p.nombre} ${p.apellido}`;
-}
-
 function gameTypeLabel(tipo: JuegoTipo) {
   return tipo === "individual" ? "Individual" : "Grupal";
 }
@@ -85,7 +81,7 @@ export default function JuegosPage() {
 
   const participants = db.participants;
   const activeTeams = useMemo(() => TEAMS.slice(0, act.cantEquipos || 4), [act.cantEquipos]);
-  const gameList = act.juegos || [];
+  const gameList = useMemo(() => act.juegos || [], [act.juegos]);
 
   const eligiblePlayers = useMemo(() => {
     return participants
@@ -102,12 +98,6 @@ export default function JuegosPage() {
     () => gameList.find((game) => game.id === selectedId) || null,
     [gameList, selectedId],
   );
-
-  useEffect(() => {
-    if (selectedId !== null && !selectedGame) {
-      setSelectedId(null);
-    }
-  }, [selectedGame, selectedId]);
 
   const commitGamePositions = useCallback(
     async (gameId: number | string, nextPos: Record<string, string[]>) => {
@@ -278,13 +268,10 @@ export default function JuegosPage() {
                 className="h-9 w-9 shrink-0 hover:bg-red-50 hover:text-red-500"
                 onClick={async (e) => {
                   e.stopPropagation();
-                  const ok = await confirmDialog({
-                    title: "Eliminar juego",
-                    description: `Vas a eliminar ${game.nombre || "este juego"}.`,
-                    confirmText: "Eliminar",
-                    cancelText: "Cancelar",
-                    variant: "destructive",
-                  });
+                  const ok = await confirmDialog(
+                    `Vas a eliminar ${game.nombre || "este juego"}.`,
+                    { title: "Eliminar juego", confirmText: "Eliminar", isDestructive: true },
+                  );
                   if (ok) await deleteGame(game.id);
                 }}
               >
@@ -343,13 +330,10 @@ export default function JuegosPage() {
               locked={locked}
               onRename={(nombre) => void updateName(selectedGame.id, nombre)}
               onDelete={async () => {
-                const ok = await confirmDialog({
-                  title: "Eliminar juego",
-                  description: `Vas a eliminar ${selectedGame.nombre || "este juego"}.`,
-                  confirmText: "Eliminar",
-                  cancelText: "Cancelar",
-                  variant: "destructive",
-                });
+                const ok = await confirmDialog(
+                  `Vas a eliminar ${selectedGame.nombre || "este juego"}.`,
+                  { title: "Eliminar juego", confirmText: "Eliminar", isDestructive: true },
+                );
                 if (ok) await deleteGame(selectedGame.id);
               }}
               onToggleItem={togglePositionItem}
@@ -413,9 +397,8 @@ function GameDetailModal({
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor={`game-name-${String(game.id)}`}>Nombre</Label>
+        <Label>Nombre</Label>
         <Input
-          id={`game-name-${String(game.id)}`}
           value={game.nombre || ""}
           onChange={(e) => onRename(e.target.value)}
           placeholder="Nombre del juego..."

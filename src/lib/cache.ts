@@ -92,7 +92,11 @@ export const triggerRankingsRebuild = () => {
           for (const jp of posiciones) {
             if (jp.posicion === 0 && jp.equipo === "__individual__") continue;
             if (!pos[jp.posicion]) pos[jp.posicion] = [];
-            pos[jp.posicion].push(jp.equipo);
+            if (isIndividual) {
+              if (jp.participantId) pos[jp.posicion].push(String(jp.participantId));
+            } else {
+              if (jp.equipo) pos[jp.posicion].push(jp.equipo);
+            }
           }
           Object.values(pos).forEach((teams) => teams.sort());
           return { id: j.id, nombre: j.nombre, tipo: isIndividual ? "individual" : "grupal", pos };

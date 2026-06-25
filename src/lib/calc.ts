@@ -23,18 +23,22 @@ export function actPts(pid: number, a: Activity, participants: AnyParticipant[])
       for (const _ of a.juegos || []) {
         pts += PTS.rec[4] || 0;
       }
-    } else if (team) {
+    } else {
       // Nueva estructura: pos = { 1: ["E1", "E2"], 2: ["E3"], 3: ["E4"] }
-      // Múltiples equipos pueden estar en la misma posición (ej: ambos ganaron)
-      // Todos los equipos en esa posición reciben PTS.rec[posicion]
+      // Múltiples equipos o personas pueden estar en la misma posición.
+      // El tipo del juego define si la posición guarda equipos o participantes.
       for (const j of a.juegos || []) {
-        // Buscar en qué posición está el equipo
         let position: number | undefined;
-
         if (j.pos && typeof j.pos === "object") {
-          // j.pos es { posicion: [equipos] }
-          for (const [posStr, equipos] of Object.entries(j.pos)) {
-            if (Array.isArray(equipos) && equipos.includes(team)) {
+          for (const [posStr, items] of Object.entries(j.pos)) {
+            if (!Array.isArray(items)) continue;
+
+            if (j.tipo === "individual") {
+              if (items.includes(String(pid))) {
+                position = Number(posStr);
+                break;
+              }
+            } else if (team && items.includes(team)) {
               position = Number(posStr);
               break;
             }

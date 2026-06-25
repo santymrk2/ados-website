@@ -56,6 +56,7 @@ type PositionMap = Record<string, string[]>;
 interface ActivityGamePayload {
   id?: number | string;
   nombre?: string | null;
+  tipo?: "grupal" | "individual";
   pos?: PositionMap | null;
 }
 
@@ -145,6 +146,8 @@ interface ActivityPatchPayload extends Record<string, unknown> {
 function getActiveTeams(cantEquipos: number | null | undefined) {
   return TEAMS.slice(0, cantEquipos || 4);
 }
+
+const INDIVIDUAL_GAME_MARKER = "__individual__";
 
 function isActiveTeam(team: string | null | undefined, cantEquipos: number | null | undefined) {
   return !!team && getActiveTeams(cantEquipos).includes(team);
@@ -1093,6 +1096,14 @@ export async function PATCH(request: NextRequest) {
             })
             .returning({ id: schema.juegos.id });
 
+          if (data.tipo === "individual") {
+            await tx.insert(schema.juegoPosiciones).values({
+              juegoId: game.id,
+              equipo: INDIVIDUAL_GAME_MARKER,
+              posicion: 0,
+            });
+          }
+
           return { success: true, id: game.id, version: versionClaim.version };
         }
         case "game_update": {
@@ -1124,6 +1135,19 @@ export async function PATCH(request: NextRequest) {
           const activeTeams = getActiveTeams(activity.cantEquipos);
           const allTeams: { equipo: string; posicion: number }[] = [];
           const seenTeams = new Set<string>();
+          const existingPositions = await tx
+            .select({
+              equipo: schema.juegoPosiciones.equipo,
+              posicion: schema.juegoPosiciones.posicion,
+            })
+            .from(schema.juegoPosiciones)
+            .where(eq(schema.juegoPosiciones.juegoId, juegoId));
+          const isIndividualGame = existingPositions.some(
+            (row) => row.posicion === 0 && row.equipo === INDIVIDUAL_GAME_MARKER,
+          );
+          if (isIndividualGame) {
+            allTeams.push({ equipo: INDIVIDUAL_GAME_MARKER, posicion: 0 });
+          }
           for (const [posStr, equipos] of Object.entries(pos)) {
             const posicion = Number(posStr);
             if (posicion < 1 || posicion > activeTeams.length) {

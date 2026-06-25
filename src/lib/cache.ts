@@ -81,15 +81,21 @@ export const triggerRankingsRebuild = () => {
           }
         }
 
-        // Build juegos with posiciones
+        // Build juegos with posiciones and inferred type
         const juegos: Juego[] = actJuegos.map((j) => {
           const posiciones = juegoPosicionesRaw.filter((jp) => jp.juegoId === j.id);
           const pos: Record<string, string[]> = {};
+          const isIndividual = posiciones.some(
+            (jp) => jp.posicion === 0 && jp.equipo === "__individual__",
+          );
+
           for (const jp of posiciones) {
+            if (jp.posicion === 0 && jp.equipo === "__individual__") continue;
             if (!pos[jp.posicion]) pos[jp.posicion] = [];
             pos[jp.posicion].push(jp.equipo);
           }
-          return { id: j.id, nombre: j.nombre, pos };
+          Object.values(pos).forEach((teams) => teams.sort());
+          return { id: j.id, nombre: j.nombre, tipo: isIndividual ? "individual" : "grupal", pos };
         });
 
         // Build goles

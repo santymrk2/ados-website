@@ -43,9 +43,12 @@ export interface ParticipantBasic {
 // ----------------------------------------------------------------------------
 
 // Juego dentro de una actividad
+export type JuegoTipo = "grupal" | "individual";
+
 export interface Juego {
   id: number | string;
   nombre: string | null;
+  tipo: JuegoTipo;
   pos: Record<string, string[]>;
 }
 

@@ -1,5 +1,7 @@
 ## ADOS Project Skills
 
+Before implementing code changes, read `.claude/skills/coding-discipline/SKILL.md` and apply it together with the matching project and framework skills below.
+
 Before changing this project, load the skill that matches the task:
 
 | Context | Skill |

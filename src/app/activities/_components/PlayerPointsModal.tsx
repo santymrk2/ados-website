@@ -98,6 +98,7 @@ export function PlayerPointsModal({
   }, [player, act, participants]);
 
   const team = act.equipos?.[String(player.id)];
+  const tieneBiblia = act.biblias.includes(player.id);
   const edad = getEdad(player.fechaNacimiento);
 
   return (
@@ -133,14 +134,24 @@ export function PlayerPointsModal({
               {team && (
                 <span
                   className="text-xs font-bold px-2 py-0.5 rounded-full"
-                  style={{ 
-                    backgroundColor: TEAM_COLORS[team] + '20',
-                    color: TEAM_COLORS[team] 
+                  style={{
+                    backgroundColor: TEAM_COLORS[team] + "20",
+                    color: TEAM_COLORS[team],
                   }}
                 >
                   Equipo {team}
                 </span>
               )}
+              <span
+                className={cn(
+                  "text-xs font-bold px-2 py-0.5 rounded-full",
+                  tieneBiblia
+                    ? "bg-emerald-100 text-emerald-700"
+                    : "bg-slate-100 text-slate-600",
+                )}
+              >
+                {tieneBiblia ? "Trajo Biblia" : "No trajo Biblia"}
+              </span>
             </div>
           </div>
         </div>

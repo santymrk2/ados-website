@@ -707,7 +707,7 @@ export async function PATCH(request: NextRequest) {
         .where(and(eq(schema.activities.id, activityId), eq(schema.activities.version, clientVersion)))
         .returning({ version: schema.activities.version });
 
-      let currentActivity: { version: number; locked: boolean } | null = null;
+      let currentActivity: { version: number; locked: boolean | null } | null = null;
       [currentActivity] = await tx
         .select({ version: schema.activities.version, locked: schema.activities.locked })
         .from(schema.activities)

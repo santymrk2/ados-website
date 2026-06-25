@@ -136,8 +136,8 @@ export default function RankingPage() {
 
   if (!act) return null;
 
-  const top3 = rankingData.slice(0, 3);
-  const rest = rankingData.slice(3);
+  const top3: typeof rankingData = [];
+  const rest = rankingData;
 
   return (
     <div>
@@ -204,7 +204,7 @@ export default function RankingPage() {
             className="bg-white/90 rounded-xl p-3 flex items-center gap-3"
           >
             <div className="w-7 h-7 flex items-center justify-center font-bold text-xs text-text-muted">
-              {i + 4}
+              {i + 1}
             </div>
             <Avatar p={p} size={30} />
             <div className="flex-1">

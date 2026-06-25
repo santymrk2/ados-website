@@ -497,8 +497,10 @@ export default function AsistenciaPage() {
                     )}
                     style={{
                       backgroundColor: here ? "var(--color-primary)" : "#f5f5f5",
-                      border: `1px solid ${here ? "var(--color-primary)" : "#e5e5e5"}`,
-                      borderRight: "none",
+                      borderStyle: "solid",
+                      borderWidth: "1px",
+                      borderColor: here ? "var(--color-primary)" : "#e5e5e5",
+                      borderRightWidth: 0,
                       color: here ? "var(--color-primary-foreground)" : "#999",
                       borderRadius: "12px 0 0 12px",
                     }}

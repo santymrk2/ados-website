@@ -242,11 +242,13 @@ export default function JuegosPage() {
 
       <div className="flex flex-col gap-4">
         {gameList.map((game, index) => (
-          <button
+          <div
             key={String(game.id)}
-            type="button"
+            role="button"
+            tabIndex={0}
             onClick={() => setSelectedId(game.id)}
-            className="text-left rounded-2xl border border-surface-dark bg-white p-4 shadow-sm transition hover:shadow-md"
+            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setSelectedId(game.id); }}
+            className="text-left rounded-2xl border border-surface-dark bg-white p-4 shadow-sm transition hover:shadow-md cursor-pointer"
           >
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0 flex-1">
@@ -278,7 +280,7 @@ export default function JuegosPage() {
                 <X className="h-4 w-4" />
               </Button>
             </div>
-          </button>
+          </div>
         ))}
       </div>
 

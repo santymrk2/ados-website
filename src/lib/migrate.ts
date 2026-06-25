@@ -32,8 +32,9 @@ export async function migrateDatabase() {
         juego_id,
         equipo,
         COUNT(*) as cnt,
-        GROUP_CONCAT(id) as ids
+        string_agg(id::text, ',') as ids
       FROM juego_posiciones
+      WHERE equipo IS NOT NULL
       GROUP BY juego_id, equipo
       HAVING COUNT(*) > 1
     `);
@@ -93,7 +94,7 @@ export async function migrateDatabase() {
     // 5. Validar constraint UNIQUE
     console.log('\n✨ Validando que el schema tiene UNIQUE constraint...');
     const indexInfo = await db.execute(
-      sql`PRAGMA index_info(unq_juego_equipo)`,
+      sql`SELECT indexname FROM pg_indexes WHERE indexname = 'unq_juego_equipo'`,
     );
 
     if (indexInfo.rows && indexInfo.rows.length > 0) {

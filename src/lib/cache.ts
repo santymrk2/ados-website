@@ -87,9 +87,17 @@ export const triggerRankingsRebuild = () => {
           const pos: Record<string, string[]> = {};
           for (const jp of posiciones) {
             if (!pos[jp.posicion]) pos[jp.posicion] = [];
-            pos[jp.posicion].push(jp.equipo);
+            if (j.tipo === "individual") {
+              if (jp.participantId) {
+                pos[jp.posicion].push(String(jp.participantId));
+              }
+            } else {
+              if (jp.equipo) {
+                pos[jp.posicion].push(jp.equipo);
+              }
+            }
           }
-          return { id: j.id, nombre: j.nombre, pos };
+          return { id: j.id, nombre: j.nombre, tipo: j.tipo as "grupal" | "individual", pos };
         });
 
         // Build goles

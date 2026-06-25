@@ -46,6 +46,7 @@ export interface ParticipantBasic {
 export interface Juego {
   id: number | string;
   nombre: string | null;
+  tipo?: "grupal" | "individual";
   pos: Record<string, string[]>;
 }
 

@@ -69,6 +69,7 @@ export const juegos = pgTable(
       .notNull()
       .references(() => activities.id, { onDelete: "cascade" }),
     nombre: text("nombre"),
+    tipo: text("tipo").default("grupal").notNull(),
   },
   (table) => ({
     // Index for filtering by activity
@@ -83,13 +84,20 @@ export const juegoPosiciones = pgTable(
     juegoId: integer("juego_id")
       .notNull()
       .references(() => juegos.id, { onDelete: "cascade" }),
-    equipo: text("equipo").notNull(),
+    equipo: text("equipo"),
+    participantId: integer("participant_id").references(() => participants.id, {
+      onDelete: "cascade",
+    }),
     posicion: integer("posicion").notNull(),
   },
   (table) => ({
     unq_juego_equipo: uniqueIndex("unq_juego_equipo").on(
       table.juegoId,
       table.equipo,
+    ),
+    unq_juego_participant: uniqueIndex("unq_juego_participant").on(
+      table.juegoId,
+      table.participantId,
     ),
     // Index for filtering by juego
     idx_juego_id: index("idx_juego_posiciones_juego_id").on(table.juegoId),

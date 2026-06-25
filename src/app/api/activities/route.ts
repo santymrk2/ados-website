@@ -326,13 +326,19 @@ export async function GET(request: NextRequest) {
         .map((j) => {
           const pos: Record<string, string[]> = {};
           jp.filter((x) => x.juegoId === j.id).forEach((x) => {
-            if (!activeTeams.includes(x.equipo)) return;
-            if (x.posicion < 1 || x.posicion > activeTeams.length) return;
-            if (!pos[x.posicion]) pos[x.posicion] = [];
-            pos[x.posicion].push(x.equipo);
+            if (j.tipo === "individual") {
+              if (!x.participantId || x.posicion < 1) return;
+              if (!pos[x.posicion]) pos[x.posicion] = [];
+              pos[x.posicion].push(String(x.participantId));
+            } else {
+              if (!x.equipo || !activeTeams.includes(x.equipo)) return;
+              if (x.posicion < 1 || x.posicion > activeTeams.length) return;
+              if (!pos[x.posicion]) pos[x.posicion] = [];
+              pos[x.posicion].push(x.equipo);
+            }
           });
           Object.keys(pos).forEach((k) => pos[k].sort());
-          return { id: j.id, nombre: j.nombre, pos };
+          return { id: j.id, nombre: j.nombre, tipo: j.tipo as "grupal" | "individual", pos };
         });
 
       return {

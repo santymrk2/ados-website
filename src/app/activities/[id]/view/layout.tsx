@@ -5,7 +5,6 @@ import { createContext, useContext, useEffect, useMemo, useState, useCallback, u
 import { useRouter, useSearchParams, useParams, usePathname } from "next/navigation";
 import {
   LayoutGrid,
-  Award,
   Gamepad2,
   ChevronLeft,
   Trophy,
@@ -44,9 +43,8 @@ export function useViewContext() {
 }
 
 const VIEW_TABS = [
-  { value: "equipos", label: "Equipos", icon: LayoutGrid },
   { value: "asistencia", label: "Asistencia", icon: CheckSquare },
-  { value: "goleadores", label: "Goleadores", icon: Award },
+  { value: "equipos", label: "Equipos", icon: LayoutGrid },
   { value: "juegos", label: "Juegos", icon: Gamepad2 },
   { value: "ranking", label: "Ranking", icon: Trophy },
 ] as const;

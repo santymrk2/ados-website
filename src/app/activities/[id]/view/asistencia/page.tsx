@@ -31,11 +31,13 @@ export default function AsistenciaPage() {
 
   // Stats
   const stats = useMemo(() => {
-    if (!act) return { total: 0, males: 0, females: 0, puntuales: 0 };
+    if (!act) return { total: 0, males: 0, females: 0, puntuales: 0, juegos: 0, social: 0 };
     const total = act.asistentes.length;
     let males = 0;
     let females = 0;
     let puntuales = 0;
+    const social = act.socials?.length || 0;
+    const juegos = total - social;
 
     act.asistentes.forEach((pid) => {
       const p = participants.find((x) => x.id === pid);
@@ -46,7 +48,7 @@ export default function AsistenciaPage() {
       if (act.puntuales.includes(pid)) puntuales++;
     });
 
-    return { total, males, females, puntuales };
+    return { total, males, females, puntuales, juegos, social };
   }, [act, act?.puntuales, participants]);
 
   // Lista de asistentes filtrados
@@ -156,6 +158,18 @@ export default function AsistenciaPage() {
           <div className="text-xs font-bold opacity-60 text-accent flex items-center justify-center gap-1">
             <Clock className="w-3 h-3" />
             Puntuales
+          </div>
+        </div>
+        <div className="bg-white/20 rounded-xl p-3 text-center border border-white/20">
+          <div className="text-2xl font-black text-accent">{stats.juegos}</div>
+          <div className="text-xs font-bold opacity-60 text-accent">
+            Juegos
+          </div>
+        </div>
+        <div className="bg-white/20 rounded-xl p-3 text-center border border-white/20">
+          <div className="text-2xl font-black text-accent">{stats.social}</div>
+          <div className="text-xs font-bold opacity-60 text-accent">
+            Social
           </div>
         </div>
       </div>

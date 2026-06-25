@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { parseBody, requireAdmin, requireAuth } from "@/lib/api-utils";
+import { apiForbidden, parseBody, requireAdmin, requireAuth } from "@/lib/api-utils";
 
 export const dynamic = 'force-dynamic';
 import * as schema from "@/lib/schema";
@@ -707,14 +707,22 @@ export async function PATCH(request: NextRequest) {
         .where(and(eq(schema.activities.id, activityId), eq(schema.activities.version, clientVersion)))
         .returning({ version: schema.activities.version });
 
+      let currentActivity: { version: number; locked: boolean } | null = null;
+      [currentActivity] = await tx
+        .select({ version: schema.activities.version, locked: schema.activities.locked })
+        .from(schema.activities)
+        .where(eq(schema.activities.id, activityId));
+
       if (!versionClaim) {
-        const [currentActivity] = await tx
-          .select({ version: schema.activities.version })
-          .from(schema.activities)
-          .where(eq(schema.activities.id, activityId));
         fail("Versión desactualizada", 409, {
           currentVersion: currentActivity?.version || clientVersion,
         });
+      }
+
+      const requestedData = data as Record<string, unknown> | null | undefined;
+      const isUnlockRequest = type === "config" && requestedData?.k === "locked" && requestedData?.v === false;
+      if (currentActivity?.locked && !isUnlockRequest) {
+        return apiForbidden("La actividad está bloqueada");
       }
 
       switch (type) {

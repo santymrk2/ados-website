@@ -4,7 +4,7 @@ import { participants, pushSubscriptions } from "@/lib/schema";
 import { sendBirthdayNotification, isWebPushConfigured, type PushMultiResult } from "@/services/web-push-server";
 import { getEdad } from "@/lib/constants";
 import { inArray } from "drizzle-orm";
-import { apiServerError, parseBody, requireAdmin, requireAuth } from "@/lib/api-utils";
+import { handleApiError, parseBody, requireAdmin, requireAuth } from "@/lib/api-utils";
 import { notificationTriggerSchema } from "@/lib/validation";
 import { timingSafeEqual } from "crypto";
 
@@ -119,7 +119,7 @@ export async function POST(request: NextRequest) {
     const result = await sendBirthdayNotifications(parsed.data.date ?? null);
     return NextResponse.json(result, { status: result.status });
   } catch (e) {
-    return apiServerError(e);
+    return handleApiError(e);
   }
 }
 
@@ -139,7 +139,7 @@ export async function GET(request: NextRequest) {
       }
 
       if (clientDate && !/^\d{4}-\d{2}-\d{2}$/.test(clientDate)) {
-        return NextResponse.json({ error: 'Invalid date' }, { status: 422 });
+        return NextResponse.json({ success: false, error: 'Fecha inválida' }, { status: 422 });
       }
 
       const result = await sendBirthdayNotifications(clientDate);
@@ -155,6 +155,6 @@ export async function GET(request: NextRequest) {
       configured: isWebPushConfigured(),
     });
   } catch (e) {
-    return apiServerError(e);
+    return handleApiError(e);
   }
 }

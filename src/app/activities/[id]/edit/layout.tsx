@@ -32,6 +32,7 @@ import { toast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 
 import type { Activity, Participant, DBData } from "@/lib/types";
+import { VersionConflictError } from "@/lib/errors";
 
 type DbType = DBData;
 
@@ -197,13 +198,12 @@ export default function EditLayout({ children, mode = "edit" }: EditLayoutProps)
         }
         return result;
       } catch (e) {
-        const err = e as Error;
-        if (err.message.startsWith("VERSION_CONFLICT:")) {
+        if (e instanceof VersionConflictError) {
           toast.error("Otro dispositivo actualizó esta actividad. Recargamos la versión nueva.");
         } else {
-          toast.error("Error al sincronizar: " + err.message);
+          toast.error("Error al sincronizar: " + (e instanceof Error ? e.message : String(e)));
         }
-        throw err;
+        throw e;
       } finally {
         lastEditTimeRef.current = Date.now();
         setPendingOps((prev) => {
@@ -274,12 +274,10 @@ export default function EditLayout({ children, mode = "edit" }: EditLayoutProps)
       setSaveStatus("saved");
     } catch (e) {
       setSaveStatus("error");
-      const err = e as Error;
-      if (err.message.startsWith("VERSION_CONFLICT:")) {
-        const serverVersion = err.message.split(":")[1];
-        toast.error(`⚠️ Alguien más modificó esta actividad (v${serverVersion}). Recargá la página.`);
+      if (e instanceof VersionConflictError) {
+        toast.error(`⚠️ Alguien más modificó esta actividad (v${e.details?.currentVersion}). Recargá la página.`);
       } else {
-        toast.error("Error al guardar: " + err.message);
+        toast.error("Error al guardar: " + (e instanceof Error ? e.message : String(e)));
       }
     }
   }, [activity, db.nextAid, quickUpdate, saveActivity, router]);

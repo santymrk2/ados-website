@@ -19,6 +19,7 @@ import {
   quickUpdateActivity,
 } from "@/lib/api-client";
 import type { Activity, Participant, DBData } from "@/lib/types";
+import { VersionConflictError } from "@/lib/errors";
 
 type ActivityDraft = Omit<Activity, "id"> & {
   id?: number | null;
@@ -84,7 +85,7 @@ export function useDatabase() {
       }
       return result;
     } catch (error) {
-      const isConflict = error instanceof Error && error.message.startsWith("VERSION_CONFLICT:");
+      const isConflict = error instanceof VersionConflictError;
 
       if (isConflict && RETRYABLE_QUICK_UPDATE_TYPES.has(type)) {
         await refreshData(false);

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { pushSubscriptions } from "@/lib/schema";
 import { eq } from "drizzle-orm";
-import { apiServerError, parseBody, requireAdmin } from "@/lib/api-utils";
+import { handleApiError, parseBody, requireAdmin } from "@/lib/api-utils";
 import { subscriptionActionSchema } from "@/lib/validation";
 
 export async function POST(request: NextRequest) {
@@ -56,6 +56,6 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
   } catch (e) {
-    return apiServerError(e);
+    return handleApiError(e);
   }
 }

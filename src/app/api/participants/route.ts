@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { requireAdmin, requireAuth } from "@/lib/api-utils";
+import { handleApiError, requireAdmin, requireAuth } from "@/lib/api-utils";
 
 export const dynamic = 'force-dynamic';
 import { participants, activityParticipants, goles, extras, invitaciones } from "@/lib/schema";
 import { eq, or } from "drizzle-orm";
 import { eventBus } from "@/lib/eventBus";
 import { uploadBase64Image, minioConfig } from "@/services/minio";
-import { apiServerError, parseBody } from "@/lib/api-utils";
+import { parseBody } from "@/lib/api-utils";
 import { deleteByIdSchema, participantSaveSchema } from "@/lib/validation";
 
 const generateUniqueFilename = (prefix: string) => `${prefix}_${Date.now()}_${Math.random().toString(36).substring(7)}.jpg`;
@@ -77,7 +77,7 @@ export async function GET(request: NextRequest) {
       }
     });
   } catch (e) {
-    return apiServerError(e);
+    return handleApiError(e);
   }
 }
 
@@ -99,7 +99,7 @@ export async function POST(request: NextRequest) {
       data.fotoAltaCalidad?.startsWith('data:image');
 
     if (needsImageUpload && !minioConfig.isConfigured) {
-      return NextResponse.json({ error: "Image storage is not configured" }, { status: 503 });
+      return NextResponse.json({ success: false, error: "El almacenamiento de imágenes no está configurado" }, { status: 503 });
     }
     
     // Handle image uploads
@@ -108,7 +108,7 @@ export async function POST(request: NextRequest) {
         data.foto = await uploadBase64Image(data.foto, generateUniqueFilename('thumb'));
       } catch (uploadError) {
         console.error('[MinIO] Image upload failed:', uploadError);
-        return NextResponse.json({ error: "Error uploading image" }, { status: 500 });
+        return NextResponse.json({ success: false, error: "Error al subir la imagen" }, { status: 500 });
       }
     }
     if (data.fotoAltaCalidad && data.fotoAltaCalidad.startsWith('data:image')) {
@@ -116,7 +116,7 @@ export async function POST(request: NextRequest) {
         data.fotoAltaCalidad = await uploadBase64Image(data.fotoAltaCalidad, generateUniqueFilename('full'));
       } catch (uploadError) {
         console.error('[MinIO] Image upload failed:', uploadError);
-        return NextResponse.json({ error: "Error uploading image" }, { status: 500 });
+        return NextResponse.json({ success: false, error: "Error al subir la imagen" }, { status: 500 });
       }
     }
     
@@ -136,7 +136,7 @@ export async function POST(request: NextRequest) {
     } else {
       const { id, ...participantData } = data;
       if (!id) {
-        return NextResponse.json({ error: "Participant ID is required" }, { status: 422 });
+        return NextResponse.json({ success: false, error: "ID de participante requerido" }, { status: 422 });
       }
 
       await db.update(participants).set(participantData).where(eq(participants.id, id));
@@ -144,7 +144,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: true }, { status: 200 });
     }
   } catch (e) {
-    return apiServerError(e);
+    return handleApiError(e);
   }
 }
 
@@ -176,6 +176,6 @@ export async function DELETE(request: NextRequest) {
     eventBus.emit('data-changed');
     return NextResponse.json({ success: true }, { status: 200 });
   } catch (e) {
-    return apiServerError(e);
+    return handleApiError(e);
   }
 }

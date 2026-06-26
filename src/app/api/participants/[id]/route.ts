@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 import { participants } from "@/lib/schema";
 import { eq } from "drizzle-orm";
 import type { Participant } from "@/lib/types";
-import { requireAuth } from "@/lib/api-utils";
+import { handleApiError, requireAuth } from "@/lib/api-utils";
 
 export const dynamic = 'force-dynamic';
 
@@ -51,7 +51,6 @@ export async function GET(
       }
     });
   } catch (e) {
-    console.error("[API Participant ID] Error:", e);
-    return NextResponse.json({ success: false, error: "Error interno" }, { status: 500 });
+    return handleApiError(e);
   }
 }

@@ -18,13 +18,11 @@ interface AvatarProps {
 export function Avatar({ p, size = 36, className = "" }: AvatarProps) {
   const initials =
     `${p.nombre?.[0] || ""}${p.apellido?.[0] || ""}`.toUpperCase();
-  const isM = p.sexo === "M";
-  const isMX = p.sexo === "MX";
-
-  const borderColor = isM ? "#00D4FF" : isMX ? "#4342FF" : "#FF2A7A";
+  const sexLetter = p.sexo === "M" ? "M" : "F";
 
   const fontSize = Math.round(size * 0.4);
-  const borderWidth = Math.max(2, Math.round(size * 0.08));
+  const badgeSize = Math.max(14, Math.round(size * 0.38));
+  const badgeFontSize = Math.max(7, Math.round(badgeSize * 0.55));
 
   return (
     <div
@@ -32,12 +30,9 @@ export function Avatar({ p, size = 36, className = "" }: AvatarProps) {
         width: size,
         height: size,
       }}
-      className={cn("inline-block shrink-0", className)}
+      className={cn("relative inline-block shrink-0", className)}
     >
-      <AvatarPrimitive.Root
-        className="relative flex h-full w-full shrink-0 overflow-hidden rounded-full"
-        style={{ borderWidth, borderColor, borderStyle: "solid" }}
-      >
+      <AvatarPrimitive.Root className="relative flex h-full w-full shrink-0 overflow-hidden rounded-full border border-[#E5E7EB]">
         {p.foto && (
           <AvatarPrimitive.Image
             src={getImg(p.foto)}
@@ -52,6 +47,12 @@ export function Avatar({ p, size = 36, className = "" }: AvatarProps) {
           {initials || "?"}
         </AvatarPrimitive.Fallback>
       </AvatarPrimitive.Root>
+      <div
+        className="absolute -bottom-0.5 -right-0.5 flex items-center justify-center rounded-full bg-white text-text-muted shadow-sm"
+        style={{ width: badgeSize, height: badgeSize, fontSize: badgeFontSize, fontWeight: 700 }}
+      >
+        {sexLetter}
+      </div>
     </div>
   );
 }

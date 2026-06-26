@@ -292,8 +292,8 @@ export default function EquiposPage() {
             <div className="flex-1 text-center">
               <div className="font-black text-xl">{total}</div>
               <div className="text-[10px] text-text-muted flex items-center justify-center gap-0.5">
-                <SexBadge sex="M" className="w-3 h-3" />
-                {m} <SexBadge sex="F" className="w-3 h-3" />
+                <SexBadge sex="M" size={12} />
+                {m} <SexBadge sex="F" size={12} />
                 {f}
               </div>
             </div>
@@ -338,7 +338,7 @@ export default function EquiposPage() {
             {selectedTeamData.women.length > 0 && (
               <div className="bg-surface-light/50 rounded-xl p-3 border border-surface-dark">
                 <div className="font-bold text-sm text-muted-foreground mb-2 flex items-center gap-2">
-                  <SexBadge sex="F" className="w-4 h-4" /> Mujer ({selectedTeamData.women.length})
+                  <SexBadge sex="F" size={16} /> Mujer ({selectedTeamData.women.length})
                 </div>
                 <div className="flex flex-col gap-1">
                   {selectedTeamData.women.map((p: ParticipantBasic) => (
@@ -361,7 +361,7 @@ export default function EquiposPage() {
             {selectedTeamData.men.length > 0 && (
               <div className="bg-surface-light/50 rounded-xl p-3 border border-surface-dark">
                 <div className="font-bold text-sm text-muted-foreground mb-2 flex items-center gap-2">
-                  <SexBadge sex="M" className="w-4 h-4" /> Varón ({selectedTeamData.men.length})
+                  <SexBadge sex="M" size={16} /> Varón ({selectedTeamData.men.length})
                 </div>
                 <div className="flex flex-col gap-1">
                   {selectedTeamData.men.map((p: ParticipantBasic) => (

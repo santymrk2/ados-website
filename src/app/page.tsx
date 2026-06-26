@@ -21,7 +21,7 @@ import {
 import { Section, Empty } from "@/components/ui/Common";
 import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/button";
-import { SexBadge, RankBadge, PodiumBadge } from "@/components/ui/Badges";
+import { RankBadge, PodiumBadge } from "@/components/ui/Badges";
 import { cn, formatDate } from "@/lib/utils";
 import type { ParticipantBasic, Activity, Ranking, Invitacion } from "@/lib/types";
 

@@ -8,6 +8,7 @@ import { Avatar } from "@/components/ui/Avatar";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import type { ParticipantBasic } from "@/lib/types";
+import { ArrowRight, X, Plus, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface InvitacionWithId {
@@ -79,7 +80,7 @@ function InvitationRow({
   return (
     <div
       className={cn(
-        "flex items-center gap-2 px-3 py-2 bg-white rounded-lg border border-surface-dark relative",
+        "flex items-center gap-2 px-3 py-2 bg-white rounded-2xl border border-surface-dark relative",
         "transition-all duration-150 hover:border-teal-400/50"
       )}
     >
@@ -188,20 +189,7 @@ function InvitationRow({
 
       {/* FLECHA DIRECCIONAL - El elemento que comunica la relación */}
       <div className="flex-shrink-0 text-teal-600">
-        <svg
-          width="20"
-          height="20"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="rotate-0 rtl:rotate-180"
-        >
-          <path d="M5 12h14" />
-          <path d="m12 5 7 7-7 7" />
-        </svg>
+        <ArrowRight className="w-5 h-5 rotate-0 rtl:rotate-180" />
       </div>
 
       {/* INVITADO - Clickable trigger */}
@@ -322,10 +310,7 @@ function InvitationRow({
         disabled={locked}
         className="flex-shrink-0 text-red-500 hover:bg-red-50 w-8 h-8"
       >
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M18 6 6 18" />
-          <path d="m6 6 12 12" />
-        </svg>
+        <X className="w-4 h-4" />
       </Button>
     </div>
   );
@@ -444,19 +429,7 @@ export default function InvitadosPage() {
           disabled={locked}
           className="bg-teal-50 text-teal-600 hover:bg-teal-100"
         >
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M5 12h14" />
-            <path d="M12 5v14" />
-          </svg>
+          <Plus className="w-4 h-4" />
           <span className="ml-1">Agregar</span>
         </Button>
       </div>
@@ -481,22 +454,7 @@ export default function InvitadosPage() {
         /* Estado vacío */
         <div className="flex flex-col items-center justify-center py-8 text-center">
           <div className="w-12 h-12 rounded-full bg-surface-dark flex items-center justify-center mb-3">
-            <svg
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="text-text-muted"
-            >
-              <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-              <circle cx="9" cy="7" r="4" />
-              <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
-              <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-            </svg>
+            <Users className="w-6 h-6 text-text-muted" />
           </div>
           <p className="text-sm text-text-muted mb-3">No hay invitaciones aún</p>
           <Button

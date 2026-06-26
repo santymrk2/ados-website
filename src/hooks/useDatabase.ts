@@ -40,6 +40,7 @@ const RETRYABLE_QUICK_UPDATE_TYPES = new Set([
   "game_add",
   "game_update",
   "game_delete",
+  "game_pos",
   "invitacion_add",
   "invitacion_update",
   "invitacion_delete",

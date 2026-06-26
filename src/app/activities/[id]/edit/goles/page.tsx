@@ -65,7 +65,7 @@ function GoalRow({
   return (
     <div
       className={cn(
-        "flex items-center gap-2 p-2 bg-white rounded-xl border border-surface-dark shadow-sm",
+        "flex items-center gap-2 p-2 bg-white rounded-2xl border border-surface-dark shadow-sm",
         "transition-all duration-200 hover:border-yellow-400/50"
       )}
     >

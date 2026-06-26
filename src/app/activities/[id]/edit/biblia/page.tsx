@@ -176,14 +176,13 @@ export default function BibliaPage() {
             return (
               <div
                 key={p.id}
-                className={`rounded-lg border bg-white ${bib ? "border-primary shadow-md shadow-primary/20" : "border-surface-dark"}`}
+                className={`rounded-2xl border bg-white ${bib ? "border-primary shadow-md shadow-primary/20" : "border-surface-dark"}`}
               >
                 <div className="flex items-center p-3 gap-3">
                   <Avatar p={p} size={30} />
                   <div className="flex-1">
                     <div
-                      className="font-bold text-sm"
-                      style={{ color: bib ? "#1a1a1a" : "#999" }}
+                      className={cn("font-bold text-sm", bib ? "text-foreground" : "text-text-muted")}
                     >
                       {p.nombre} {p.apellido}
                     </div>
@@ -195,15 +194,12 @@ export default function BibliaPage() {
                     onClick={() => toggle(p.id)}
                     disabled={locked}
                     className={cn(
-                      "flex items-center justify-center h-9 min-w-9 px-3 text-sm font-semibold transition-colors",
+                      "flex items-center justify-center h-9 min-w-9 px-3 text-sm font-semibold transition-colors rounded-2xl border",
                       locked && "opacity-50 cursor-not-allowed pointer-events-none",
+                      bib
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-surface-light text-text-muted border-surface-dark",
                     )}
-                    style={{
-                      backgroundColor: bib ? "var(--color-primary)" : "#f5f5f5",
-                      border: `1px solid ${bib ? "var(--color-primary)" : "#e5e5e5"}`,
-                      color: bib ? "var(--color-primary-foreground)" : "#999",
-                      borderRadius: "12px",
-                    }}
                   >
                     <BookOpen className="w-3.5 h-3.5" />
                   </button>

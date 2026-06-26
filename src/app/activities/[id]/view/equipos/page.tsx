@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { useViewContext } from "../layout";
-import { TEAMS, TEAM_COLORS, getTeamBg } from "@/lib/constants";
+import { TEAMS, TEAM_COLORS } from "@/lib/constants";
 import { SexBadge } from "@/components/ui/Badges";
 import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/button";
@@ -68,18 +68,16 @@ export default function EquiposPage() {
         {teamStats.map(({ team, total, m, f }) => (
           <div
             key={team}
-            className="rounded-2xl p-3 flex items-center gap-2 border-2 cursor-pointer hover:scale-[1.02] transition-transform"
+            className="rounded-2xl border border-surface-dark bg-white p-3 flex items-center gap-2 cursor-pointer transition-shadow hover:shadow-md"
             style={{
-              backgroundColor: getTeamBg(team),
-              borderColor:
-                selectedTeam === team
-                  ? TEAM_COLORS[team]
-                  : TEAM_COLORS[team] + "44",
+              borderLeftColor: TEAM_COLORS[team],
+              borderLeftWidth: 4,
+              ...(selectedTeam === team ? { boxShadow: `0 0 0 2px ${TEAM_COLORS[team]}` } : {}),
             }}
             onClick={() => setSelectedTeam(team)}
           >
             <div
-              className="font-black text-lg"
+              className="font-black text-lg shrink-0"
               style={{ color: TEAM_COLORS[team] }}
             >
               {team}
@@ -110,7 +108,7 @@ export default function EquiposPage() {
               variant="ghost"
               size="sm"
               onClick={() => setSelectedTeam(null)}
-              className="text-xs text-accent hover:text-primary"
+              className="text-xs text-text-muted hover:text-primary"
             >
               Cerrar
             </Button>
@@ -118,16 +116,16 @@ export default function EquiposPage() {
 
           <div className="flex flex-col gap-3">
             {selectedTeamData.women.length > 0 && (
-              <div className="bg-pink-50 rounded-xl p-3 border border-pink-100">
-                <div className="font-bold text-sm text-pink-700 mb-2 flex items-center gap-2">
-                  Mujer ({selectedTeamData.women.length})
+              <div className="bg-white rounded-xl p-3 border border-surface-dark">
+                <div className="font-bold text-sm text-muted-foreground mb-2 flex items-center gap-2">
+                  <SexBadge sex="F" className="w-4 h-4" /> Mujer ({selectedTeamData.women.length})
                 </div>
                 <div className="flex flex-col gap-1">
                   {selectedTeamData.women.map((p) => (
                     <div
                       key={p.id}
                       onClick={() => setSelectedPlayer(p)}
-                      className="bg-white rounded-lg p-2 flex items-center gap-2 cursor-pointer hover:bg-pink-100 transition-colors"
+                      className="rounded-lg bg-white p-2 flex items-center gap-2 cursor-pointer hover:bg-surface-light transition-colors"
                     >
                       <Avatar p={p} size={24} />
                       <div className="flex-1">
@@ -135,7 +133,7 @@ export default function EquiposPage() {
                           {p.nombre} {p.apellido}
                         </div>
                       </div>
-                      <div className="text-xs text-pink-600 font-bold">
+                      <div className="text-xs font-bold text-primary">
                         {playerRank.find((pr) => pr.id === p.id)?.pts || 0} pts
                       </div>
                     </div>
@@ -145,16 +143,16 @@ export default function EquiposPage() {
             )}
 
             {selectedTeamData.men.length > 0 && (
-              <div className="bg-cyan-50 rounded-xl p-3 border border-cyan-100">
-                <div className="font-bold text-sm text-cyan-700 mb-2 flex items-center gap-2">
-                  Varón ({selectedTeamData.men.length})
+              <div className="bg-white rounded-xl p-3 border border-surface-dark">
+                <div className="font-bold text-sm text-muted-foreground mb-2 flex items-center gap-2">
+                  <SexBadge sex="M" className="w-4 h-4" /> Varón ({selectedTeamData.men.length})
                 </div>
                 <div className="flex flex-col gap-1">
                   {selectedTeamData.men.map((p) => (
                     <div
                       key={p.id}
                       onClick={() => setSelectedPlayer(p)}
-                      className="bg-white rounded-lg p-2 flex items-center gap-2 cursor-pointer hover:bg-cyan-100 transition-colors"
+                      className="rounded-lg bg-white p-2 flex items-center gap-2 cursor-pointer hover:bg-surface-light transition-colors"
                     >
                       <Avatar p={p} size={24} />
                       <div className="flex-1">
@@ -162,7 +160,7 @@ export default function EquiposPage() {
                           {p.nombre} {p.apellido}
                         </div>
                       </div>
-                      <div className="text-xs text-cyan-600 font-bold">
+                      <div className="text-xs font-bold text-primary">
                         {playerRank.find((pr) => pr.id === p.id)?.pts || 0} pts
                       </div>
                     </div>
@@ -173,7 +171,7 @@ export default function EquiposPage() {
 
             {selectedTeamData.women.length === 0 &&
               selectedTeamData.men.length === 0 && (
-                <div className="text-accent text-center text-text-muted text-sm py-4">
+                <div className="text-center text-text-muted text-sm py-4">
                   Sin jugadores en este equipo
                 </div>
               )}

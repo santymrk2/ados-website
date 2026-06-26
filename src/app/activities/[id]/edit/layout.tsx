@@ -125,7 +125,7 @@ export default function EditLayout({ children, mode = "edit" }: EditLayoutProps)
   const contentRef = useRef<HTMLDivElement>(null);
 
   const activityRef = useRef(activity);
-  // eslint-disable-next-line react-hooks/rules-of-hooks
+  const lastEditTimeRef = useRef(0);
   useEffect(() => {
     activityRef.current = activity;
   }, [activity]);
@@ -185,7 +185,16 @@ export default function EditLayout({ children, mode = "edit" }: EditLayoutProps)
     const currentActivity = activityRef.current;
     if (currentActivity.id) {
       try {
-        const result = await quickUpdate(currentActivity.id, operationType, data, currentActivity.version);
+        const result = await quickUpdate(currentActivity.id, operationType, data, currentActivity.version, true);
+        if (result && typeof result === "object" && "version" in result) {
+          const newVersion = (result as { version: number }).version;
+          setActivity((prev) =>
+            prev.id === currentActivity.id
+              ? { ...prev, version: newVersion }
+              : prev,
+          );
+          activityRef.current = { ...activityRef.current, version: newVersion };
+        }
         return result;
       } catch (e) {
         const err = e as Error;
@@ -196,6 +205,7 @@ export default function EditLayout({ children, mode = "edit" }: EditLayoutProps)
         }
         throw err;
       } finally {
+        lastEditTimeRef.current = Date.now();
         setPendingOps((prev) => {
           const next = new Set(prev);
           next.delete(opKey);
@@ -283,15 +293,18 @@ export default function EditLayout({ children, mode = "edit" }: EditLayoutProps)
   }, [activity, saveStatus, doSave]);
 
   // Sincronizar con datos del servidor solo después de que se guarde
-  // Agregar delay para evitar sobrescribir datos locales antes de que el servidor-process
+  // Agregar delay para evitar sobrescribir datos locales antes de que el servidor processe
+  // Evitar reemplazar durante operaciones rápidas consecutivas (ej. game_pos toggles)
   useEffect(() => {
     if (!activity.id || saveStatus !== "saved" || pendingOps.size > 0) return;
+    const elapsed = Date.now() - lastEditTimeRef.current;
+    if (elapsed < 3000) return;
     const timer = setTimeout(() => {
       const initialActivity = db?.activities?.find((a: Activity) => a.id === activity.id);
       if (initialActivity) {
         setActivity(initialActivity);
       }
-    }, 500); // 500ms delay para permitir que el servidor procese completamente
+    }, 500);
     return () => clearTimeout(timer);
   }, [db?.activities, activity.id, saveStatus, pendingOps.size]);
 

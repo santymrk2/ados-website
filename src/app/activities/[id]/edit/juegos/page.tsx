@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useEditContext } from "../layout";
-import { Gamepad2, Plus, Users, X } from "lucide-react";
+import { Gamepad2, Plus, Users, X, Search, Trash2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { confirmDialog } from "@/components/ui/confirm-dialog";
 import { TEAMS } from "@/lib/constants";
@@ -10,6 +10,8 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label, Empty } from "@/components/ui/Common";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Avatar } from "@/components/ui/Avatar";
 import type { Juego, ParticipantBasic } from "@/lib/types";
 
 const POSITIONS = ["1", "2", "3", "4"] as const;
@@ -30,19 +32,18 @@ function normalizePos(currentPos: Record<string, string[]>) {
 
 function computeNewPos(currentPos: Record<string, string[]>, itemId: string, pos: string) {
   const next = normalizePos(currentPos);
+  const wasInTarget = (next[pos] || []).includes(itemId);
+
   Object.keys(next).forEach((key) => {
     if (Array.isArray(next[key])) {
       next[key] = next[key].filter((value) => value !== itemId);
+      if (next[key].length === 0) delete next[key];
     }
   });
 
-  const current = next[pos] ? [...next[pos]] : [];
-  if (current.includes(itemId)) {
-    next[pos] = current.filter((value) => value !== itemId);
-    return next;
-  }
+  if (wasInTarget) return next;
 
-  next[pos] = [...current, itemId].sort();
+  next[pos] = [...(next[pos] || []), itemId].sort();
   return next;
 }
 
@@ -70,10 +71,12 @@ function gameTypeLabel(tipo: JuegoTipo) {
 }
 
 export default function JuegosPage() {
-  const { activity: act, setLocal, syncWithServer, locked, pendingOps, db } = useEditContext();
+  const { activity: act, setLocal, syncWithServer, locked, db } = useEditContext();
   const [createOpen, setCreateOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<number | string | null>(null);
   const selectedIdRef = useRef<number | string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
 
   useEffect(() => {
     selectedIdRef.current = selectedId;
@@ -91,9 +94,6 @@ export default function JuegosPage() {
       .sort((a, b) => `${a.apellido} ${a.nombre}`.localeCompare(`${b.apellido} ${b.nombre}`));
   }, [participants, act.asistentes, act.equipos, activeTeams]);
 
-  const isAddingSaving =
-    pendingOps.size > 0 && Array.from(pendingOps).some((op) => op.startsWith("game_add"));
-
   const selectedGame = useMemo(
     () => gameList.find((game) => game.id === selectedId) || null,
     [gameList, selectedId],
@@ -101,119 +101,124 @@ export default function JuegosPage() {
 
   const commitGamePositions = useCallback(
     async (gameId: number | string, nextPos: Record<string, string[]>) => {
-      const prevJuegos = [...(act.juegos || [])];
+      if (savingRef.current || (typeof gameId === "string" && gameId.startsWith("temp"))) return;
+
       const updateFn = (prev: Juego[]) =>
         (prev || []).map((game) => (game.id === gameId ? { ...game, pos: nextPos } : game));
 
-      setLocal("juegos", updateFn, true);
-      if (typeof gameId === "string" && gameId.startsWith("temp")) return;
+      savingRef.current = true;
+      setSaving(true);
 
       try {
         await syncWithServer("game_pos", { juegoId: gameId, pos: nextPos });
+        setLocal("juegos", updateFn, true);
       } catch (error) {
-        setLocal("juegos", () => prevJuegos, true);
         const err = error as Error;
         toast.error("Error al actualizar posición: " + err.message);
+      } finally {
+        savingRef.current = false;
+        setSaving(false);
       }
     },
-    [act.juegos, setLocal, syncWithServer],
+    [setLocal, syncWithServer],
   );
 
   const addGame = useCallback(
     async (tipo: JuegoTipo) => {
-      if (locked || isAddingSaving) return;
+      if (locked || savingRef.current) return;
 
-      const tempId = generateTempId();
-      const prevJuegos = [...(act.juegos || [])];
-      const game: Juego = { id: tempId, nombre: "", tipo, pos: {} };
-
-      setLocal("juegos", (prev: Juego[]) => [...(prev || []), game], true);
-      setCreateOpen(false);
+      savingRef.current = true;
+      setSaving(true);
 
       try {
-        const result = await syncWithServer("game_add", game);
+        const result = await syncWithServer("game_add", { nombre: "", tipo, pos: {} });
+        setCreateOpen(false);
         if (result && typeof result === "object" && "id" in result) {
           const finalId = (result as { id: number }).id;
-          setLocal(
-            "juegos",
-            (prev: Juego[]) => (prev || []).map((j) => (j.id === tempId ? { ...j, id: finalId } : j)),
-            true,
-          );
+          const game: Juego = { id: finalId, nombre: "", tipo, pos: {} };
+          setLocal("juegos", (prev: Juego[]) => [...(prev || []), game], true);
           setSelectedId(finalId);
-        } else {
-          setSelectedId(tempId);
         }
       } catch (error) {
-        setLocal("juegos", () => prevJuegos, true);
         const err = error as Error;
         toast.error("Error al agregar: " + err.message);
+      } finally {
+        savingRef.current = false;
+        setSaving(false);
       }
     },
-    [act.juegos, isAddingSaving, locked, setLocal, syncWithServer],
+    [locked, setLocal, syncWithServer],
   );
 
   const deleteGame = useCallback(
     async (gameId: number | string) => {
-      const prevJuegos = [...(act.juegos || [])];
-      const updateFn = (prev: Juego[]) => (prev || []).filter((game) => game.id !== gameId);
-
       if (typeof gameId === "string" && gameId.startsWith("temp")) {
-        setLocal("juegos", updateFn, true);
+        setLocal("juegos", (prev: Juego[]) => (prev || []).filter((game) => game.id !== gameId), true);
         if (selectedIdRef.current === gameId) setSelectedId(null);
         return;
       }
 
-      setLocal("juegos", updateFn, true);
-      if (selectedIdRef.current === gameId) setSelectedId(null);
+      if (savingRef.current) return;
+      savingRef.current = true;
+      setSaving(true);
 
       try {
         await syncWithServer("game_delete", { id: gameId });
+        setLocal("juegos", (prev: Juego[]) => (prev || []).filter((game) => game.id !== gameId), true);
+        if (selectedIdRef.current === gameId) setSelectedId(null);
       } catch (error) {
-        setLocal("juegos", () => prevJuegos, true);
         const err = error as Error;
         toast.error("Error al eliminar: " + err.message);
+      } finally {
+        savingRef.current = false;
+        setSaving(false);
       }
     },
-    [act.juegos, setLocal, syncWithServer],
+    [setLocal, syncWithServer],
   );
 
   const updateName = useCallback(
     async (gameId: number | string, nombre: string) => {
-      const prevJuegos = [...(act.juegos || [])];
+      if (typeof gameId === "string" && gameId.startsWith("temp")) return;
+      if (savingRef.current) return;
+
       const updateFn = (prev: Juego[]) =>
         (prev || []).map((game) => (game.id === gameId ? { ...game, nombre } : game));
 
-      setLocal("juegos", updateFn, true);
-      if (typeof gameId === "string" && gameId.startsWith("temp")) return;
+      savingRef.current = true;
+      setSaving(true);
 
       try {
         await syncWithServer("game_update", { id: gameId, nombre });
+        setLocal("juegos", updateFn, true);
       } catch (error) {
-        setLocal("juegos", () => prevJuegos, true);
         const err = error as Error;
         toast.error("Error al actualizar: " + err.message);
+      } finally {
+        savingRef.current = false;
+        setSaving(false);
       }
     },
-    [act.juegos, setLocal, syncWithServer],
+    [setLocal, syncWithServer],
   );
 
   const togglePositionItem = useCallback(
     (gameId: number | string, itemId: string, pos: string) => {
-      const game = gameList.find((item) => item.id === gameId);
+      const game = act.juegos?.find((item) => item.id === gameId);
       if (!game) return;
       void commitGamePositions(gameId, computeNewPos(game.pos || {}, itemId, pos));
     },
-    [commitGamePositions, gameList],
+    [act.juegos, commitGamePositions],
   );
 
   const fillWithRemaining = useCallback(
     (gameId: number | string, pos: string) => {
-      const game = gameList.find((item) => item.id === gameId);
-      if (!game) return;
+      const game = act.juegos?.find((item) => item.id === gameId);
+      if (!game || savingRef.current) return;
       const allIds = eligiblePlayers.map((player) => String(player.id));
       void commitGamePositions(gameId, fillRemainingPos(game.pos || {}, pos, allIds));
     },
-    [commitGamePositions, eligiblePlayers, gameList],
+    [act.juegos, commitGamePositions, eligiblePlayers],
   );
 
   const renderSummary = useCallback(
@@ -233,7 +238,7 @@ export default function JuegosPage() {
           onClick={() => setCreateOpen(true)}
           variant="ghost"
           size="sm"
-          disabled={locked || isAddingSaving}
+          disabled={locked || saving}
           className="bg-indigo-50 text-primary font-black px-4"
         >
           <Plus className="w-4 h-4 mr-1" /> Juego
@@ -242,11 +247,13 @@ export default function JuegosPage() {
 
       <div className="flex flex-col gap-4">
         {gameList.map((game, index) => (
-          <button
+          <div
             key={String(game.id)}
-            type="button"
+            role="button"
+            tabIndex={0}
             onClick={() => setSelectedId(game.id)}
-            className="text-left rounded-2xl border border-surface-dark bg-white p-4 shadow-sm transition hover:shadow-md"
+            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setSelectedId(game.id); }}
+            className="text-left rounded-2xl border border-surface-dark bg-white p-4 shadow-sm transition hover:shadow-md cursor-pointer"
           >
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0 flex-1">
@@ -278,7 +285,7 @@ export default function JuegosPage() {
                 <X className="h-4 w-4" />
               </Button>
             </div>
-          </button>
+          </div>
         ))}
       </div>
 
@@ -321,13 +328,15 @@ export default function JuegosPage() {
       </Dialog>
 
       <Dialog open={!!selectedGame} onOpenChange={(open) => !open && setSelectedId(null)}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-4xl">
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-4xl" showCloseButton={false}>
           {selectedGame && (
             <GameDetailModal
               game={selectedGame}
               activeTeams={activeTeams}
               players={eligiblePlayers}
               locked={locked}
+              saving={saving}
+              onClose={() => setSelectedId(null)}
               onRename={(nombre) => void updateName(selectedGame.id, nombre)}
               onDelete={async () => {
                 const ok = await confirmDialog(
@@ -351,6 +360,8 @@ function GameDetailModal({
   activeTeams,
   players,
   locked,
+  saving,
+  onClose,
   onRename,
   onDelete,
   onToggleItem,
@@ -360,28 +371,46 @@ function GameDetailModal({
   activeTeams: string[];
   players: ParticipantOption[];
   locked: boolean;
+  saving: boolean;
+  onClose: () => void;
   onRename: (value: string) => void;
   onDelete: () => Promise<void>;
   onToggleItem: (gameId: number | string, itemId: string, pos: string) => void;
   onFillRemaining: (gameId: number | string, pos: string) => void;
 }) {
-  const items = game.tipo === "individual" ? players : activeTeams;
-  const toLabel = (id: string) => {
-    if (game.tipo === "individual") {
-      const person = players.find((p) => String(p.id) === id);
-      return person ? `${person.nombre} ${person.apellido}` : id;
-    }
-    return id;
-  };
+  const [localName, setLocalName] = useState(game.nombre || "");
+  const [openPopover, setOpenPopover] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+
+  const assignedIds = useMemo(() => {
+    if (game.tipo !== "individual") return new Set<string>();
+    return new Set(Object.values(game.pos || {}).flat());
+  }, [game.pos, game.tipo]);
+
+  const availablePlayers = useMemo(() => {
+    if (game.tipo !== "individual") return [];
+    return players.filter((p) => !assignedIds.has(String(p.id)));
+  }, [players, assignedIds, game.tipo]);
+
+  const filteredPlayers = useMemo(() => {
+    if (!search.trim()) return availablePlayers;
+    const q = search.toLowerCase();
+    return availablePlayers.filter((p) =>
+      `${p.nombre} ${p.apellido}`.toLowerCase().includes(q),
+    );
+  }, [availablePlayers, search]);
 
   return (
     <div className="space-y-4">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0 flex-1 space-y-2">
+      <div className="flex items-start gap-3">
+        <Button type="button" variant="ghost" size="icon-sm" disabled={saving} onClick={onDelete} className="shrink-0 hover:bg-red-50 hover:text-red-500">
+          <Trash2 className="h-4 w-4" />
+        </Button>
+        <div className="min-w-0 flex-1 space-y-2 text-center">
           <DialogHeader>
             <DialogTitle>Detalle del juego</DialogTitle>
           </DialogHeader>
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center justify-center gap-2 flex-wrap">
             <span className="inline-flex items-center gap-1 rounded-full border border-surface-dark/60 bg-surface-light px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
               {game.tipo === "individual" ? <Users className="h-3 w-3" /> : <Gamepad2 className="h-3 w-3" />}
               {gameTypeLabel(game.tipo || "grupal")}
@@ -391,7 +420,7 @@ function GameDetailModal({
             </span>
           </div>
         </div>
-        <Button type="button" variant="ghost" size="icon" className="shrink-0" onClick={onDelete}>
+        <Button type="button" variant="ghost" size="icon-sm" onClick={onClose} className="shrink-0 bg-secondary">
           <X className="h-4 w-4" />
         </Button>
       </div>
@@ -399,8 +428,9 @@ function GameDetailModal({
       <div className="space-y-2">
         <Label>Nombre</Label>
         <Input
-          value={game.nombre || ""}
-          onChange={(e) => onRename(e.target.value)}
+          value={localName}
+          onChange={(e) => setLocalName(e.target.value)}
+          onBlur={() => onRename(localName)}
           placeholder="Nombre del juego..."
           disabled={locked}
         />
@@ -418,44 +448,122 @@ function GameDetailModal({
                   </span>
                   <span className="font-bold">Puesto {pos}</span>
                 </div>
-                {game.tipo === "individual" && (
-                  <Button type="button" variant="outline" size="sm" onClick={() => onFillRemaining(game.id, pos)} disabled={locked}>
-                    Completar resto
-                  </Button>
+                {game.tipo === "individual" ? (
+                  <div className="flex items-center gap-1">
+                    <Popover
+                      open={openPopover === pos}
+                      onOpenChange={(open) => {
+                        setOpenPopover(open ? pos : null);
+                        if (!open) setSearch("");
+                      }}
+                    >
+                      <PopoverTrigger asChild disabled={locked || saving}>
+                        <Button type="button" variant="outline" size="sm">
+                          <Plus className="w-3 h-3 mr-1" /> Agregar
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent align="end" className="w-64 p-0 shadow-xl border-surface-dark">
+                        <div className="p-2 border-b border-surface-dark bg-surface-light/50">
+                          <div className="relative">
+                            <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text-muted" />
+                            <Input
+                              placeholder="Buscar jugador..."
+                              value={search}
+                              onChange={(e) => setSearch(e.target.value)}
+                              className="h-8 pl-8 text-xs bg-white"
+                              autoFocus
+                            />
+                          </div>
+                        </div>
+                        <div className="max-h-56 overflow-auto py-1">
+                          {filteredPlayers.length > 0 ? (
+                            filteredPlayers.map((p) => (
+                              <button
+                                key={p.id}
+                                type="button"
+                                onClick={() => onToggleItem(game.id, String(p.id), pos)}
+                                className="flex items-center gap-2 w-full px-3 py-2 text-left transition-colors hover:bg-indigo-50"
+                              >
+                                <Avatar p={p} size={24} />
+                                <span className="text-sm font-medium">{p.nombre} {p.apellido}</span>
+                                <span className="text-xs text-text-muted ml-auto">{p.team}</span>
+                              </button>
+                            ))
+                          ) : (
+                            <div className="px-3 py-6 text-center text-xs text-text-muted italic">
+                              {search.trim()
+                                ? "No se encontraron jugadores"
+                                : "No hay jugadores disponibles"}
+                            </div>
+                          )}
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+                    <Button type="button" variant="outline" size="sm" onClick={() => onFillRemaining(game.id, pos)} disabled={locked || saving}>
+                      Completar resto
+                    </Button>
+                  </div>
+                ) : (
+                  <span className="text-xs text-muted-foreground">
+                    {selected.length} {selected.length === 1 ? "equipo" : "equipos"}
+                  </span>
                 )}
               </div>
 
-              <div className="flex flex-wrap gap-2">
-                {items.map((item) => {
-                  const id = game.tipo === "individual" ? String(item.id) : item;
-                  const label = toLabel(id);
-                  const active = selected.includes(id);
-                  return (
-                    <button
-                      key={id}
-                      type="button"
-                      disabled={locked}
-                      onClick={() => onToggleItem(game.id, id, pos)}
-                      className={`rounded-full border px-3 py-1.5 text-xs font-bold transition ${
-                        active
-                          ? "border-primary bg-primary text-white"
-                          : "border-surface-dark bg-white hover:border-primary hover:text-primary"
-                      }`}
-                    >
-                      {label}
-                      {game.tipo === "individual" && item && typeof item === "object" && "team" in item ? ` · ${item.team}` : ""}
-                    </button>
-                  );
-                })}
-              </div>
-
-              {selected.length > 0 && (
-                <div className="flex flex-wrap gap-2 text-[11px] font-medium text-muted-foreground">
-                  {selected.map((value) => (
-                    <span key={value} className="rounded-full bg-white px-2 py-1 border border-surface-dark/50">
-                      {toLabel(value)}
-                    </span>
-                  ))}
+              {game.tipo === "individual" ? (
+                selected.length > 0 ? (
+                  <div className="flex flex-wrap gap-2">
+                    {selected.map((value) => {
+                      const person = players.find((p) => String(p.id) === value);
+                      return (
+                        <div
+                          key={value}
+                          className="inline-flex items-center gap-1.5 rounded-full border border-surface-dark bg-white px-2.5 py-1 text-xs font-medium shadow-sm"
+                        >
+                          {person ? (
+                            <>
+                              <Avatar p={person} size={18} />
+                              <span>{person.nombre} {person.apellido}</span>
+                              <span className="text-text-muted">· {person.team}</span>
+                            </>
+                          ) : (
+                            <span>{value}</span>
+                          )}
+                          <button
+                            type="button"
+                            disabled={locked || saving}
+                            onClick={() => onToggleItem(game.id, value, pos)}
+                            className="ml-0.5 rounded-full p-0.5 text-text-muted hover:bg-red-50 hover:text-red-500 transition-colors"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p className="text-xs text-text-muted italic">Sin asignar</p>
+                )
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {activeTeams.map((team) => {
+                    const active = selected.includes(team);
+                    return (
+                      <button
+                        key={team}
+                        type="button"
+                        disabled={locked || saving}
+                        onClick={() => onToggleItem(game.id, team, pos)}
+                        className={`rounded-full border px-3 py-1.5 text-xs font-bold transition ${
+                          active
+                            ? "border-primary bg-primary text-white"
+                            : "border-surface-dark bg-white hover:border-primary hover:text-primary"
+                        }`}
+                      >
+                        {team}
+                      </button>
+                    );
+                  })}
                 </div>
               )}
             </div>

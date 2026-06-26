@@ -55,11 +55,9 @@ function ConfirmDialog() {
     <AlertDialog open={isOpen} onOpenChange={(open) => !open && close(false)}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          {options.title && (
-            <AlertDialogTitle className="text-lg font-black text-foreground">
-              {options.title}
-            </AlertDialogTitle>
-          )}
+          <AlertDialogTitle className={options.title ? "text-lg font-black text-foreground" : "sr-only"}>
+            {options.title || "Confirmar acción"}
+          </AlertDialogTitle>
           <AlertDialogDescription className="text-foreground font-medium text-base text-center sm:text-left mt-2">
             {message}
           </AlertDialogDescription>

@@ -1,5 +1,6 @@
 import { SEED_PARTICIPANTS, newAct } from './constants';
 import type { Activity, Participant } from './types';
+import { VersionConflictError } from './errors';
 
 const API_BASE = '/api';
 
@@ -62,7 +63,7 @@ export async function saveActivity(activity: ActivityDraft, isNewProvided?: bool
   });
   if (res.status === 409) {
     const errorData = await res.json();
-    throw new Error(`VERSION_CONFLICT:${errorData.currentVersion}`);
+    throw new VersionConflictError(errorData.currentVersion);
   }
   if (!res.ok) throw new Error('Failed to save activity');
   const result = await res.json();
@@ -77,7 +78,7 @@ export async function quickUpdateActivity(activityId: number, type: string, data
   });
   if (res.status === 409) {
     const errorData = await res.json();
-    throw new Error(`VERSION_CONFLICT:${errorData.currentVersion}`);
+    throw new VersionConflictError(errorData.currentVersion);
   }
   if (!res.ok) throw new Error('Failed to quick update activity');
   return res.json();

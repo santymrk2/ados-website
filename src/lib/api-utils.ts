@@ -6,6 +6,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { createHmac, timingSafeEqual } from "crypto";
+import { AppError } from "./errors";
 
 export const AUTH_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24;
 
@@ -169,6 +170,31 @@ export function apiServerError(internalError?: unknown) {
  */
 export function apiRateLimited(message = "Demasiadas solicitudes") {
   return apiError(message, 429);
+}
+
+/**
+ * Conflict error (409) — used for version conflicts
+ */
+export function apiConflict(currentVersion: number, message = "Versión desactualizada") {
+  return NextResponse.json(
+    { success: false, error: message, currentVersion },
+    { status: 409 }
+  );
+}
+
+/**
+ * Convert any caught error into a consistent NextResponse.
+ * - AppError → uses its status + message
+ * - Everything else → 500 Internal error
+ */
+export function handleApiError(err: unknown): NextResponse {
+  if (err instanceof AppError) {
+    return NextResponse.json(
+      { success: false, error: err.message, ...err.details },
+      { status: err.status }
+    );
+  }
+  return apiServerError(err);
 }
 
 /**

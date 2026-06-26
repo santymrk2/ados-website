@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { apiForbidden, parseBody, requireAdmin, requireAuth } from "@/lib/api-utils";
+import { apiForbidden, apiConflict, handleApiError, parseBody, requireAdmin, requireAuth } from "@/lib/api-utils";
+import { AppError } from "@/lib/errors";
 
 export const dynamic = 'force-dynamic';
 import * as schema from "@/lib/schema";
@@ -14,36 +15,6 @@ import {
   validate,
 } from "@/lib/validation";
 import { TEAMS } from "@/lib/constants";
-
-// Helper function to return server errors without exposing details
-function serverError(e: unknown) {
-  const errorId = Date.now();
-  console.error(`[API Error ${errorId}]`, e);
-  return NextResponse.json(
-    { success: false, error: "Error interno del servidor" },
-    { status: 500 }
-  );
-}
-
-class ClientError extends Error {
-  status: number;
-  details?: Record<string, unknown>;
-
-  constructor(message: string, status = 400, details?: Record<string, unknown>) {
-    super(message);
-    this.name = "ClientError";
-    this.status = status;
-    this.details = details;
-  }
-}
-
-// Helper for client errors
-function clientError(message: string) {
-  return NextResponse.json(
-    { success: false, error: message },
-    { status: 400 }
-  );
-}
 
 // Whitelist of allowed keys for config updates - prevents SQL column injection
 const ALLOWED_CONFIG_KEYS = ["locked", "titulo", "cantEquipos", "fecha"] as const;
@@ -417,7 +388,7 @@ export async function GET(request: NextRequest) {
       }
     });
   } catch (e) {
-    return serverError(e);
+    return handleApiError(e);
   }
 }
 
@@ -437,7 +408,7 @@ export async function POST(request: NextRequest) {
     const data = parsed.data.data as ActivitySavePayload;
 
     if (!data) {
-      return clientError("Datos inválidos");
+      return NextResponse.json({ success: false, error: "Datos inválidos" }, { status: 400 });
     }
 
     let currentActId = Number(data.id || 0);
@@ -445,7 +416,7 @@ export async function POST(request: NextRequest) {
 
     if (!isNew) {
       if (!currentActId) {
-        return clientError("ID de actividad requerido");
+        return NextResponse.json({ success: false, error: "ID de actividad requerido" }, { status: 400 });
       }
 
       const currentAct = await db
@@ -454,20 +425,14 @@ export async function POST(request: NextRequest) {
         .where(eq(schema.activities.id, currentActId));
 
       if (currentAct.length === 0) {
-        return clientError("Actividad no encontrada");
+        return NextResponse.json({ success: false, error: "Actividad no encontrada" }, { status: 400 });
       }
 
       dbVersion = currentAct[0]?.version || 1;
       const clientVersion = data.version || 1;
 
       if (clientVersion !== dbVersion) {
-        return new Response(JSON.stringify({
-          error: "Versión desactualizada",
-          currentVersion: dbVersion,
-        }), {
-          status: 409,
-          headers: { "Content-Type": "application/json" }
-        });
+        return apiConflict(dbVersion);
       }
     }
 
@@ -728,7 +693,7 @@ export async function POST(request: NextRequest) {
       { status: 200 },
     );
   } catch (e) {
-    return serverError(e);
+    return handleApiError(e);
   }
 }
 
@@ -746,10 +711,6 @@ export async function PATCH(request: NextRequest) {
 
     const { activityId, type, version } = parsed.data;
     const data = parsed.data.data as ActivityPatchPayload;
-    const fail = (message: string, status = 400, details?: Record<string, unknown>): never => {
-      throw new ClientError(message, status, details);
-    };
-
     const result = await db.transaction(async (tx) => {
       const clientVersion = Number(version || 1);
       const [versionClaim] = await tx
@@ -765,7 +726,7 @@ export async function PATCH(request: NextRequest) {
         .where(eq(schema.activities.id, activityId));
 
       if (!versionClaim) {
-        fail("Versión desactualizada", 409, {
+        throw new AppError("Versión desactualizada", 409, {
           currentVersion: currentActivity?.version || clientVersion,
         });
       }
@@ -779,11 +740,12 @@ export async function PATCH(request: NextRequest) {
       switch (type) {
         case "config": {
           const validation = validate(configUpdateSchema, { id: activityId, data });
-          const config = validation.success ? validation.data : fail(validation.error);
+          if (!validation.success) throw new AppError(validation.error, 400);
+          const config = validation.data;
           const { k, v } = config.data;
           if (!ALLOWED_CONFIG_KEYS.includes(k as AllowedConfigKey)) {
             console.warn(`[SECURITY] Blocked attempt to set disallowed config key: ${k}`);
-            fail("Clave de configuración no permitida");
+            throw new AppError("Clave de configuración no permitida");
           }
 
           await tx
@@ -810,11 +772,11 @@ export async function PATCH(request: NextRequest) {
           if ("fecha" in data) updates.fecha = String(data.fecha || "");
           if ("cantEquipos" in data) {
             const cantEquipos = Number(data.cantEquipos);
-            if (![2, 4, 6].includes(cantEquipos)) fail("Cantidad de equipos inválida");
+            if (![2, 4, 6].includes(cantEquipos)) throw new AppError("Cantidad de equipos inválida");
             updates.cantEquipos = cantEquipos;
           }
 
-          if (Object.keys(updates).length === 0) fail("No hay cambios de configuración");
+          if (Object.keys(updates).length === 0) throw new AppError("No hay cambios de configuración");
 
           await tx
             .update(schema.activities)
@@ -899,8 +861,8 @@ export async function PATCH(request: NextRequest) {
               .from(schema.activities)
               .where(eq(schema.activities.id, activityId));
 
-            if (!activity) fail("Actividad no encontrada");
-            if (!isActiveTeam(team, activity?.cantEquipos)) fail("Equipo no habilitado para esta actividad");
+            if (!activity) throw new AppError("Actividad no encontrada");
+            if (!isActiveTeam(team, activity?.cantEquipos)) throw new AppError("Equipo no habilitado para esta actividad");
 
             await ensureSingleActivityParticipant(tx, activityId, participantId);
           }
@@ -919,6 +881,20 @@ export async function PATCH(request: NextRequest) {
           const { participantId, value } = data;
           if (value) {
             await ensureSingleActivityParticipant(tx, activityId, participantId);
+            const juegos = await tx
+              .select({ id: schema.juegos.id })
+              .from(schema.juegos)
+              .where(eq(schema.juegos.activityId, activityId));
+            if (juegos.length > 0) {
+              await tx
+                .delete(schema.juegoPosiciones)
+                .where(
+                  and(
+                    eq(schema.juegoPosiciones.participantId, participantId),
+                    inArray(schema.juegoPosiciones.juegoId, juegos.map((j: { id: number }) => j.id)),
+                  ),
+                );
+            }
           }
           await tx
             .update(schema.activityParticipants)
@@ -937,7 +913,7 @@ export async function PATCH(request: NextRequest) {
             .from(schema.activities)
             .where(eq(schema.activities.id, activityId));
 
-          if (!activity) fail("Actividad no encontrada");
+          if (!activity) throw new AppError("Actividad no encontrada");
 
           const activeTeams = getActiveTeams(activity.cantEquipos);
           const equipos = data.equipos || {};
@@ -994,7 +970,7 @@ export async function PATCH(request: NextRequest) {
               .where(eq(schema.activities.id, activityId));
 
             if (!activity || !isActiveTeam(data.team, activity.cantEquipos)) {
-              fail("Equipo no habilitado para esta actividad");
+              throw new AppError("Equipo no habilitado para esta actividad");
             }
           }
 
@@ -1016,7 +992,8 @@ export async function PATCH(request: NextRequest) {
           if (data.id) {
             await tx.delete(schema.goles).where(eq(schema.goles.id, data.id));
           } else {
-            const participantId = data.pid ?? fail("ID de participante requerido");
+            if (!data.pid) throw new AppError("ID de participante requerido", 400);
+            const participantId = data.pid;
 
             const existing = await tx
               .select()
@@ -1061,7 +1038,7 @@ export async function PATCH(request: NextRequest) {
               .where(eq(schema.activities.id, activityId));
 
             if (!activity || !isActiveTeam(team, activity.cantEquipos)) {
-              fail("Equipo no habilitado para esta actividad");
+              throw new AppError("Equipo no habilitado para esta actividad");
             }
           }
 
@@ -1112,7 +1089,7 @@ export async function PATCH(request: NextRequest) {
               .where(eq(schema.activities.id, activityId));
 
             if (!activity || !isActiveTeam(data.team, activity.cantEquipos)) {
-              fail("Equipo no habilitado para esta actividad");
+              throw new AppError("Equipo no habilitado para esta actividad");
             }
           }
 
@@ -1172,14 +1149,14 @@ export async function PATCH(request: NextRequest) {
         }
         case "game_pos": {
           const { juegoId, pos } = data;
-          if (!juegoId || !pos) fail("Datos inválidos: juegoId y pos son requeridos");
+          if (!juegoId || !pos) throw new AppError("Datos inválidos: juegoId y pos son requeridos");
 
           const [activity] = await tx
             .select({ cantEquipos: schema.activities.cantEquipos })
             .from(schema.activities)
             .where(eq(schema.activities.id, activityId));
 
-          if (!activity) fail("Actividad no encontrada");
+          if (!activity) throw new AppError("Actividad no encontrada");
 
           const activeTeams = getActiveTeams(activity.cantEquipos);
           const existingPositions = await tx
@@ -1241,14 +1218,14 @@ export async function PATCH(request: NextRequest) {
             for (const [posStr, equipos] of Object.entries(pos)) {
               const posicion = Number(posStr);
               if (posicion < 1 || posicion > activeTeams.length) {
-                fail("Posición inválida para la cantidad de equipos");
+                throw new AppError("Posición inválida para la cantidad de equipos");
               }
 
               if (Array.isArray(equipos)) {
                 for (const eqName of equipos) {
                   if (typeof eqName !== "string") continue;
                   if (!activeTeams.includes(eqName)) {
-                    fail("Equipo no habilitado para esta actividad");
+                    throw new AppError("Equipo no habilitado para esta actividad");
                   }
                   if (!seenTeams.has(eqName)) {
                     seenTeams.add(eqName);
@@ -1309,7 +1286,7 @@ export async function PATCH(request: NextRequest) {
         }
         case "invitacion_add": {
           const { invitador, invitadoId } = data;
-          if (!invitadoId) fail("La invitación debe tener un invitado seleccionado");
+          if (!invitadoId) throw new AppError("La invitación debe tener un invitado seleccionado");
 
           const [created] = await tx
             .insert(schema.invitaciones)
@@ -1324,8 +1301,8 @@ export async function PATCH(request: NextRequest) {
         }
         case "invitacion_update": {
           const { id, invitador, invitadoId } = data;
-          if (!id) fail("ID de invitación requerido");
-          if (!invitadoId) fail("La invitación debe tener un invitado seleccionado");
+          if (!id) throw new AppError("ID de invitación requerido");
+          if (!invitadoId) throw new AppError("La invitación debe tener un invitado seleccionado");
 
           await tx
             .update(schema.invitaciones)
@@ -1338,25 +1315,19 @@ export async function PATCH(request: NextRequest) {
         }
         case "invitacion_delete": {
           const { id } = data;
-          if (!id) fail("ID de invitación requerido");
+          if (!id) throw new AppError("ID de invitación requerido");
           await tx.delete(schema.invitaciones).where(eq(schema.invitaciones.id, id));
           return { success: true, version: versionClaim.version };
         }
         default:
-          fail("Invalid update type");
+          throw new AppError("Invalid update type");
       }
     });
 
     eventBus.emit("data-changed");
     return NextResponse.json(result, { status: 200 });
   } catch (e) {
-    if (e instanceof ClientError) {
-      return NextResponse.json(
-        { success: false, error: e.message, ...e.details },
-        { status: e.status },
-      );
-    }
-    return serverError(e);
+    return handleApiError(e);
   }
 }
 
@@ -1403,6 +1374,6 @@ export async function DELETE(request: NextRequest) {
 
     return NextResponse.json({ success: true }, { status: 200 });
   } catch (e) {
-    return serverError(e);
+    return handleApiError(e);
   }
 }

@@ -5,11 +5,13 @@ import {
   REQUIRED_AUTH_ENV_VARS,
   createAuthCookieValue,
   getMissingEnvVars,
+  handleApiError,
   parseBody,
   type AuthRole,
 } from "@/lib/api-utils";
 import { loginSchema } from "@/lib/validation";
 import { timingSafeEqual } from "crypto";
+import { RateLimitError, UnauthorizedError } from "@/lib/errors";
 
 // In-memory rate limiting: { ip: { count: number, resetTime: number } }
 const rateLimitStore = new Map<string, { count: number; resetTime: number }>();
@@ -58,10 +60,7 @@ export async function POST(request: NextRequest) {
 
     // Check rate limit
     if (!checkRateLimit(clientIp)) {
-      return NextResponse.json(
-        { success: false, error: "Demasiados intentos. Intenta en 15 minutos." },
-        { status: 429 }
-      );
+      throw new RateLimitError("Demasiados intentos. Intenta en 15 minutos.");
     }
 
     const parsed = await parseBody(request, loginSchema);
@@ -109,7 +108,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (!authenticatedRole) {
-      return NextResponse.json({ success: false, error: "Contraseña incorrecta" }, { status: 401 });
+      throw new UnauthorizedError("Contraseña incorrecta");
     }
 
     const cookieOptions = {
@@ -123,7 +122,7 @@ export async function POST(request: NextRequest) {
     const response = NextResponse.json({ success: true, role: authenticatedRole });
     response.cookies.set("activados_auth", createAuthCookieValue(authenticatedRole), cookieOptions);
     return response;
-  } catch {
-    return NextResponse.json({ success: false, error: "Error en el servidor" }, { status: 500 });
+  } catch (e) {
+    return handleApiError(e);
   }
 }

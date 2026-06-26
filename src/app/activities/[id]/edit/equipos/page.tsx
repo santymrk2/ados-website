@@ -4,7 +4,7 @@ import { useState, useMemo, useEffect } from "react";
 import { useEditContext } from "../layout";
 import { toast } from "@/hooks/use-toast";
 import { Zap, Shuffle } from "lucide-react";
-import { TEAMS, TEAM_COLORS, getTeamBg } from "@/lib/constants";
+import { TEAMS, TEAM_COLORS } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import { Avatar } from "@/components/ui/Avatar";
 import { SexBadge } from "@/components/ui/Badges";
@@ -275,18 +275,16 @@ export default function EquiposPage() {
         {teamStats.map(({ team, total, m, f }) => (
           <div
             key={team}
-            className="rounded-2xl p-3 flex items-center gap-2 border-2 cursor-pointer hover:scale-[1.02] transition-transform"
+            className="rounded-2xl border border-surface-dark bg-white p-3 flex items-center gap-2 cursor-pointer transition-shadow hover:shadow-md"
             style={{
-              backgroundColor: getTeamBg(team),
-              borderColor:
-                selectedTeam === team
-                  ? TEAM_COLORS[team]
-                  : TEAM_COLORS[team] + "44",
+              borderLeftColor: TEAM_COLORS[team],
+              borderLeftWidth: 4,
+              ...(selectedTeam === team ? { boxShadow: `0 0 0 2px ${TEAM_COLORS[team]}` } : {}),
             }}
             onClick={() => handleTeamClick(team)}
           >
             <div
-              className="font-black text-lg"
+              className="font-black text-lg shrink-0"
               style={{ color: TEAM_COLORS[team] }}
             >
               {team}
@@ -338,15 +336,15 @@ export default function EquiposPage() {
           </div>
           <div className="flex flex-col gap-3">
             {selectedTeamData.women.length > 0 && (
-              <div className="bg-pink-50 rounded-xl p-3 border border-pink-100">
-                <div className="font-bold text-sm text-pink-700 mb-2 flex items-center gap-2">
-                  Mujer ({selectedTeamData.women.length})
+              <div className="bg-surface-light/50 rounded-xl p-3 border border-surface-dark">
+                <div className="font-bold text-sm text-muted-foreground mb-2 flex items-center gap-2">
+                  <SexBadge sex="F" className="w-4 h-4" /> Mujer ({selectedTeamData.women.length})
                 </div>
                 <div className="flex flex-col gap-1">
                   {selectedTeamData.women.map((p: ParticipantBasic) => (
                     <div
                       key={p.id}
-                      className="bg-white rounded-lg p-2 flex items-center gap-2"
+                      className="rounded-lg p-2 flex items-center gap-2"
                     >
                       <Avatar p={p} size={24} />
                       <div className="flex-1">
@@ -361,15 +359,15 @@ export default function EquiposPage() {
             )}
 
             {selectedTeamData.men.length > 0 && (
-              <div className="bg-cyan-50 rounded-xl p-3 border border-cyan-100">
-                <div className="font-bold text-sm text-cyan-700 mb-2 flex items-center gap-2">
-                  Varón ({selectedTeamData.men.length})
+              <div className="bg-surface-light/50 rounded-xl p-3 border border-surface-dark">
+                <div className="font-bold text-sm text-muted-foreground mb-2 flex items-center gap-2">
+                  <SexBadge sex="M" className="w-4 h-4" /> Varón ({selectedTeamData.men.length})
                 </div>
                 <div className="flex flex-col gap-1">
                   {selectedTeamData.men.map((p: ParticipantBasic) => (
                     <div
                       key={p.id}
-                      className="bg-white rounded-lg p-2 flex items-center gap-2"
+                      className="rounded-lg p-2 flex items-center gap-2"
                     >
                       <Avatar p={p} size={24} />
                       <div className="flex-1">
@@ -406,9 +404,10 @@ export default function EquiposPage() {
               return (
                 <div
                   key={p.id}
-                  className="bg-white rounded-lg p-3 flex items-center gap-3 border"
+                  className="rounded-2xl border border-surface-dark bg-white p-3 flex items-center gap-3"
                   style={{
-                    borderColor: cur ? TEAM_COLORS[cur] + "55" : "#e5e5e5",
+                    borderLeftColor: cur ? TEAM_COLORS[cur] : "transparent",
+                    borderLeftWidth: 4,
                   }}
                 >
                   <Avatar p={p} size={32} />
@@ -419,8 +418,9 @@ export default function EquiposPage() {
                   </div>
                   <div className="flex gap-1">
                     {activeTeams.map((t) => (
-                      <Button
+                      <button
                         key={t}
+                        type="button"
                         onClick={() => {
                           if (cur && cur !== t) {
                             setConfirmChange({ player: p, fromTeam: cur, toTeam: t });
@@ -428,18 +428,16 @@ export default function EquiposPage() {
                             setTeam(p.id, t);
                           }
                         }}
-                        variant="ghost"
-                        size="sm"
                         disabled={locked}
-                        className="w-8 h-7 rounded font-black text-[10px] p-0"
+                        className="rounded-full px-3 py-1 text-xs font-bold transition border disabled:opacity-50"
                         style={{
-                          backgroundColor:
-                            cur === t ? TEAM_COLORS[t] : getTeamBg(t),
-                          color: cur === t ? "white" : "#666",
+                          backgroundColor: cur === t ? TEAM_COLORS[t] : "transparent",
+                          borderColor: cur === t ? TEAM_COLORS[t] : TEAM_COLORS[t] + "44",
+                          color: cur === t ? "white" : TEAM_COLORS[t],
                         }}
                       >
                         {t}
-                      </Button>
+                      </button>
                     ))}
                   </div>
                 </div>

@@ -139,7 +139,7 @@ function NewPlayerModal({ act, db, onClose, onSave, setLocal, syncWithServer }: 
           Crea un jugador y lo registra como asistente de la actividad.
         </DialogDescription>
         <div className="flex items-center justify-between mb-4">
-          <h3 className="font-black text-lg text-dark">Nuevo Jugador</h3>
+          <h3 className="font-black text-lg text-foreground">Nuevo Jugador</h3>
           <Button
             onClick={onClose}
             variant="ghost"
@@ -484,7 +484,7 @@ export default function AsistenciaPage() {
           return (
             <div
               key={p.id}
-              className={`rounded-lg border bg-white ${here ? "border-primary shadow-md shadow-primary/20" : "border-surface-dark"}`}
+               className={`rounded-2xl border bg-white ${here ? "border-primary shadow-md shadow-primary/20" : "border-surface-dark"}`}
             >
               <div className="flex items-center p-3 gap-2">
                 <div className="flex gap-0">
@@ -492,18 +492,13 @@ export default function AsistenciaPage() {
                     onClick={() => toggle("asistentes", p.id)}
                     disabled={locked}
                     className={cn(
-                      "flex items-center justify-center h-9 min-w-9 px-2 text-sm font-semibold transition-colors",
+                      "flex items-center justify-center h-9 min-w-9 px-2 text-sm font-semibold transition-colors rounded-l-2xl border",
                       locked && "opacity-50 cursor-not-allowed pointer-events-none",
+                      here
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-surface-light text-text-muted border-surface-dark",
+                      here ? "" : "border-r-0",
                     )}
-                    style={{
-                      backgroundColor: here ? "var(--color-primary)" : "#f5f5f5",
-                      borderStyle: "solid",
-                      borderWidth: "1px",
-                      borderColor: here ? "var(--color-primary)" : "#e5e5e5",
-                      borderRightWidth: 0,
-                      color: here ? "var(--color-primary-foreground)" : "#999",
-                      borderRadius: "12px 0 0 12px",
-                    }}
                   >
                     {here ? <CalendarCheck className="w-3.5 h-3.5" /> : <CalendarX className="w-3.5 h-3.5" />}
                   </button>
@@ -511,15 +506,12 @@ export default function AsistenciaPage() {
                     onClick={() => toggle("puntuales", p.id)}
                     disabled={locked}
                     className={cn(
-                      "flex items-center justify-center h-9 min-w-9 px-2 text-sm font-semibold transition-colors",
+                      "flex items-center justify-center h-9 min-w-9 px-2 text-sm font-semibold transition-colors rounded-r-2xl border border-l-0",
                       locked && "opacity-50 cursor-not-allowed pointer-events-none",
+                      punct
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-surface-light text-text-muted border-surface-dark",
                     )}
-                    style={{
-                      backgroundColor: punct ? "var(--color-primary)" : "#f5f5f5",
-                      border: `1px solid ${punct ? "var(--color-primary)" : "#e5e5e5"}`,
-                      color: punct ? "var(--color-primary-foreground)" : "#999",
-                      borderRadius: "0 12px 12px 0",
-                    }}
                   >
                     <Clock className="w-3.5 h-3.5" />
                   </button>
@@ -527,8 +519,7 @@ export default function AsistenciaPage() {
                 <Avatar p={p} size={30} />
                 <div className="flex-1">
                   <div
-                    className="font-bold text-sm"
-                    style={{ color: here ? "#1a1a1a" : "#999" }}
+                    className={cn("font-bold text-sm", here ? "text-foreground" : "text-text-muted")}
                   >
                     {p.nombre} {p.apellido}
                   </div>
@@ -542,21 +533,12 @@ export default function AsistenciaPage() {
                       onClick={() => toggle("socials", p.id)}
                       disabled={locked}
                       className={cn(
-                        "flex items-center gap-1 h-9 min-w-9 px-3 text-sm font-semibold transition-colors",
+                        "flex items-center gap-1 h-9 min-w-9 px-3 text-sm font-semibold transition-colors rounded-2xl border",
                         locked && "opacity-50 cursor-not-allowed pointer-events-none",
+                        (act.socials || []).includes(p.id)
+                          ? "bg-[#F59E0B33] border-[#F59E0B66] text-[#F59E0B]"
+                          : "bg-primary/20 border-primary/40 text-primary",
                       )}
-                      style={{
-                        backgroundColor: (act.socials || []).includes(p.id)
-                          ? "#F59E0B33"
-                          : "color-mix(in srgb, var(--color-primary) 20%, transparent)",
-                        border: (act.socials || []).includes(p.id)
-                          ? "1px solid #F59E0B66"
-                          : "1px solid color-mix(in srgb, var(--color-primary) 40%, transparent)",
-                        color: (act.socials || []).includes(p.id)
-                          ? "#F59E0B"
-                          : "var(--color-primary)",
-                        borderRadius: "12px",
-                      }}
                     >
                       {(act.socials || []).includes(p.id) ? <Coffee className="w-3.5 h-3.5" /> : <Zap className="w-3.5 h-3.5" />}
                       <span className="text-xs font-medium">

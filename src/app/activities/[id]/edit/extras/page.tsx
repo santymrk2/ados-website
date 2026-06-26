@@ -99,7 +99,7 @@ function ExtraRow({
   return (
     <div
       className={cn(
-        "flex items-center gap-2 p-2 bg-white rounded-xl border border-surface-dark shadow-sm",
+        "flex items-center gap-2 p-2 bg-white rounded-2xl border border-surface-dark shadow-sm",
         "transition-all duration-200 hover:border-yellow-400/50"
       )}
     >
@@ -406,7 +406,7 @@ export default function ExtrasPage() {
             return (
               <div 
                 key={t} 
-                className="rounded-3xl p-4 flex flex-col gap-3 border-2 transition-all relative shadow-sm"
+                className="rounded-2xl p-4 flex flex-col gap-3 border-2 transition-all relative shadow-sm"
                 style={{ 
                   backgroundColor: getTeamBg(t),
                   borderColor: TEAM_COLORS[t] + "44"

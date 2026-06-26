@@ -4,7 +4,7 @@ import { apiForbidden, parseBody, requireAdmin, requireAuth } from "@/lib/api-ut
 
 export const dynamic = 'force-dynamic';
 import * as schema from "@/lib/schema";
-import { eq, inArray, and, gt, sql } from "drizzle-orm";
+import { eq, inArray, and, gt, sql, isNull } from "drizzle-orm";
 import { eventBus } from "@/lib/eventBus";
 import {
   activityPatchSchema,
@@ -241,6 +241,7 @@ async function normalizeInactiveTeamData(tx: Tx, activityId: number, cantEquipos
           and(
             inArray(schema.juegoPosiciones.juegoId, juegoIds),
             gt(schema.juegoPosiciones.posicion, cantEquipos),
+            isNull(schema.juegoPosiciones.participantId),
           ),
         );
     }
@@ -324,9 +325,14 @@ export async function GET(request: NextRequest) {
       const actJuegos = jj
         .filter((x) => x.activityId === a.id)
         .map((j) => {
+          const allJp = jp.filter((x) => x.juegoId === j.id);
+          const isIndividual = j.tipo === "individual" || allJp.some(
+            (x) => x.equipo === INDIVIDUAL_GAME_MARKER && x.posicion === 0,
+          );
           const pos: Record<string, string[]> = {};
-          jp.filter((x) => x.juegoId === j.id).forEach((x) => {
-            if (j.tipo === "individual") {
+          allJp.forEach((x) => {
+            if (x.equipo === INDIVIDUAL_GAME_MARKER && x.posicion === 0) return;
+            if (isIndividual) {
               if (!x.participantId || x.posicion < 1) return;
               if (!pos[x.posicion]) pos[x.posicion] = [];
               pos[x.posicion].push(String(x.participantId));
@@ -338,7 +344,7 @@ export async function GET(request: NextRequest) {
             }
           });
           Object.keys(pos).forEach((k) => pos[k].sort());
-          return { id: j.id, nombre: j.nombre, tipo: j.tipo as "grupal" | "individual", pos };
+          return { id: j.id, nombre: j.nombre, tipo: (isIndividual ? "individual" : "grupal") as "grupal" | "individual", pos };
         });
 
       return {
@@ -549,16 +555,52 @@ export async function POST(request: NextRequest) {
 
       if (data.juegos && data.juegos.length > 0) {
         for (const j of data.juegos) {
+          const isIndividual = j.tipo === "individual";
           const jRes = await tx
             .insert(schema.juegos)
             .values({
               activityId: currentActId,
               nombre: j.nombre || "",
+              tipo: j.tipo || "grupal",
             })
             .returning({ id: schema.juegos.id });
           const jId = jRes[0].id;
 
-          if (j.pos && Object.keys(j.pos).length > 0) {
+          if (isIndividual) {
+            await tx.insert(schema.juegoPosiciones).values({
+              juegoId: jId,
+              equipo: INDIVIDUAL_GAME_MARKER,
+              posicion: 0,
+            });
+
+            if (j.pos && Object.keys(j.pos).length > 0) {
+              for (const [posStr, pIds] of Object.entries(j.pos)) {
+                const posicion = Number(posStr);
+                if (posicion < 1) continue;
+                if (Array.isArray(pIds)) {
+                  for (const pidStr of pIds) {
+                    const pid = Number(pidStr);
+                    if (Number.isFinite(pid) && pid > 0) {
+                      await tx
+                        .insert(schema.juegoPosiciones)
+                        .values({
+                          juegoId: jId,
+                          participantId: pid,
+                          posicion,
+                        })
+                        .onConflictDoUpdate({
+                          target: [
+                            schema.juegoPosiciones.juegoId,
+                            schema.juegoPosiciones.participantId,
+                          ],
+                          set: { posicion },
+                        });
+                    }
+                  }
+                }
+              }
+            }
+          } else if (j.pos && Object.keys(j.pos).length > 0) {
             const jpData: { juegoId: number; equipo: string; posicion: number }[] = [];
             const seenEquipos = new Set<string>();
             Object.entries(j.pos).forEach(
@@ -1096,11 +1138,12 @@ export async function PATCH(request: NextRequest) {
         case "game_add": {
           const [game] = await tx
             .insert(schema.juegos)
-            .values({
-              activityId,
-              nombre: data.nombre || "",
-            })
-            .returning({ id: schema.juegos.id });
+              .values({
+                activityId,
+                nombre: data.nombre || "",
+                tipo: data.tipo || "grupal",
+              })
+              .returning({ id: schema.juegos.id });
 
           if (data.tipo === "individual") {
             await tx.insert(schema.juegoPosiciones).values({
@@ -1139,60 +1182,98 @@ export async function PATCH(request: NextRequest) {
           if (!activity) fail("Actividad no encontrada");
 
           const activeTeams = getActiveTeams(activity.cantEquipos);
-          const allTeams: { equipo: string; posicion: number }[] = [];
-          const seenTeams = new Set<string>();
           const existingPositions = await tx
             .select({
               equipo: schema.juegoPosiciones.equipo,
               posicion: schema.juegoPosiciones.posicion,
+              participantId: schema.juegoPosiciones.participantId,
             })
             .from(schema.juegoPosiciones)
             .where(eq(schema.juegoPosiciones.juegoId, juegoId));
+
           const isIndividualGame = existingPositions.some(
             (row) => row.posicion === 0 && row.equipo === INDIVIDUAL_GAME_MARKER,
           );
-          if (isIndividualGame) {
-            allTeams.push({ equipo: INDIVIDUAL_GAME_MARKER, posicion: 0 });
-          }
-          for (const [posStr, equipos] of Object.entries(pos)) {
-            const posicion = Number(posStr);
-            if (posicion < 1 || posicion > activeTeams.length) {
-              fail("Posición inválida para la cantidad de equipos");
-            }
-
-            if (Array.isArray(equipos)) {
-              for (const eqName of equipos) {
-                if (typeof eqName !== "string") continue;
-                if (!activeTeams.includes(eqName)) {
-                  fail("Equipo no habilitado para esta actividad");
-                }
-                if (!seenTeams.has(eqName)) {
-                  seenTeams.add(eqName);
-                  allTeams.push({ equipo: eqName, posicion });
-                }
-              }
-            }
-          }
 
           await tx
             .delete(schema.juegoPosiciones)
             .where(eq(schema.juegoPosiciones.juegoId, juegoId));
 
-          for (const teamData of allTeams) {
-            await tx
-              .insert(schema.juegoPosiciones)
-              .values({
-                juegoId,
-                equipo: teamData.equipo,
-                posicion: teamData.posicion,
-              })
-              .onConflictDoUpdate({
-                target: [
-                  schema.juegoPosiciones.juegoId,
-                  schema.juegoPosiciones.equipo,
-                ],
-                set: { posicion: teamData.posicion },
-              });
+          if (isIndividualGame) {
+            await tx.insert(schema.juegoPosiciones).values({
+              juegoId,
+              equipo: INDIVIDUAL_GAME_MARKER,
+              posicion: 0,
+            });
+
+            const seenPIds = new Set<number>();
+            for (const [posStr, pIds] of Object.entries(pos)) {
+              const posicion = Number(posStr);
+              if (posicion < 1) continue;
+
+              if (Array.isArray(pIds)) {
+                for (const pidStr of pIds) {
+                  const participantId = Number(pidStr);
+                  if (!Number.isFinite(participantId) || participantId < 1) continue;
+                  if (seenPIds.has(participantId)) continue;
+                  seenPIds.add(participantId);
+
+                  await tx
+                    .insert(schema.juegoPosiciones)
+                    .values({
+                      juegoId,
+                      participantId,
+                      posicion,
+                    })
+                    .onConflictDoUpdate({
+                      target: [
+                        schema.juegoPosiciones.juegoId,
+                        schema.juegoPosiciones.participantId,
+                      ],
+                      set: { posicion },
+                    });
+                }
+              }
+            }
+          } else {
+            const allTeams: { equipo: string; posicion: number }[] = [];
+            const seenTeams = new Set<string>();
+            for (const [posStr, equipos] of Object.entries(pos)) {
+              const posicion = Number(posStr);
+              if (posicion < 1 || posicion > activeTeams.length) {
+                fail("Posición inválida para la cantidad de equipos");
+              }
+
+              if (Array.isArray(equipos)) {
+                for (const eqName of equipos) {
+                  if (typeof eqName !== "string") continue;
+                  if (!activeTeams.includes(eqName)) {
+                    fail("Equipo no habilitado para esta actividad");
+                  }
+                  if (!seenTeams.has(eqName)) {
+                    seenTeams.add(eqName);
+                    allTeams.push({ equipo: eqName, posicion });
+                  }
+                }
+              }
+            }
+
+            for (const teamData of allTeams) {
+              await tx
+                .insert(schema.juegoPosiciones)
+                .values({
+                  juegoId,
+                  equipo: teamData.equipo,
+                  posicion: teamData.posicion,
+                })
+                .onConflictDoUpdate({
+                  target: [
+                    schema.juegoPosiciones.juegoId,
+                    schema.juegoPosiciones.equipo,
+                  ],
+                  set: { posicion: teamData.posicion },
+                });
+            }
           }
 
           return { success: true, version: versionClaim.version };

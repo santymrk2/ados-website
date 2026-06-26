@@ -435,7 +435,7 @@ export default function ExtrasPage() {
                   <Button 
                     onClick={() => fastAdd(null, t, "extra")} 
                     size="sm" 
-                    className="flex-1 h-9 rounded-xl bg-white/50 hover:bg-white/80 border-none text-green-700 font-black"
+                    className="flex-1 h-9 rounded-xl bg-white/50 hover:bg-white/80 border-none text-primary font-black"
                   >
                     <Plus className="w-4 h-4" />
                   </Button>
@@ -481,7 +481,7 @@ export default function ExtrasPage() {
                     <Button onClick={() => fastAdd(p.id, null, "descuento")} size="icon" variant="ghost" className="h-9 w-9 bg-red-50 text-red-600 hover:bg-red-100 rounded-xl">
                       <Minus className="w-5 h-5" />
                     </Button>
-                    <Button onClick={() => fastAdd(p.id, null, "extra")} size="icon" variant="ghost" className="h-9 w-9 bg-green-50 text-green-600 hover:bg-green-100 rounded-xl">
+                    <Button onClick={() => fastAdd(p.id, null, "extra")} size="icon" variant="ghost" className="h-9 w-9 bg-indigo-50 text-primary hover:bg-indigo-100 rounded-xl">
                       <Plus className="w-5 h-5" />
                     </Button>
                   </div>

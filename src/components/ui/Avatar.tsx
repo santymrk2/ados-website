@@ -47,12 +47,14 @@ export function Avatar({ p, size = 36, className = "" }: AvatarProps) {
           {initials || "?"}
         </AvatarPrimitive.Fallback>
       </AvatarPrimitive.Root>
-      <div
-        className="absolute -bottom-0.5 -right-0.5 flex items-center justify-center rounded-full bg-white text-text-muted shadow-sm"
-        style={{ width: badgeSize, height: badgeSize, fontSize: badgeFontSize, fontWeight: 700 }}
-      >
-        {sexLetter}
-      </div>
+      {size >= 28 && (
+        <div
+          className="absolute -bottom-0.5 -right-0.5 flex items-center justify-center rounded-full bg-white text-text-muted shadow-sm"
+          style={{ width: badgeSize, height: badgeSize, fontSize: badgeFontSize, fontWeight: 700 }}
+        >
+          {sexLetter}
+        </div>
+      )}
     </div>
   );
 }

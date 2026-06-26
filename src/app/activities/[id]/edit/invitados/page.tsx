@@ -81,11 +81,11 @@ function InvitationRow({
     <div
       className={cn(
         "flex items-center gap-2 px-3 py-2 bg-white rounded-2xl border border-surface-dark relative",
-        "transition-all duration-150 hover:border-teal-400/50"
+        "transition-all duration-150 hover:border-primary/30"
       )}
     >
       {/* Label sutil para clarificar roles */}
-      <div className="absolute -top-2 left-2 text-[9px] font-black text-teal-600 bg-white px-1 z-0 pointer-events-none">
+      <div className="absolute -top-2 left-2 text-[9px] font-black text-primary bg-white px-1 z-0 pointer-events-none">
         INVITA
       </div>
       <div className="absolute -top-2 right-8 text-[9px] font-black text-purple-600 bg-white px-1 z-0 pointer-events-none">
@@ -128,7 +128,7 @@ function InvitationRow({
                       className={cn(
                         "flex items-center gap-2 w-full px-3 py-2 text-left",
                         "hover:bg-surface-light transition-colors",
-                        p.id === (invitador as ParticipantBasic | null)?.id && "bg-teal-50"
+                        p.id === (invitador as ParticipantBasic | null)?.id && "bg-indigo-50"
                       )}
                     >
                       <Avatar p={p} size={24} />
@@ -152,7 +152,7 @@ function InvitationRow({
                 className={cn(
                   "flex items-center gap-2 w-full text-left",
                   "p-2 rounded-lg border border-dashed border-surface-dark",
-                  "hover:border-teal-400 hover:bg-teal-50/30 transition-colors",
+                  "hover:border-primary/40 hover:bg-indigo-50/30 transition-colors",
                   "text-sm text-text-muted"
                 )}
                 onClick={() => !locked && setOpenDropdown(inv.id + "_invitador")}
@@ -172,7 +172,7 @@ function InvitationRow({
                     className={cn(
                       "flex items-center gap-2 w-full px-3 py-2 text-left",
                       "hover:bg-surface-light transition-colors",
-                      false && "bg-teal-50"
+                      false && "bg-indigo-50"
                     )}
                   >
                     <Avatar p={p} size={24} />
@@ -188,7 +188,7 @@ function InvitationRow({
       </div>
 
       {/* FLECHA DIRECCIONAL - El elemento que comunica la relación */}
-      <div className="flex-shrink-0 text-teal-600">
+      <div className="flex-shrink-0 text-primary">
         <ArrowRight className="w-5 h-5 rotate-0 rtl:rotate-180" />
       </div>
 
@@ -229,7 +229,7 @@ function InvitationRow({
                       className={cn(
                         "flex items-center gap-2 w-full px-3 py-2 text-left",
                         "hover:bg-surface-light transition-colors",
-                        p.id === (invitado as ParticipantBasic | null)?.id && "bg-teal-50"
+                        p.id === (invitado as ParticipantBasic | null)?.id && "bg-indigo-50"
                       )}
                     >
                       <Avatar p={p} size={24} />
@@ -253,7 +253,7 @@ function InvitationRow({
                 className={cn(
                   "flex items-center gap-2 w-full text-left",
                   "p-2 rounded-lg border border-dashed border-surface-dark",
-                  "hover:border-teal-400 hover:bg-teal-50/30 transition-colors",
+                  "hover:border-primary/40 hover:bg-indigo-50/30 transition-colors",
                   "text-sm text-text-muted"
                 )}
                 onClick={() => !locked && setOpenDropdown(inv.id + "_invitado")}
@@ -282,7 +282,7 @@ function InvitationRow({
                       className={cn(
                         "flex items-center gap-2 w-full px-3 py-2 text-left",
                         "hover:bg-surface-light transition-colors",
-                        false && "bg-teal-50"
+                        false && "bg-indigo-50"
                       )}
                     >
                       <Avatar p={p} size={24} />
@@ -427,7 +427,7 @@ export default function InvitadosPage() {
           variant="ghost"
           size="sm"
           disabled={locked}
-          className="bg-teal-50 text-teal-600 hover:bg-teal-100"
+          className="bg-indigo-50 text-primary hover:bg-indigo-100"
         >
           <Plus className="w-4 h-4" />
           <span className="ml-1">Agregar</span>
@@ -462,7 +462,7 @@ export default function InvitadosPage() {
             variant="outline"
             size="sm"
             disabled={locked}
-            className="border-teal-500 text-teal-600 hover:bg-teal-50"
+            className="border-primary/30 text-primary hover:bg-indigo-50"
           >
             Agregar primera invitación
           </Button>

@@ -381,6 +381,15 @@ export default function AsistenciaPage() {
     } else if (key === "socials") {
       const c = act.socials || [];
       const isIncluded = c.includes(id);
+
+      if (!isIncluded && act.equipos?.[String(id)]) {
+        const ok = await confirmDialog(
+          "Al cambiar a Social, el equipo y los puntos acumulados en juegos se perderán.",
+          { title: "Cambiar a Social", confirmText: "Cambiar", isDestructive: true },
+        );
+        if (!ok) return;
+      }
+
       const updateFn = (prev: number[]) => {
         const arr = prev || [];
         return arr.includes(id) ? arr.filter((x) => x !== id) : [...arr, id];

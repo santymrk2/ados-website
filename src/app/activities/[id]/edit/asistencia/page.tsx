@@ -439,15 +439,12 @@ export default function AsistenciaPage() {
           .includes(searchQuery.toLowerCase()),
       );
     }
-    if (sortOrder === "asc") {
-      arr.sort((a, b) =>
-        `${a.apellido} ${a.nombre}`.localeCompare(`${b.apellido} ${b.nombre}`),
-      );
-    } else {
-      arr.sort((a, b) =>
-        `${b.apellido} ${b.nombre}`.localeCompare(`${a.apellido} ${a.nombre}`),
-      );
-    }
+    const sortedArr = arr.sort((a, b) => {
+      const nameA = `${a.apellido} ${a.nombre}`;
+      const nameB = `${b.apellido} ${b.nombre}`;
+      return nameA.localeCompare(nameB, "es", { sensitivity: "base" });
+    });
+    if (sortOrder === "desc") sortedArr.reverse();
     return arr;
   }, [db.participants, sortOrder, searchQuery]);
 
@@ -486,7 +483,7 @@ export default function AsistenciaPage() {
         </div>
       </div>
 
-      <div className="flex flex-col gap-1">
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(310px,1fr))] gap-2">
         {sorted.map((p: ParticipantBasic) => {
           const here = act.asistentes.includes(p.id);
           const punct = (act.puntuales || []).includes(p.id);

@@ -5,7 +5,7 @@ import { useEditContext } from "../layout";
 import { Gamepad2, Plus, Users, X, Search, Trash2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { confirmDialog } from "@/components/ui/confirm-dialog";
-import { TEAMS } from "@/lib/constants";
+import { TEAMS, PTS } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -381,6 +381,7 @@ function GameDetailModal({
   const [localName, setLocalName] = useState(game.nombre || "");
   const [openPopover, setOpenPopover] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [showPtsPos, setShowPtsPos] = useState<string | null>(null);
 
   const assignedIds = useMemo(() => {
     if (game.tipo !== "individual") return new Set<string>();
@@ -442,12 +443,21 @@ function GameDetailModal({
           return (
             <div key={pos} className="rounded-2xl border border-surface-dark bg-surface-light/20 p-3 space-y-3">
               <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowPtsPos(showPtsPos === pos ? null : pos)}
+                  className="flex items-center gap-2"
+                >
                   <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-primary text-sm font-black text-white">
                     {pos}
                   </span>
                   <span className="font-bold">Puesto {pos}</span>
-                </div>
+                  {showPtsPos === pos && (
+                    <span className="text-[10px] font-black text-primary bg-primary/10 rounded-full px-2 py-0.5">
+                      {PTS.rec[Number(pos)] || 0} pts
+                    </span>
+                  )}
+                </button>
                 {game.tipo === "individual" ? (
                   <div className="flex items-center gap-1">
                     <Popover

@@ -483,7 +483,7 @@ export default function AsistenciaPage() {
         </div>
       </div>
 
-      <div className="flex flex-col gap-1">
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(310px,1fr))] gap-2">
         {sorted.map((p: ParticipantBasic) => {
           const here = act.asistentes.includes(p.id);
           const punct = (act.puntuales || []).includes(p.id);

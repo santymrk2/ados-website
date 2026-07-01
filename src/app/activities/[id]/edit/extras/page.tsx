@@ -70,14 +70,6 @@ function AdjustmentRow({
   const color = item.tipo === "extra" ? "#22C55E" : "#FF6B6B";
   const disabled = locked || saving || item.id < 0;
 
-  // Sync motivo from parent when not editing
-  useEffect(() => {
-    if (!editingMotivo && motivoInput !== item.motivo) {
-      setMotivoInput(item.motivo || "");
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [item.motivo, editingMotivo]);
-
   const commitMotivo = () => {
     setEditingMotivo(false);
     const v = motivoInput.trim();
@@ -313,13 +305,13 @@ export default function ExtrasPage() {
   );
 
   const filteredPlayers = useMemo(() => {
-    let arr = searchQuery.trim()
+    const filtered = searchQuery.trim()
       ? availablePlayers.filter((p: ParticipantBasic) =>
           `${p.nombre} ${p.apellido}`.toLowerCase().includes(searchQuery.toLowerCase()),
         )
       : [...availablePlayers];
-    if (sortOrder === "desc") arr.reverse();
-    return arr;
+    if (sortOrder === "desc") filtered.reverse();
+    return filtered;
   }, [availablePlayers, searchQuery, sortOrder]);
 
   const activeTeams = useMemo(

@@ -439,15 +439,12 @@ export default function AsistenciaPage() {
           .includes(searchQuery.toLowerCase()),
       );
     }
-    if (sortOrder === "asc") {
-      arr.sort((a, b) =>
-        `${a.apellido} ${a.nombre}`.localeCompare(`${b.apellido} ${b.nombre}`),
-      );
-    } else {
-      arr.sort((a, b) =>
-        `${b.apellido} ${b.nombre}`.localeCompare(`${a.apellido} ${a.nombre}`),
-      );
-    }
+    const sortedArr = arr.sort((a, b) => {
+      const nameA = `${a.apellido} ${a.nombre}`;
+      const nameB = `${b.apellido} ${b.nombre}`;
+      return nameA.localeCompare(nameB, "es", { sensitivity: "base" });
+    });
+    if (sortOrder === "desc") sortedArr.reverse();
     return arr;
   }, [db.participants, sortOrder, searchQuery]);
 

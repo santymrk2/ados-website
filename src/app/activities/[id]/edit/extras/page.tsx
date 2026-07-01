@@ -25,6 +25,55 @@ interface ExtraWithId extends Extra {
   scope?: "ind" | "team";
 }
 
+function InlineScoreInput({ value, color, disabled, saving, onSave }: {
+  value: number;
+  color: string;
+  disabled: boolean;
+  saving: boolean;
+  onSave: (v: number) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [inputVal, setInputVal] = useState(String(value));
+
+  useEffect(() => {
+    if (!editing) setInputVal(String(value));
+  }, [value, editing]);
+
+  if (editing) {
+    return (
+      <input
+        autoFocus
+        type="number"
+        min="0"
+        className="w-8 text-center text-[10px] font-black bg-white rounded border border-primary outline-none p-0 h-5"
+        style={{ color }}
+        value={inputVal}
+        onChange={(e) => setInputVal(e.target.value)}
+        onBlur={() => {
+          setEditing(false);
+          const v = parseInt(inputVal, 10);
+          if (!isNaN(v) && v >= 0 && v !== value) onSave(v);
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+          if (e.key === "Escape") { setInputVal(String(value)); setEditing(false); }
+        }}
+      />
+    );
+  }
+
+  return (
+    <span
+      className="w-5 text-center text-[10px] font-black cursor-pointer hover:bg-white hover:rounded px-0.5 transition-colors disabled:opacity-50"
+      style={{ color }}
+      onClick={() => { if (!disabled && !saving) setEditing(true); }}
+      title="Click para editar"
+    >
+      {value}
+    </span>
+  );
+}
+
 interface ExtraRowProps {
   item: ExtraWithId;
   db: DBData;
@@ -37,6 +86,7 @@ interface ExtraRowProps {
   setOpenDropdown: (id: number | string | null) => void;
   availablePlayers: ParticipantBasic[];
   activeTeams: string[];
+  saving?: boolean;
 }
 
 function ExtraRow({
@@ -51,9 +101,12 @@ function ExtraRow({
   setOpenDropdown,
   availablePlayers,
   activeTeams,
-}: ExtraRowProps) {
+  saving = false,
+}: ExtraRowProps & { saving?: boolean }) {
   const [search, setSearch] = useState("");
   const [localMotivo, setLocalMotivo] = useState(item.motivo || "");
+  const [editingPuntos, setEditingPuntos] = useState(false);
+  const [puntosInput, setPuntosInput] = useState(String(item.puntos || 0));
   const selectedPlayer = !isTeam ? availablePlayers.find((p) => p.id === item.pid) : null;
   const color = item.tipo === "extra" ? "#22C55E" : "#FF6B6B";
 
@@ -211,22 +264,58 @@ function ExtraRow({
 
       <div className="flex items-center gap-1 bg-surface-light rounded-lg px-1 shrink-0">
         <button
-          disabled={locked || item.id < 0}
+          disabled={locked || item.id < 0 || saving}
           onClick={() => onUpdate(item.id, "puntos", Math.max(0, (item.puntos || 0) - 1))}
-          className="w-6 h-6 flex items-center justify-center text-text-muted hover:text-red-500 transition-colors"
+          className="w-6 h-6 flex items-center justify-center text-text-muted hover:text-red-500 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
         >
           <Minus className="w-3 h-3" />
         </button>
-        <span 
-          className="w-5 text-center text-[11px] font-black"
-          style={{ color }}
-        >
-          {item.puntos > 0 && item.tipo === "extra" ? "+" : ""}{item.puntos}
-        </span>
+        {editingPuntos ? (
+          <input
+            autoFocus
+            type="number"
+            min="0"
+            className="w-10 text-center text-[11px] font-black bg-white rounded border border-primary outline-none p-0 h-6"
+            style={{ color }}
+            value={puntosInput}
+            onChange={(e) => setPuntosInput(e.target.value)}
+            onBlur={() => {
+              setEditingPuntos(false);
+              const v = parseInt(puntosInput, 10);
+              if (!isNaN(v) && v >= 0 && v !== item.puntos) {
+                onUpdate(item.id, "puntos", v);
+              } else {
+                setPuntosInput(String(item.puntos || 0));
+              }
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                (e.target as HTMLInputElement).blur();
+              }
+              if (e.key === "Escape") {
+                setPuntosInput(String(item.puntos || 0));
+                setEditingPuntos(false);
+              }
+            }}
+          />
+        ) : (
+          <span
+            className="w-5 text-center text-[11px] font-black cursor-pointer hover:bg-white hover:rounded px-1 transition-colors"
+            style={{ color }}
+            onClick={() => {
+              if (locked || item.id < 0) return;
+              setPuntosInput(String(item.puntos || 0));
+              setEditingPuntos(true);
+            }}
+            title="Click para editar"
+          >
+            {item.puntos > 0 && item.tipo === "extra" ? "+" : ""}{item.puntos}
+          </span>
+        )}
         <button
-          disabled={locked || item.id < 0}
+          disabled={locked || item.id < 0 || saving}
           onClick={() => onUpdate(item.id, "puntos", (item.puntos || 0) + 1)}
-          className="w-6 h-6 flex items-center justify-center text-text-muted hover:text-teal-500 transition-colors"
+          className="w-6 h-6 flex items-center justify-center text-text-muted hover:text-teal-500 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
         >
           <Plus className="w-3 h-3" />
         </button>
@@ -248,6 +337,7 @@ function ExtraRow({
 export default function ExtrasPage() {
   const { activity: act, setLocal, syncWithServer, db, locked, searchQuery } = useEditContext();
   const [openDropdown, setOpenDropdown] = useState<number | string | null>(null);
+  const [savingItems, setSavingItems] = useState<Set<number>>(new Set());
 
   const availablePlayers = useMemo(() => {
     return db.participants
@@ -297,6 +387,7 @@ export default function ExtrasPage() {
 
     if (id < 0) return;
 
+    setSavingItems((prev) => new Set(prev).add(id));
     try {
       const item = (act[listKey] || []).find(e => e.id === id);
       if (!item) return;
@@ -310,6 +401,12 @@ export default function ExtrasPage() {
     } catch (e) {
       const err = e as Error;
       toast.error("Error: " + err.message);
+    } finally {
+      setSavingItems((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
     }
   };
 
@@ -357,6 +454,8 @@ export default function ExtrasPage() {
     
     const addFn = (prev: Extra[]) => [...(prev || []), newItem];
     setLocal(listKey, addFn, true);
+
+    setSavingItems((prev) => new Set(prev).add(tempId));
     
     try {
       const result = await syncWithServer("extra_add", {
@@ -375,6 +474,12 @@ export default function ExtrasPage() {
     } catch (e) {
       toast.error("Error al agregar");
       setLocal(listKey, (prev: Extra[]) => (prev || []).filter((e) => e.id !== tempId), true);
+    } finally {
+      setSavingItems((prev) => {
+        const next = new Set(prev);
+        next.delete(tempId);
+        return next;
+      });
     }
   };
 
@@ -398,10 +503,11 @@ export default function ExtrasPage() {
           <span className="text-xs font-black uppercase tracking-widest text-primary">Equipos</span>
         </div>
         <div className="grid grid-cols-2 gap-3">
-          {activeTeams.map((t) => {
+            {activeTeams.map((t) => {
             const tExtras = filteredE.filter(x => x.team === t);
             const tDescs = filteredD.filter(x => x.team === t);
             const total = tExtras.reduce((s, x) => s + x.puntos, 0) - tDescs.reduce((s, x) => s + x.puntos, 0);
+            const tItems = [...tExtras, ...tDescs];
 
             return (
               <div 
@@ -423,19 +529,69 @@ export default function ExtrasPage() {
                     </div>
                   </div>
                 </div>
+
+                {tItems.length > 0 && (
+                  <div className="space-y-1">
+                    {tItems.map((item) => {
+                      const itemColor = item.tipo === "extra" ? "#22C55E" : "#FF6B6B";
+                      return (
+                        <div key={item.id} className="flex items-center gap-1.5 bg-white/60 rounded-lg px-2 py-1">
+                          <span className={`text-[10px] font-bold uppercase ${item.tipo === "extra" ? "text-green-700" : "text-red-700"}`}>
+                            {item.tipo === "extra" ? "Extra" : "Desc"}
+                          </span>
+                          {item.motivo && (
+                            <span className="text-[10px] text-gray-600 truncate max-w-16">{item.motivo}</span>
+                          )}
+                          <div className="flex items-center gap-0.5 ml-auto">
+                            <button
+                              disabled={locked || item.id < 0 || savingItems.has(item.id)}
+                              onClick={() => upd(item.id, item.tipo === "extra" ? "extras" : "descuentos", "puntos", Math.max(0, (item.puntos || 0) - 1))}
+                              className="w-5 h-5 flex items-center justify-center text-gray-500 hover:text-red-600 transition-colors disabled:opacity-30"
+                            >
+                              <Minus className="w-2.5 h-2.5" />
+                            </button>
+                            <InlineScoreInput
+                              value={item.puntos || 0}
+                              color={itemColor}
+                              disabled={locked || item.id < 0}
+                              saving={savingItems.has(item.id)}
+                              onSave={(v) => upd(item.id, item.tipo === "extra" ? "extras" : "descuentos", "puntos", v)}
+                            />
+                            <button
+                              disabled={locked || item.id < 0 || savingItems.has(item.id)}
+                              onClick={() => upd(item.id, item.tipo === "extra" ? "extras" : "descuentos", "puntos", (item.puntos || 0) + 1)}
+                              className="w-5 h-5 flex items-center justify-center text-gray-500 hover:text-teal-600 transition-colors disabled:opacity-30"
+                            >
+                              <Plus className="w-2.5 h-2.5" />
+                            </button>
+                          </div>
+                          <button
+                            onClick={() => del(item.id, item.tipo === "extra" ? "extras" : "descuentos")}
+                            disabled={locked}
+                            className="w-5 h-5 flex items-center justify-center text-red-300 hover:text-red-500 transition-colors disabled:opacity-30"
+                          >
+                            <Trash2 className="w-2.5 h-2.5" />
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
                 
                 <div className="flex gap-2">
                   <Button 
                     onClick={() => fastAdd(null, t, "descuento")} 
                     size="sm" 
-                    className="flex-1 h-9 rounded-xl bg-white/50 hover:bg-white/80 border-none text-red-700 font-black"
+                    disabled={locked || savingItems.size > 0}
+                    className="flex-1 h-9 rounded-xl bg-white/50 hover:bg-white/80 border-none text-red-700 font-black disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     <Minus className="w-4 h-4" />
                   </Button>
                   <Button 
                     onClick={() => fastAdd(null, t, "extra")} 
                     size="sm" 
-                    className="flex-1 h-9 rounded-xl bg-white/50 hover:bg-white/80 border-none text-primary font-black"
+                    disabled={locked || savingItems.size > 0}
+                    className="flex-1 h-9 rounded-xl bg-white/50 hover:bg-white/80 border-none text-primary font-black disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     <Plus className="w-4 h-4" />
                   </Button>
@@ -462,26 +618,86 @@ export default function ExtrasPage() {
               const pExtras = extrasList.filter(x => x.pid === p.id);
               const pDescs = descuentosList.filter(x => x.pid === p.id);
               const total = pExtras.reduce((s, x) => s + x.puntos, 0) - pDescs.reduce((s, x) => s + x.puntos, 0);
+              const pItems = [...pExtras, ...pDescs];
 
               return (
                 <div 
                   key={p.id}
-                  className="bg-white rounded-2xl p-3 flex items-center gap-3 border border-surface-dark shadow-sm"
+                  className="bg-white rounded-2xl p-3 flex items-start gap-3 border border-surface-dark shadow-sm"
                 >
-                  <Avatar p={p} size={36} />
+                  <Avatar p={p} size={36} className="mt-1" />
                   <div className="flex-1 min-w-0">
                     <div className="font-bold text-sm truncate">{p.nombre} {p.apellido}</div>
-                    <div className="text-[10px] font-black text-text-muted uppercase">
+                    <div className="text-[10px] font-black text-text-muted uppercase mb-1">
                       Balance: <span className={cn(total > 0 ? "text-green-600" : total < 0 ? "text-red-600" : "")}>
                         {total > 0 ? "+" : ""}{total} pts
                       </span>
                     </div>
+                    {pItems.length > 0 && (
+                      <div className="space-y-1">
+                        {pItems.map((item) => {
+                          const itemColor = item.tipo === "extra" ? "#22C55E" : "#FF6B6B";
+                          return (
+                            <div key={item.id} className="flex items-center gap-1.5 bg-surface-light rounded-lg px-2 py-1">
+                              <span className={`text-[10px] font-bold uppercase ${item.tipo === "extra" ? "text-green-600" : "text-red-600"}`}>
+                                {item.tipo === "extra" ? "Extra" : "Desc"}
+                              </span>
+                              {item.motivo && (
+                                <span className="text-[10px] text-text-muted truncate max-w-20">{item.motivo}</span>
+                              )}
+                              <div className="flex items-center gap-0.5 ml-auto">
+                                <button
+                                  disabled={locked || item.id < 0 || savingItems.has(item.id)}
+                                  onClick={() => upd(item.id, item.tipo === "extra" ? "extras" : "descuentos", "puntos", Math.max(0, (item.puntos || 0) - 1))}
+                                  className="w-5 h-5 flex items-center justify-center text-text-muted hover:text-red-500 transition-colors disabled:opacity-30"
+                                >
+                                  <Minus className="w-2.5 h-2.5" />
+                                </button>
+                                <InlineScoreInput
+                                  value={item.puntos || 0}
+                                  color={itemColor}
+                                  disabled={locked || item.id < 0}
+                                  saving={savingItems.has(item.id)}
+                                  onSave={(v) => upd(item.id, item.tipo === "extra" ? "extras" : "descuentos", "puntos", v)}
+                                />
+                                <button
+                                  disabled={locked || item.id < 0 || savingItems.has(item.id)}
+                                  onClick={() => upd(item.id, item.tipo === "extra" ? "extras" : "descuentos", "puntos", (item.puntos || 0) + 1)}
+                                  className="w-5 h-5 flex items-center justify-center text-text-muted hover:text-teal-500 transition-colors disabled:opacity-30"
+                                >
+                                  <Plus className="w-2.5 h-2.5" />
+                                </button>
+                              </div>
+                              <button
+                                onClick={() => del(item.id, item.tipo === "extra" ? "extras" : "descuentos")}
+                                disabled={locked}
+                                className="w-5 h-5 flex items-center justify-center text-red-300 hover:text-red-500 transition-colors disabled:opacity-30"
+                              >
+                                <Trash2 className="w-2.5 h-2.5" />
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
-                  <div className="flex gap-1">
-                    <Button onClick={() => fastAdd(p.id, null, "descuento")} size="icon" variant="ghost" className="h-9 w-9 bg-red-50 text-red-600 hover:bg-red-100 rounded-xl">
+                  <div className="flex gap-1 shrink-0">
+                    <Button
+                      onClick={() => fastAdd(p.id, null, "descuento")}
+                      size="icon"
+                      variant="ghost"
+                      disabled={locked || savingItems.size > 0}
+                      className="h-9 w-9 bg-red-50 text-red-600 hover:bg-red-100 rounded-xl disabled:opacity-30 disabled:cursor-not-allowed"
+                    >
                       <Minus className="w-5 h-5" />
                     </Button>
-                    <Button onClick={() => fastAdd(p.id, null, "extra")} size="icon" variant="ghost" className="h-9 w-9 bg-indigo-50 text-primary hover:bg-indigo-100 rounded-xl">
+                    <Button
+                      onClick={() => fastAdd(p.id, null, "extra")}
+                      size="icon"
+                      variant="ghost"
+                      disabled={locked || savingItems.size > 0}
+                      className="h-9 w-9 bg-indigo-50 text-primary hover:bg-indigo-100 rounded-xl disabled:opacity-30 disabled:cursor-not-allowed"
+                    >
                       <Plus className="w-5 h-5" />
                     </Button>
                   </div>

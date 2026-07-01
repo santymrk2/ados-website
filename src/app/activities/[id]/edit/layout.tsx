@@ -419,8 +419,8 @@ export default function EditLayout({ children, mode = "edit" }: EditLayoutProps)
             href: tab.value ? `${base}/${tab.value}` : base,
           };
         })}
-        searchValue={currentTab === "asistencia" || currentTab === "biblia" || currentTab === "equipos" ? searchQuery : undefined}
-        onSearchChange={currentTab === "asistencia" || currentTab === "biblia" || currentTab === "equipos" ? setSearchQuery : undefined}
+        searchValue={currentTab === "asistencia" || currentTab === "biblia" || currentTab === "equipos" || currentTab === "extras" ? searchQuery : undefined}
+        onSearchChange={currentTab === "asistencia" || currentTab === "biblia" || currentTab === "equipos" || currentTab === "extras" ? setSearchQuery : undefined}
         searchPlaceholder="Buscar por nombre..."
         filterContent={filterContent ?? undefined}
         hasActiveSearch={searchQuery.trim().length > 0}

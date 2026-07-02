@@ -313,16 +313,44 @@ function NewPlayerModal({ act, db, onClose, onSave, setLocal, syncWithServer }: 
 export default function AsistenciaPage() {
   const { activity: act, setLocal, syncWithServer, db, locked, searchQuery, setFilterContent, setFiltersActive } = useEditContext();
   const { saveParticipant } = useApp();
+  const [sortBy, setSortBy] = useState<"apellido" | "nombre">("apellido");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
   const [showNewPlayer, setShowNewPlayer] = useState(false);
 
   // Proveer filtro de orden al FloatingNav
   useEffect(() => {
-    setFiltersActive(sortOrder !== "asc");
+    setFiltersActive(sortBy !== "apellido" || sortOrder !== "asc");
     setFilterContent(
       <div>
         <span className="text-[11px] font-bold text-text-muted uppercase tracking-wider mb-2 block">
-          Orden alfabético
+          Ordenar por
+        </span>
+        <div className="flex gap-2 mb-3">
+          <button
+            onClick={() => setSortBy("apellido")}
+            className={cn(
+              "flex-1 px-3 py-2 rounded-lg text-sm font-bold transition-colors border",
+              sortBy === "apellido"
+                ? "bg-primary text-white border-primary"
+                : "bg-white text-foreground border-border hover:bg-surface-light",
+            )}
+          >
+            Apellido
+          </button>
+          <button
+            onClick={() => setSortBy("nombre")}
+            className={cn(
+              "flex-1 px-3 py-2 rounded-lg text-sm font-bold transition-colors border",
+              sortBy === "nombre"
+                ? "bg-primary text-white border-primary"
+                : "bg-white text-foreground border-border hover:bg-surface-light",
+            )}
+          >
+            Nombre
+          </button>
+        </div>
+        <span className="text-[11px] font-bold text-text-muted uppercase tracking-wider mb-2 block">
+          Dirección
         </span>
         <div className="flex gap-2">
           <button
@@ -354,7 +382,7 @@ export default function AsistenciaPage() {
       setFilterContent(null);
       setFiltersActive(false);
     };
-  }, [sortOrder, setFilterContent, setFiltersActive]);
+  }, [sortBy, sortOrder, setFilterContent, setFiltersActive]);
 
   const toggle = async (key: string, id: number) => {
     if (key === "asistentes") {
@@ -440,13 +468,13 @@ export default function AsistenciaPage() {
       );
     }
     const sortedArr = arr.sort((a, b) => {
-      const nameA = `${a.apellido} ${a.nombre}`;
-      const nameB = `${b.apellido} ${b.nombre}`;
+      const nameA = sortBy === "nombre" ? `${a.nombre} ${a.apellido}` : `${a.apellido} ${a.nombre}`;
+      const nameB = sortBy === "nombre" ? `${b.nombre} ${b.apellido}` : `${b.apellido} ${b.nombre}`;
       return nameA.localeCompare(nameB, "es", { sensitivity: "base" });
     });
     if (sortOrder === "desc") sortedArr.reverse();
     return arr;
-  }, [db.participants, sortOrder, searchQuery]);
+  }, [db.participants, sortBy, sortOrder, searchQuery]);
 
   return (
     <div>
@@ -483,7 +511,7 @@ export default function AsistenciaPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-[repeat(auto-fill,minmax(310px,1fr))] gap-2">
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(310px,1fr))] gap-2 items-start">
         {sorted.map((p: ParticipantBasic) => {
           const here = act.asistentes.includes(p.id);
           const punct = (act.puntuales || []).includes(p.id);
@@ -492,7 +520,7 @@ export default function AsistenciaPage() {
               key={p.id}
                className={`rounded-2xl border bg-white ${here ? "border-primary shadow-md shadow-primary/20" : "border-surface-dark"}`}
             >
-              <div className="flex items-center p-3 gap-2">
+              <div className="flex items-center p-3 gap-2 h-full">
                 <div className="flex gap-0">
                   <button
                     onClick={() => toggle("asistentes", p.id)}
@@ -523,7 +551,7 @@ export default function AsistenciaPage() {
                   </button>
                 </div>
                 <Avatar p={p} size={30} />
-                <div className="flex-1">
+                <div className="flex-1 min-w-0">
                   <div
                     className={cn("font-bold text-sm", here ? "text-foreground" : "text-text-muted")}
                   >

@@ -6,8 +6,8 @@ import { Button } from "@/components/ui/button";
 import { X } from "lucide-react";
 import { Avatar } from "@/components/ui/Avatar";
 import { cn } from "@/lib/utils";
-import { TEAM_COLORS, getEdad, PTS } from "@/lib/constants";
-import { actGoles } from "@/lib/calc";
+import { TEAM_COLORS, getEdad } from "@/lib/constants";
+import { actRankingPtsDetails } from "@/lib/calc";
 import type { Activity, ParticipantBasic } from "@/lib/types";
 
 interface PlayerPointsModalProps {
@@ -24,75 +24,8 @@ export function PlayerPointsModal({
   onClose,
 }: PlayerPointsModalProps) {
   const { total, details } = useMemo(() => {
-    const pid = player.id;
-    const a = act;
-    const team = a.equipos?.[String(pid)];
-    const details: { label: string; pts: number }[] = [];
-    let total = 0;
-
-    if (a.asistentes.includes(pid)) {
-      details.push({ label: "Asistencia", pts: PTS.asistencia });
-      total += PTS.asistencia;
-
-      if (a.puntuales.includes(pid)) {
-        details.push({ label: "Puntualidad", pts: PTS.puntualidad });
-        total += PTS.puntualidad;
-      }
-      if (a.biblias.includes(pid)) {
-        details.push({ label: "Biblia", pts: PTS.biblia });
-        total += PTS.biblia;
-      }
-
-      const isSocial = (a.socials || []).includes(pid);
-      if (isSocial) {
-        for (const _j of a.juegos || []) {
-          details.push({ label: "Juego Social", pts: PTS.rec[4] || 0 });
-          total += PTS.rec[4] || 0;
-        }
-      } else if (team) {
-        for (const j of a.juegos || []) {
-          let position;
-          if (j.pos && typeof j.pos === "object") {
-            for (const [posStr, equipos] of Object.entries(j.pos)) {
-              if (Array.isArray(equipos) && equipos.includes(team)) {
-                position = Number(posStr);
-                break;
-              }
-            }
-          }
-          if (position !== undefined) {
-            const pts = PTS.rec[position] || 0;
-            details.push({ label: `${j.nombre || "Juego"} (${position}°)`, pts });
-            total += pts;
-          }
-        }
-      }
-
-      const invCount = (a.invitaciones || []).filter((i) => i.invitador === pid).length;
-      if (invCount > 0) {
-        details.push({ label: `Invitaciones (x${invCount})`, pts: invCount * PTS.invite });
-        total += invCount * PTS.invite;
-      }
-    }
-
-    for (const e of a.extras || []) {
-      if (e.pid === pid || (team && e.team === team)) {
-        details.push({ label: e.desc || "Extra", pts: e.puntos });
-        total += e.puntos;
-      }
-    }
-    for (const d of a.descuentos || []) {
-      if (d.pid === pid || (team && d.team === team)) {
-        details.push({ label: d.desc || "Descuento", pts: -d.puntos });
-        total -= d.puntos;
-      }
-    }
-
-    const goles = actGoles(pid, a);
-    if (goles > 0) {
-      details.push({ label: "Goles", pts: goles });
-      total += goles;
-    }
+    const details = actRankingPtsDetails(player.id, act, participants);
+    const total = details.reduce((sum, detail) => sum + detail.pts, 0);
 
     return { total, details };
   }, [player, act, participants]);
@@ -169,7 +102,14 @@ export function PlayerPointsModal({
               key={i}
               className="flex justify-between items-center bg-slate-50 rounded-xl px-3 py-2.5 border border-slate-100"
             >
-              <span className="text-sm font-bold text-slate-700">{d.label}</span>
+              <span className="text-sm font-bold text-slate-700">
+                {d.label}
+                {d.sublabel && (
+                  <span className="ml-1 text-xs font-medium text-slate-400">
+                    · {d.sublabel}
+                  </span>
+                )}
+              </span>
               <span
                 className={cn(
                   "font-black text-sm tabular-nums",

@@ -24,6 +24,7 @@ import { Button } from "@/components/ui/button";
 import { RankBadge, PodiumBadge } from "@/components/ui/Badges";
 import { cn, formatDate } from "@/lib/utils";
 import type { ParticipantBasic, Activity, Ranking, Invitacion } from "@/lib/types";
+import { PlayerHistoryModal } from "@/app/_components/PlayerHistoryModal";
 
 // Tipo para ranking calculado con stats
 interface RankingWithStats extends ParticipantBasic {
@@ -77,21 +78,26 @@ function RankRow({
   p,
   pos,
   metric,
+  isClickable = false,
+  onClick,
 }: {
   p: RankingWithStats;
   pos: number;
   activities: Activity[];
   metric: RankingMetricKey;
+  isClickable?: boolean;
+  onClick?: () => void;
 }) {
   const metricValue = p[metric] || 0;
 
-  return (
-    <div
-      className={cn(
-        "bg-white rounded-xl p-3 flex items-center gap-3 border relative overflow-hidden",
-        pos <= 3 ? "border-primary/30" : "border-surface-dark",
-      )}
-    >
+  const className = cn(
+    "bg-white rounded-xl p-3 flex items-center gap-3 border relative overflow-hidden",
+    pos <= 3 ? "border-primary/30" : "border-surface-dark",
+    isClickable && "w-full text-left cursor-pointer transition-all hover:border-primary/40 active:scale-[0.99]",
+  );
+
+  const content = (
+    <>
       {pos <= 3 && (
         <div
           className="absolute inset-0"
@@ -118,7 +124,19 @@ function RankRow({
         </div>
       </div>
       <div className="font-black text-2xl z-10">{metricValue}</div>
-    </div>
+    </>
+  );
+
+  if (isClickable && onClick) {
+    return (
+      <button type="button" onClick={onClick} className={className}>
+        {content}
+      </button>
+    );
+  }
+
+  return (
+    <div className={className}>{content}</div>
   );
 }
 
@@ -135,6 +153,7 @@ export default function Page() {
   const [rankingMetric, setRankingMetric] = useState<RankingMetricKey>('total');
   const [selectedActivityIds, setSelectedActivityIds] = useState<number[]>([]);
   const [selectedInviter, setSelectedInviter] = useState<InvitacionRanking | null>(null);
+  const [selectedRankingPlayer, setSelectedRankingPlayer] = useState<RankingWithStats | null>(null);
 
   const handleActivityClick = (activityId: number) => {
     router.push(`/activities/${activityId}`);
@@ -483,6 +502,8 @@ export default function Page() {
                       pos={i + 1}
                       activities={activities}
                       metric={rankingMetric}
+                      isClickable={rankingMetric === "total"}
+                      onClick={rankingMetric === "total" ? () => setSelectedRankingPlayer(p) : undefined}
                     />
                   ))}
                 </div>
@@ -610,6 +631,15 @@ export default function Page() {
         onLogout={logout}
         role={role}
       />
+
+      {selectedRankingPlayer && (
+        <PlayerHistoryModal
+          player={selectedRankingPlayer}
+          activities={activities}
+          participants={participants}
+          onClose={() => setSelectedRankingPlayer(null)}
+        />
+      )}
 
       {/* Modal de invitados */}
       {selectedInviter && (

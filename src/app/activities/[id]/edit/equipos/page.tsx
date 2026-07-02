@@ -25,6 +25,7 @@ import type { Activity, ParticipantBasic } from "@/lib/types";
 export default function EquiposPage() {
   const { activity: act, setLocal, syncWithServer, db, locked, searchQuery, setFilterContent, setFiltersActive } = useEditContext();
   const [selectedTeam, setSelectedTeam] = useState<string | null>(null);
+  const [sortBy, setSortBy] = useState<"apellido" | "nombre">("apellido");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
   const [confirmChange, setConfirmChange] = useState<{
     player: ParticipantBasic;
@@ -34,11 +35,38 @@ export default function EquiposPage() {
 
   // Proveer filtro de orden al FloatingNav
   useEffect(() => {
-    setFiltersActive(sortOrder !== "asc");
+    setFiltersActive(sortBy !== "apellido" || sortOrder !== "asc");
     setFilterContent(
       <div>
         <span className="text-[11px] font-bold text-text-muted uppercase tracking-wider mb-2 block">
-          Orden alfabético
+          Ordenar por
+        </span>
+        <div className="flex gap-2 mb-3">
+          <button
+            onClick={() => setSortBy("apellido")}
+            className={cn(
+              "flex-1 px-3 py-2 rounded-lg text-sm font-bold transition-colors border",
+              sortBy === "apellido"
+                ? "bg-primary text-white border-primary"
+                : "bg-white text-foreground border-border hover:bg-surface-light",
+            )}
+          >
+            Apellido
+          </button>
+          <button
+            onClick={() => setSortBy("nombre")}
+            className={cn(
+              "flex-1 px-3 py-2 rounded-lg text-sm font-bold transition-colors border",
+              sortBy === "nombre"
+                ? "bg-primary text-white border-primary"
+                : "bg-white text-foreground border-border hover:bg-surface-light",
+            )}
+          >
+            Nombre
+          </button>
+        </div>
+        <span className="text-[11px] font-bold text-text-muted uppercase tracking-wider mb-2 block">
+          Dirección
         </span>
         <div className="flex gap-2">
           <button
@@ -70,7 +98,7 @@ export default function EquiposPage() {
       setFilterContent(null);
       setFiltersActive(false);
     };
-  }, [sortOrder, setFilterContent, setFiltersActive]);
+  }, [sortBy, sortOrder, setFilterContent, setFiltersActive]);
 
   const activeTeams = useMemo(
     () => TEAMS.slice(0, act.cantEquipos || 4),
@@ -105,14 +133,14 @@ export default function EquiposPage() {
     }
 
     arr.sort((a, b) => {
-      const cmp = `${a.apellido} ${a.nombre}`.localeCompare(
-        `${b.apellido} ${b.nombre}`,
-      );
+      const nameA = sortBy === "nombre" ? `${a.nombre} ${a.apellido}` : `${a.apellido} ${a.nombre}`;
+      const nameB = sortBy === "nombre" ? `${b.nombre} ${b.apellido}` : `${b.apellido} ${b.nombre}`;
+      const cmp = nameA.localeCompare(nameB);
       return sortOrder === "asc" ? cmp : -cmp;
     });
 
     return arr;
-  }, [present, searchQuery, sortOrder]);
+  }, [present, searchQuery, sortBy, sortOrder]);
 
   const setTeam = async (pid: number, team: string) => {
     const previousEquipos = { ...(act.equipos || {}) };

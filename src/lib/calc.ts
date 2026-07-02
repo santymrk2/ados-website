@@ -3,70 +3,158 @@ import type { Activity, Participant, ParticipantBasic, ParticipantStats } from "
 
 type AnyParticipant = Participant | ParticipantBasic;
 
-export function actPts(pid: number, a: Activity, participants: AnyParticipant[]): number {
+const ACTIVITY_POINTS_DETAIL_TYPE = {
+  BASE: "base",
+  GAME: "game",
+  SOCIAL: "social",
+  INVITE: "invite",
+  EXTRA: "extra",
+  DISCOUNT: "discount",
+  GOAL: "goal",
+} as const;
+
+type ActivityPointsDetailType = (typeof ACTIVITY_POINTS_DETAIL_TYPE)[keyof typeof ACTIVITY_POINTS_DETAIL_TYPE];
+
+export interface ActivityPointsDetail {
+  label: string;
+  pts: number;
+  type: ActivityPointsDetailType;
+  sublabel?: string;
+}
+
+const GOAL_LABELS = {
+  f: "Goles faltantes",
+  h: "Goles hora",
+  b: "Goles Biblia",
+} as const;
+
+function getParticipantName(pid: number | null | undefined, participants: AnyParticipant[]) {
+  const participant = participants.find((p) => p.id === pid);
+  return participant ? `${participant.nombre} ${participant.apellido}` : null;
+}
+
+export function actPtsDetails(pid: number, a: Activity, participants: AnyParticipant[]): ActivityPointsDetail[] {
   const p = participants.find((x) => x.id === pid);
-  if (!p) return 0;
+  if (!p) return [];
 
   const team = a.equipos?.[String(pid)];
   const here = a.asistentes.includes(pid);
-  let pts = 0;
+  if (!here) return [];
 
-  if (here) {
-    pts += PTS.asistencia;
-    if (a.puntuales.includes(pid)) pts += PTS.puntualidad;
-    if (a.biblias.includes(pid)) pts += PTS.biblia;
+  const details: ActivityPointsDetail[] = [
+    { label: "Asistencia", pts: PTS.asistencia, type: ACTIVITY_POINTS_DETAIL_TYPE.BASE },
+  ];
 
-    const isSocial = (a.socials || []).includes(pid);
+  if (a.puntuales.includes(pid)) {
+    details.push({ label: "Puntualidad", pts: PTS.puntualidad, type: ACTIVITY_POINTS_DETAIL_TYPE.BASE });
+  }
+  if (a.biblias.includes(pid)) {
+    details.push({ label: "Biblia", pts: PTS.biblia, type: ACTIVITY_POINTS_DETAIL_TYPE.BASE });
+  }
 
-    if (isSocial) {
-      // Social mode adds 4th place points for each game
-      for (const _ of a.juegos || []) {
-        pts += PTS.rec[4] || 0;
-      }
-    } else {
-      // Nueva estructura: pos = { 1: ["E1", "E2"], 2: ["E3"], 3: ["E4"] }
-      // Múltiples equipos o personas pueden estar en la misma posición.
-      // El tipo del juego define si la posición guarda equipos o participantes.
-      for (const j of a.juegos || []) {
-        let position: number | undefined;
-        if (j.pos && typeof j.pos === "object") {
-          for (const [posStr, items] of Object.entries(j.pos)) {
-            if (!Array.isArray(items)) continue;
+  const isSocial = (a.socials || []).includes(pid);
 
-            if (j.tipo === "individual") {
-              if (items.includes(String(pid))) {
-                position = Number(posStr);
-                break;
-              }
-            } else if (team && items.includes(team)) {
+  if (isSocial) {
+    for (const j of a.juegos || []) {
+      details.push({
+        label: j.nombre || "Juego",
+        pts: PTS.rec[4] || 0,
+        type: ACTIVITY_POINTS_DETAIL_TYPE.SOCIAL,
+        sublabel: "Social",
+      });
+    }
+  } else {
+    for (const j of a.juegos || []) {
+      let position: number | undefined;
+      if (j.pos && typeof j.pos === "object") {
+        for (const [posStr, items] of Object.entries(j.pos)) {
+          if (!Array.isArray(items)) continue;
+
+          if (j.tipo === "individual") {
+            if (items.includes(String(pid))) {
               position = Number(posStr);
               break;
             }
+          } else if (team && items.includes(team)) {
+            position = Number(posStr);
+            break;
           }
         }
+      }
 
-        if (position !== undefined && PTS.rec[position]) {
-          pts += PTS.rec[position];
-        }
+      if (position !== undefined && PTS.rec[position]) {
+        details.push({
+          label: j.nombre || "Juego",
+          pts: PTS.rec[position],
+          type: ACTIVITY_POINTS_DETAIL_TYPE.GAME,
+          sublabel: `${position}° puesto`,
+        });
       }
     }
-    // Contar cuántas personas invitó y sumar puntos por cada una
-    const invitacionesCount = (a.invitaciones || []).filter((i) => i.invitador === pid).length;
-    if (invitacionesCount > 0) {
-      pts += invitacionesCount * PTS.invite;
+  }
+
+  for (const invitation of a.invitaciones || []) {
+    if (invitation.invitador !== pid) continue;
+    const invitedName = getParticipantName(invitation.invitadoId, participants);
+    details.push({
+      label: invitedName ? `Invitó a ${invitedName}` : "Invitación",
+      pts: PTS.invite,
+      type: ACTIVITY_POINTS_DETAIL_TYPE.INVITE,
+    });
+  }
+
+  for (const e of a.extras || []) {
+    if (e.pid === pid || (team && e.team === team)) {
+      details.push({
+        label: e.motivo || e.desc || "Extra",
+        pts: e.puntos,
+        type: ACTIVITY_POINTS_DETAIL_TYPE.EXTRA,
+      });
+    }
+  }
+  for (const d of a.descuentos || []) {
+    if (d.pid === pid || (team && d.team === team)) {
+      details.push({
+        label: d.motivo || d.desc || "Descuento",
+        pts: -d.puntos,
+        type: ACTIVITY_POINTS_DETAIL_TYPE.DISCOUNT,
+      });
     }
   }
 
-  if (here) {
-    for (const e of a.extras || []) {
-      if (e.pid === pid || (team && e.team === team)) pts += e.puntos;
-    }
-    for (const d of a.descuentos || []) {
-      if (d.pid === pid || (team && d.team === team)) pts -= d.puntos;
+  return details;
+}
+
+export function actRankingPtsDetails(pid: number, a: Activity, participants: AnyParticipant[]): ActivityPointsDetail[] {
+  const details = actPtsDetails(pid, a, participants);
+  if (!a.asistentes.includes(pid)) return details;
+
+  const goalCounts = (a.goles || []).reduce<Record<keyof typeof GOAL_LABELS, number>>(
+    (acc, goal) => {
+      if (goal.pid !== pid) return acc;
+      if (goal.tipo === "f" || goal.tipo === "h" || goal.tipo === "b") {
+        acc[goal.tipo] += goal.cant;
+      }
+      return acc;
+    },
+    { f: 0, h: 0, b: 0 },
+  );
+
+  for (const type of ["f", "h", "b"] as const) {
+    if (goalCounts[type] > 0) {
+      details.push({
+        label: GOAL_LABELS[type],
+        pts: goalCounts[type],
+        type: ACTIVITY_POINTS_DETAIL_TYPE.GOAL,
+      });
     }
   }
 
-  return pts;
+  return details;
+}
+
+export function actPts(pid: number, a: Activity, participants: AnyParticipant[]): number {
+  return actPtsDetails(pid, a, participants).reduce((sum, detail) => sum + detail.pts, 0);
 }
 
 export function actGoles(pid: number, a: Activity): number {

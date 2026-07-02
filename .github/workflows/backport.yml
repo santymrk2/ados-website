@@ -1,0 +1,92 @@
+name: Backport
+
+on:
+  workflow_call:
+    inputs:
+      source_sha:
+        required: true
+        type: string
+      source_label:
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  backport:
+    name: Backport ${{ inputs.source_label }} to develop
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout develop
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          ref: develop
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Create backport branch
+        id: branch
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          git fetch --force --prune origin \
+            +refs/heads/develop:refs/remotes/origin/develop \
+            +refs/heads/main:refs/remotes/origin/main
+          git checkout -B develop origin/develop
+
+          SHORT_SHA="${SOURCE_SHA:0:7}"
+          DATE="$(date +%Y-%m-%d)"
+          BACKPORT_BRANCH="backport/${DATE}-${SHORT_SHA}"
+
+          git checkout -B "$BACKPORT_BRANCH"
+
+          read -r -a COMMIT_AND_PARENTS <<< "$(git rev-list --parents -n 1 "$SOURCE_SHA")"
+          if [ "${#COMMIT_AND_PARENTS[@]}" -gt 2 ]; then
+            git cherry-pick -m 1 "$SOURCE_SHA"
+          else
+            git cherry-pick "$SOURCE_SHA"
+          fi
+
+          if git diff --quiet origin/develop...HEAD; then
+            echo "No backport changes were produced."
+            echo "created=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          git push --force-with-lease origin "$BACKPORT_BRANCH"
+          echo "created=true" >> "$GITHUB_OUTPUT"
+          echo "branch=$BACKPORT_BRANCH" >> "$GITHUB_OUTPUT"
+        env:
+          SOURCE_SHA: ${{ inputs.source_sha }}
+
+      - name: Open PR to develop
+        if: steps.branch.outputs.created == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BACKPORT_BRANCH: ${{ steps.branch.outputs.branch }}
+          SOURCE_LABEL: ${{ inputs.source_label }}
+          SOURCE_SHA: ${{ inputs.source_sha }}
+        run: |
+          EXISTING_PR="$(gh pr list --head "$BACKPORT_BRANCH" --base develop --state open --json number --jq '.[0].number // empty')"
+          if [ -n "$EXISTING_PR" ]; then
+            echo "Backport PR already exists: #$EXISTING_PR"
+            exit 0
+          fi
+
+          gh pr create \
+            --head "$BACKPORT_BRANCH" \
+            --base develop \
+            --title "chore: backport ${SOURCE_LABEL} to develop" \
+            --body "Automated backport of ${SOURCE_LABEL} into \`develop\`.
+
+          Source commit: \`${SOURCE_SHA}\`
+
+          This PR was created after a production hotfix was merged. Review it before merging; it is intentionally not auto-merged."

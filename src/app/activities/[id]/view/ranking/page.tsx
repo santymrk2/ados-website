@@ -10,17 +10,21 @@ import { cn } from "@/lib/utils";
 import type { Invitacion, Gol } from "@/lib/types";
 
 export default function RankingPage() {
-  const { playerRank, act, setFilterContent } = useViewContext();
+  const { playerRank, act, setFilterContent, setFiltersActive } = useViewContext();
   const [rankingType, setRankingType] = useState("puntos");
   const [goalSexo, setGoalSexo] = useState<string | null>(null);
 
   // Limpiar filtro al desmontar
   useEffect(() => {
-    return () => setFilterContent(null);
-  }, [setFilterContent]);
+    return () => {
+      setFilterContent(null);
+      setFiltersActive(false);
+    };
+  }, [setFilterContent, setFiltersActive]);
 
   // Setear filtro en el FloatingNav
   useEffect(() => {
+    setFiltersActive(rankingType !== "puntos" || goalSexo !== null);
     setFilterContent(
       <div className="space-y-4">
         {/* Tipo de ranking */}
@@ -83,7 +87,7 @@ export default function RankingPage() {
         )}
       </div>
     );
-  }, [rankingType, goalSexo, setFilterContent]);
+  }, [rankingType, goalSexo, setFilterContent, setFiltersActive]);
 
   // Calcular goleadores traídos
   const invitedCount = useMemo(() => {
@@ -132,8 +136,8 @@ export default function RankingPage() {
 
   if (!act) return null;
 
-  const top3 = rankingData.slice(0, 3);
-  const rest = rankingData.slice(3);
+  const top3: typeof rankingData = [];
+  const rest = rankingData;
 
   return (
     <div>
@@ -200,7 +204,7 @@ export default function RankingPage() {
             className="bg-white/90 rounded-xl p-3 flex items-center gap-3"
           >
             <div className="w-7 h-7 flex items-center justify-center font-bold text-xs text-text-muted">
-              {i + 4}
+              {i + 1}
             </div>
             <Avatar p={p} size={30} />
             <div className="flex-1">

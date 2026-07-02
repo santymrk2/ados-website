@@ -257,13 +257,13 @@ export function ParticipantForm({ db, initial, onClose, onSave }: ParticipantFor
               <TabsList className="grid w-full grid-cols-2 h-12 bg-slate-100">
                 <TabsTrigger 
                   value="M" 
-                  className="data-[state=active]:bg-cyan-600 data-[state=active]:text-white data-[state=active]:shadow-md font-bold"
+                  className="data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-md font-bold"
                 >
                   Varón
                 </TabsTrigger>
                 <TabsTrigger 
                   value="F"
-                  className="data-[state=active]:bg-pink-500 data-[state=active]:text-white data-[state=active]:shadow-md font-bold"
+                  className="data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-md font-bold"
                 >
                   Mujer
                 </TabsTrigger>

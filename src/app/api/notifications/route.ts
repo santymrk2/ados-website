@@ -4,6 +4,9 @@ import { participants, pushSubscriptions } from "@/lib/schema";
 import { sendBirthdayNotification, isWebPushConfigured, type PushMultiResult } from "@/services/web-push-server";
 import { getEdad } from "@/lib/constants";
 import { inArray } from "drizzle-orm";
+import { handleApiError, parseBody, requireAdmin, requireAuth } from "@/lib/api-utils";
+import { notificationTriggerSchema } from "@/lib/validation";
+import { timingSafeEqual } from "crypto";
 
 function getArgentinaDate() {
   const now = new Date();
@@ -83,20 +86,40 @@ async function sendBirthdayNotifications(clientDate: string | null = null) {
   };
 }
 
-export async function POST(request: NextRequest) {
-  try {
-    const body = await request.json();
-    const { action, date: clientDate } = body;
-    const isInternal = request.headers.get('x-internal-trigger') === 'true';
+function hasValidCronSecret(request: NextRequest) {
+  const secret = process.env.CRON_SECRET;
+  const provided = request.headers.get("x-cron-secret");
 
-    if (action === 'send_birthday_notifications' || isInternal) {
-      const result = await sendBirthdayNotifications(clientDate);
-      return NextResponse.json(result, { status: result.status });
+  if (!secret || !provided) return false;
+
+  const secretBuffer = Buffer.from(secret);
+  const providedBuffer = Buffer.from(provided);
+
+  return (
+    secretBuffer.length === providedBuffer.length &&
+    timingSafeEqual(secretBuffer, providedBuffer)
+  );
+}
+
+export async function POST(request: NextRequest) {
+  const isInternal = hasValidCronSecret(request);
+  if (!isInternal) {
+    const auth = requireAdmin(request);
+    if (!auth.success) {
+      return auth.error;
+    }
+  }
+
+  try {
+    const parsed = await parseBody(request, notificationTriggerSchema);
+    if (!parsed.success) {
+      return parsed.error;
     }
 
-    return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
+    const result = await sendBirthdayNotifications(parsed.data.date ?? null);
+    return NextResponse.json(result, { status: result.status });
   } catch (e) {
-    return NextResponse.json({ error: (e as Error).message }, { status: 500 });
+    return handleApiError(e);
   }
 }
 
@@ -107,15 +130,31 @@ export async function GET(request: NextRequest) {
     const clientDate = searchParams.get('date');
 
     if (trigger === 'birthday') {
+      const isInternal = hasValidCronSecret(request);
+      if (!isInternal) {
+        const auth = requireAdmin(request);
+        if (!auth.success) {
+          return auth.error;
+        }
+      }
+
+      if (clientDate && !/^\d{4}-\d{2}-\d{2}$/.test(clientDate)) {
+        return NextResponse.json({ success: false, error: 'Fecha inválida' }, { status: 422 });
+      }
+
       const result = await sendBirthdayNotifications(clientDate);
       return NextResponse.json(result, { status: result.status });
     }
 
+    const auth = requireAuth(request);
+    if (!auth.success) {
+      return auth.error;
+    }
+
     return NextResponse.json({
       configured: isWebPushConfigured(),
-      usage: 'GET /api/notifications?trigger=birthday to send notifications',
     });
   } catch (e) {
-    return NextResponse.json({ error: (e as Error).message }, { status: 500 });
+    return handleApiError(e);
   }
 }

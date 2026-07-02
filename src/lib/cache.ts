@@ -81,15 +81,25 @@ export const triggerRankingsRebuild = () => {
           }
         }
 
-        // Build juegos with posiciones
+        // Build juegos with posiciones and inferred type
         const juegos: Juego[] = actJuegos.map((j) => {
           const posiciones = juegoPosicionesRaw.filter((jp) => jp.juegoId === j.id);
           const pos: Record<string, string[]> = {};
+          const isIndividual = posiciones.some(
+            (jp) => jp.posicion === 0 && jp.equipo === "__individual__",
+          );
+
           for (const jp of posiciones) {
+            if (jp.posicion === 0 && jp.equipo === "__individual__") continue;
             if (!pos[jp.posicion]) pos[jp.posicion] = [];
-            pos[jp.posicion].push(jp.equipo);
+            if (isIndividual) {
+              if (jp.participantId) pos[jp.posicion].push(String(jp.participantId));
+            } else {
+              if (jp.equipo) pos[jp.posicion].push(jp.equipo);
+            }
           }
-          return { id: j.id, nombre: j.nombre, pos };
+          Object.values(pos).forEach((teams) => teams.sort());
+          return { id: j.id, nombre: j.nombre, tipo: isIndividual ? "individual" : "grupal", pos };
         });
 
         // Build goles
@@ -99,11 +109,22 @@ export const triggerRankingsRebuild = () => {
           cant: g.cant,
         }));
 
-        // Build extras (puntos extra)
-        const extras: Extra[] = actExtras.map((e) => ({
+        const extras: Extra[] = actExtras
+          .filter((e) => e.tipo === "extra")
+          .map((e) => ({
           pid: e.participantId,
           team: e.team,
-          tipo: e.tipo as Extra['tipo'],
+          tipo: "extra",
+          puntos: e.puntos,
+          motivo: e.motivo,
+        }));
+
+        const descuentos: Extra[] = actExtras
+          .filter((e) => e.tipo === "descuento")
+          .map((e) => ({
+          pid: e.participantId,
+          team: e.team,
+          tipo: "descuento",
           puntos: e.puntos,
           motivo: e.motivo,
         }));
@@ -129,7 +150,7 @@ export const triggerRankingsRebuild = () => {
           partidos: actPartidos,
           goles,
           extras,
-          descuentos: [],
+          descuentos,
           invitaciones,
         };
       });

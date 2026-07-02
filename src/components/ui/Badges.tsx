@@ -56,28 +56,24 @@ export function PodiumBadge({
 
 export function SexBadge({
   sex,
+  size = 14,
   className = "",
 }: {
   sex: string;
+  size?: number;
   className?: string;
 }) {
-  const isM = sex === "M";
-  const isMX = sex === "MX";
-
   return (
     <span
       className={cn(
-        "inline-block rounded-full shrink-0",
+        "inline-flex items-center justify-center rounded-full bg-surface-dark text-text-muted font-bold shrink-0",
         className,
       )}
-      style={{
-        width: "8px",
-        height: "8px",
-        minWidth: "8px",
-        backgroundColor: isM ? "#00D4FF" : isMX ? "#6366F1" : "#FF2A7A",
-      }}
-      title={sex === "M" ? "Masculino" : sex === "F" ? "Femenino" : "Otro"}
-    />
+      style={{ width: size, height: size, fontSize: Math.round(size * 0.55) }}
+      title={sex === "M" ? "Masculino" : "Femenino"}
+    >
+      {sex === "M" ? "M" : "F"}
+    </span>
   );
 }
 

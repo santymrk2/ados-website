@@ -1,17 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { pushSubscriptions, participants } from "@/lib/schema";
+import { pushSubscriptions } from "@/lib/schema";
 import { eq } from "drizzle-orm";
+import { handleApiError, parseBody, requireAdmin } from "@/lib/api-utils";
+import { subscriptionActionSchema } from "@/lib/validation";
 
 export async function POST(request: NextRequest) {
-  try {
-    const body = await request.json();
-    const { action, endpoint, p256dh, auth, participantId } = body;
+  const auth = requireAdmin(request);
+  if (!auth.success) {
+    return auth.error;
+  }
 
-    if (action === 'subscribe') {
-      if (!endpoint || !p256dh || !auth) {
-        return NextResponse.json({ error: 'Missing subscription data' }, { status: 400 });
-      }
+  try {
+    const parsed = await parseBody(request, subscriptionActionSchema);
+    if (!parsed.success) {
+      return parsed.error;
+    }
+
+    const body = parsed.data;
+
+    if (body.action === 'subscribe') {
+      const { endpoint, p256dh, auth: subscriptionAuth, participantId } = body;
 
       const existing = await db
         .select()
@@ -26,31 +35,27 @@ export async function POST(request: NextRequest) {
         participantId: participantId || null,
         endpoint,
         p256dh,
-        auth,
+        auth: subscriptionAuth,
       });
 
       return NextResponse.json({ success: true, message: 'Subscribed successfully' });
     }
 
-    if (action === 'unsubscribe') {
-      if (!endpoint) {
-        return NextResponse.json({ error: 'Missing endpoint' }, { status: 400 });
-      }
-
+    if (body.action === 'unsubscribe') {
       await db
         .delete(pushSubscriptions)
-        .where(eq(pushSubscriptions.endpoint, endpoint));
+        .where(eq(pushSubscriptions.endpoint, body.endpoint));
 
       return NextResponse.json({ success: true, message: 'Unsubscribed successfully' });
     }
 
-    if (action === 'delete_all') {
+    if (body.action === 'delete_all') {
       await db.delete(pushSubscriptions);
       return NextResponse.json({ success: true, message: 'All subscriptions deleted' });
     }
 
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
   } catch (e) {
-    return NextResponse.json({ error: (e as Error).message }, { status: 500 });
+    return handleApiError(e);
   }
 }

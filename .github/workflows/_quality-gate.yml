@@ -1,0 +1,122 @@
+name: Quality Gate
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  quality-gate:
+    name: Quality Gate
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: ados
+          POSTGRES_PASSWORD: ados_password
+          POSTGRES_DB: ados
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://ados:ados_password@localhost:5432/ados
+      AUTH_SECRET: ci-auth-secret
+      ADMIN_PASSWORD: admin123
+      VIEWER_PASSWORD: viewer123
+      CRON_SECRET: ci-cron-secret
+      MINIO_ENDPOINT: http://localhost:9000
+      MINIO_PUBLIC_URL: http://localhost:9000
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+      MINIO_BUCKET_NAME: activados
+      NEXT_PUBLIC_APP_URL: http://localhost:3000
+      NEXT_TELEMETRY_DISABLED: 1
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.13
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Run ESLint
+        run: bun run lint
+
+      - name: Run typecheck
+        run: bun run typecheck
+
+      - name: Build application
+        run: bun run build
+
+      - name: Install Playwright browsers
+        run: bunx playwright install --with-deps chromium
+
+      - name: Run database migrations
+        run: bun run db:migrate
+
+      - name: Apply database hardening constraints
+        run: bun run db:harden
+
+      - name: Run Playwright tests
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          cleanup() {
+            if [ -n "${SERVER_PID:-}" ]; then
+              kill "$SERVER_PID" 2>/dev/null || true
+            fi
+          }
+          trap cleanup EXIT
+
+          bun run dev -- --hostname 0.0.0.0 > /tmp/ados-next.log 2>&1 &
+          SERVER_PID=$!
+
+          echo "Waiting for dev server to start (max 45s)..."
+          for attempt in {1..45}; do
+            if curl --fail --silent --show-error http://localhost:3000 > /dev/null; then
+              echo "Server is up."
+              break
+            fi
+
+            if [ "$attempt" -eq 45 ]; then
+              echo "Server did not start in time. Last logs:"
+              tail -100 /tmp/ados-next.log || true
+              exit 1
+            fi
+
+            sleep 1
+          done
+
+          bun run test:e2e:quality
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
+          if-no-files-found: ignore
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-results
+          path: test-results/
+          retention-days: 7
+          if-no-files-found: ignore

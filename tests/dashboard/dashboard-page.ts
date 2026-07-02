@@ -12,7 +12,7 @@ export class DashboardPage extends BasePage {
 
   constructor(page: Page) {
     super(page);
-    this.header = page.getByText("ACTIVADOS");
+    this.header = page.getByRole("heading", { name: "Dashboard" });
     this.settingsButton = page.locator("button").filter({ has: page.locator("svg") }).first();
     this.settingsPanel = page.getByRole("dialog");
     this.bottomNav = page.locator("nav").last();
@@ -27,6 +27,13 @@ export class DashboardPage extends BasePage {
   async loginAsViewer(): Promise<void> {
     const loginPage = new LoginPage(this.page);
     await loginPage.login(TEST_USERS.viewer.password, TEST_USERS.viewer.role);
+    await loginPage.expectAuthenticatedHome();
+  }
+
+  async loginAsAdmin(): Promise<void> {
+    const loginPage = new LoginPage(this.page);
+    await loginPage.login(TEST_USERS.admin.password, TEST_USERS.admin.role);
+    await loginPage.expectAuthenticatedHome();
   }
 
   async openSettings(): Promise<void> {

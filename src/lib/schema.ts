@@ -6,6 +6,7 @@ import {
   boolean,
   uniqueIndex,
   index,
+  type AnyPgColumn,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 
@@ -17,7 +18,9 @@ export const participants = pgTable("participants", {
   sexo: text("sexo").notNull().default("M"),
   foto: text("foto"),
   fotoAltaCalidad: text("foto_alta_calidad"),
-  invitadoPor: integer("invitado_por"),
+  invitadoPor: integer("invitado_por").references((): AnyPgColumn => participants.id, {
+    onDelete: "set null",
+  }),
 });
 
 export const activities = pgTable("activities", {
@@ -45,6 +48,10 @@ export const activityParticipants = pgTable(
     esSocial: boolean("es_social").default(false),
   },
   (table) => ({
+    unq_activity_participant: uniqueIndex("unq_activity_participant").on(
+      table.activityId,
+      table.participantId,
+    ),
     // Index for filtering by activity
     idx_activity_id: index("idx_activity_participants_activity_id").on(table.activityId),
     // Index for filtering by participant
@@ -62,6 +69,7 @@ export const juegos = pgTable(
       .notNull()
       .references(() => activities.id, { onDelete: "cascade" }),
     nombre: text("nombre"),
+    tipo: text("tipo").default("grupal").notNull(),
   },
   (table) => ({
     // Index for filtering by activity
@@ -76,13 +84,20 @@ export const juegoPosiciones = pgTable(
     juegoId: integer("juego_id")
       .notNull()
       .references(() => juegos.id, { onDelete: "cascade" }),
-    equipo: text("equipo").notNull(),
+    equipo: text("equipo"),
+    participantId: integer("participant_id").references(() => participants.id, {
+      onDelete: "cascade",
+    }),
     posicion: integer("posicion").notNull(),
   },
   (table) => ({
     unq_juego_equipo: uniqueIndex("unq_juego_equipo").on(
       table.juegoId,
       table.equipo,
+    ),
+    unq_juego_participant: uniqueIndex("unq_juego_participant").on(
+      table.juegoId,
+      table.participantId,
     ),
     // Index for filtering by juego
     idx_juego_id: index("idx_juego_posiciones_juego_id").on(table.juegoId),
@@ -199,6 +214,7 @@ export const pushSubscriptions = pgTable(
     createdAt: text("created_at").notNull().default(sql`to_char(now(), 'YYYY-MM-DD"T"HH24:MI:SS"Z"')`),
   },
   (table) => ({
+    unq_push_subscriptions_endpoint: uniqueIndex("unq_push_subscriptions_endpoint").on(table.endpoint),
     // Index for filtering by participant
     idx_participant_id: index("idx_push_subscriptions_participant_id").on(table.participantId),
   }),

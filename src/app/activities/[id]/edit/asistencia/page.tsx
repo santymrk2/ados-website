@@ -17,18 +17,17 @@ import {
   getEdad,
   newPart,
 } from "@/lib/constants";
-import { Modal, Label, Empty } from "@/components/ui/Common";
-import { SexBadge } from "@/components/ui/Badges";
+import { Label } from "@/components/ui/Common";
 import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { confirmDialog } from "@/components/ui/confirm-dialog";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { DatePicker } from "@/components/ui/calendar";
 
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import type { Activity, ParticipantBasic, AppState, Participant, DBData, Invitacion, ParticipantFormData } from "@/lib/types";
+import type { Activity, ParticipantBasic, Participant, DBData, Invitacion } from "@/lib/types";
 
 let tempIdCounter = 0;
 const generateTempId = () => -1 - tempIdCounter++;
@@ -92,28 +91,24 @@ function NewPlayerModal({ act, db, onClose, onSave, setLocal, syncWithServer }: 
     if (isSubmittingPlayer) return;
     setIsSubmittingPlayer(true);
     try {
-      const p = { ...newPart(), ...newPlayer, id: 0 };
+      const p = { ...newPart(), ...newPlayer, id: db.nextPid };
       const { invitadorId, ...participantData } = p;
       const newId = await onSave(participantData, true, invitadorId);
       const playerId = newId || p.id;
 
       const updateAsistentes = (prev: number[]) => Array.from(new Set([...(prev || []), playerId]));
-      setLocal("asistentes", updateAsistentes);
+      setLocal("asistentes", updateAsistentes, true);
       syncWithServer(
         "attendance",
         { participantId: playerId, value: true },
-        "asistentes",
-        updateAsistentes,
       );
 
       if (newPlayer.invitadorId && act.id) {
         syncWithServer(
           "invitacion_add",
           { invitador: Number(newPlayer.invitadorId), invitadoId: playerId },
-          "invitaciones",
-          (prev: Invitacion[]) => [...(prev || []), { id: -Date.now(), invitador: newPlayer.invitadorId, invitadoId: playerId }],
         );
-      } else {
+      } else if (newPlayer.invitadorId) {
         setLocal("invitaciones", (prev: Invitacion[]) => [
           ...(prev || []),
           {
@@ -125,7 +120,6 @@ function NewPlayerModal({ act, db, onClose, onSave, setLocal, syncWithServer }: 
       }
 
       onClose();
-      toast.success("Jugador agregado y registrado");
     } catch (e) {
       const err = e as Error;
       toast.error("Error al guardar: " + err.message);
@@ -140,8 +134,12 @@ function NewPlayerModal({ act, db, onClose, onSave, setLocal, syncWithServer }: 
         showCloseButton={false}
         className="max-w-sm bg-white rounded-3xl p-5 flex flex-col overflow-y-auto max-h-[90vh]"
       >
+        <DialogTitle className="sr-only">Nuevo jugador</DialogTitle>
+        <DialogDescription className="sr-only">
+          Crea un jugador y lo registra como asistente de la actividad.
+        </DialogDescription>
         <div className="flex items-center justify-between mb-4">
-          <h3 className="font-black text-lg text-dark">Nuevo Jugador</h3>
+          <h3 className="font-black text-lg text-foreground">Nuevo Jugador</h3>
           <Button
             onClick={onClose}
             variant="ghost"
@@ -313,17 +311,46 @@ function NewPlayerModal({ act, db, onClose, onSave, setLocal, syncWithServer }: 
 }
 
 export default function AsistenciaPage() {
-  const { activity: act, setLocal, syncWithServer, db, locked, searchQuery, setFilterContent } = useEditContext();
+  const { activity: act, setLocal, syncWithServer, db, locked, searchQuery, setFilterContent, setFiltersActive } = useEditContext();
   const { saveParticipant } = useApp();
+  const [sortBy, setSortBy] = useState<"apellido" | "nombre">("apellido");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
   const [showNewPlayer, setShowNewPlayer] = useState(false);
 
   // Proveer filtro de orden al FloatingNav
   useEffect(() => {
+    setFiltersActive(sortBy !== "apellido" || sortOrder !== "asc");
     setFilterContent(
       <div>
         <span className="text-[11px] font-bold text-text-muted uppercase tracking-wider mb-2 block">
-          Orden alfabético
+          Ordenar por
+        </span>
+        <div className="flex gap-2 mb-3">
+          <button
+            onClick={() => setSortBy("apellido")}
+            className={cn(
+              "flex-1 px-3 py-2 rounded-lg text-sm font-bold transition-colors border",
+              sortBy === "apellido"
+                ? "bg-primary text-white border-primary"
+                : "bg-white text-foreground border-border hover:bg-surface-light",
+            )}
+          >
+            Apellido
+          </button>
+          <button
+            onClick={() => setSortBy("nombre")}
+            className={cn(
+              "flex-1 px-3 py-2 rounded-lg text-sm font-bold transition-colors border",
+              sortBy === "nombre"
+                ? "bg-primary text-white border-primary"
+                : "bg-white text-foreground border-border hover:bg-surface-light",
+            )}
+          >
+            Nombre
+          </button>
+        </div>
+        <span className="text-[11px] font-bold text-text-muted uppercase tracking-wider mb-2 block">
+          Dirección
         </span>
         <div className="flex gap-2">
           <button
@@ -351,10 +378,13 @@ export default function AsistenciaPage() {
         </div>
       </div>,
     );
-    return () => setFilterContent(null);
-  }, [sortOrder, setFilterContent]);
+    return () => {
+      setFilterContent(null);
+      setFiltersActive(false);
+    };
+  }, [sortBy, sortOrder, setFilterContent, setFiltersActive]);
 
-  const toggle = (key: string, id: number) => {
+  const toggle = async (key: string, id: number) => {
     if (key === "asistentes") {
       const c = act.asistentes || [];
       const isIncluded = c.includes(id);
@@ -362,34 +392,43 @@ export default function AsistenciaPage() {
         const arr = prev || [];
         return arr.includes(id) ? arr.filter((x) => x !== id) : [...arr, id];
       };
-      setLocal("asistentes", updateFn);
-      syncWithServer("attendance", { participantId: id, value: !isIncluded }, "asistentes", updateFn);
+      setLocal("asistentes", updateFn, true);
+      await syncWithServer("attendance", { participantId: id, value: !isIncluded });
 
       if (isIncluded) {
         // Clear all related flags in a single batched update
-        setLocal("socials", (prev: number[]) => (prev || []).filter((x) => x !== id));
-        setLocal("puntuales", (prev: number[]) => (prev || []).filter((x) => x !== id));
-        setLocal("biblias", (prev: number[]) => (prev || []).filter((x) => x !== id));
+        setLocal("socials", (prev: number[]) => (prev || []).filter((x) => x !== id), true);
+        setLocal("puntuales", (prev: number[]) => (prev || []).filter((x) => x !== id), true);
+        setLocal("biblias", (prev: number[]) => (prev || []).filter((x) => x !== id), true);
         setLocal("equipos", (prev: Record<string, string>) => {
           const next = { ...(prev || {}) };
           delete next[id];
           return next;
-        });
+        }, true);
       }
     } else if (key === "socials") {
       const c = act.socials || [];
       const isIncluded = c.includes(id);
+
+      if (!isIncluded && act.equipos?.[String(id)]) {
+        const ok = await confirmDialog(
+          "Al cambiar a Social, el equipo y los puntos acumulados en juegos se perderán.",
+          { title: "Cambiar a Social", confirmText: "Cambiar", isDestructive: true },
+        );
+        if (!ok) return;
+      }
+
       const updateFn = (prev: number[]) => {
         const arr = prev || [];
         return arr.includes(id) ? arr.filter((x) => x !== id) : [...arr, id];
       };
-      setLocal("socials", updateFn);
-      syncWithServer("socials", { participantId: id, value: !isIncluded }, "socials", updateFn);
+      setLocal("socials", updateFn, true);
+      await syncWithServer("socials", { participantId: id, value: !isIncluded });
       setLocal("equipos", (prev: Record<string, string>) => {
         const next = { ...(prev || {}) };
         delete next[id];
         return next;
-      });
+      }, true);
     } else if (key === "puntuales") {
       const c = act.puntuales || [];
       const isIncluded = c.includes(id);
@@ -401,12 +440,12 @@ export default function AsistenciaPage() {
       // Si marca como puntual, también marca como presente automáticamente
       if (!isIncluded && !act.asistentes.includes(id)) {
         const asistUpdateFn = (prev: number[]) => [...(prev || []), id];
-        setLocal("asistentes", asistUpdateFn);
-        syncWithServer("attendance", { participantId: id, value: true }, "asistentes", asistUpdateFn);
+        setLocal("asistentes", asistUpdateFn, true);
+        await syncWithServer("attendance", { participantId: id, value: true });
       }
 
-      // syncWithServer ya actualiza el estado local internamente
-      syncWithServer("puntuales", { participantId: id, value: !isIncluded }, "puntuales", updateFn);
+      setLocal("puntuales", updateFn, true);
+      await syncWithServer("puntuales", { participantId: id, value: !isIncluded });
     } else if (key === "biblias") {
       const c = act.biblias || [];
       const isIncluded = c.includes(id);
@@ -414,8 +453,8 @@ export default function AsistenciaPage() {
         const arr = prev || [];
         return arr.includes(id) ? arr.filter((x) => x !== id) : [...arr, id];
       };
-      setLocal("biblias", updateFn);
-      syncWithServer("biblias", { participantId: id, value: !isIncluded }, "biblias", updateFn);
+      setLocal("biblias", updateFn, true);
+      await syncWithServer("biblias", { participantId: id, value: !isIncluded });
     }
   };
 
@@ -428,17 +467,14 @@ export default function AsistenciaPage() {
           .includes(searchQuery.toLowerCase()),
       );
     }
-    if (sortOrder === "asc") {
-      arr.sort((a, b) =>
-        `${a.apellido} ${a.nombre}`.localeCompare(`${b.apellido} ${b.nombre}`),
-      );
-    } else {
-      arr.sort((a, b) =>
-        `${b.apellido} ${b.nombre}`.localeCompare(`${a.apellido} ${a.nombre}`),
-      );
-    }
+    const sortedArr = arr.sort((a, b) => {
+      const nameA = sortBy === "nombre" ? `${a.nombre} ${a.apellido}` : `${a.apellido} ${a.nombre}`;
+      const nameB = sortBy === "nombre" ? `${b.nombre} ${b.apellido}` : `${b.apellido} ${b.nombre}`;
+      return nameA.localeCompare(nameB, "es", { sensitivity: "base" });
+    });
+    if (sortOrder === "desc") sortedArr.reverse();
     return arr;
-  }, [db.participants, sortOrder, searchQuery]);
+  }, [db.participants, sortBy, sortOrder, searchQuery]);
 
   return (
     <div>
@@ -470,36 +506,33 @@ export default function AsistenciaPage() {
             disabled={locked}
             className="bg-primary/10 text-primary text-xs flex items-center gap-1"
           >
-            <Plus className="w-3 h-3" /> Nuevo
+            <Plus className="w-3 h-3" /> Nuevo Jugador
           </Button>
         </div>
       </div>
 
-      <div className="flex flex-col gap-1">
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(310px,1fr))] gap-2 items-start">
         {sorted.map((p: ParticipantBasic) => {
           const here = act.asistentes.includes(p.id);
           const punct = (act.puntuales || []).includes(p.id);
           return (
             <div
               key={p.id}
-              className={`rounded-lg border bg-white ${here ? "border-primary shadow-md shadow-primary/20" : "border-surface-dark"}`}
+               className={`rounded-2xl border bg-white ${here ? "border-primary shadow-md shadow-primary/20" : "border-surface-dark"}`}
             >
-              <div className="flex items-center p-3 gap-2">
+              <div className="flex items-center p-3 gap-2 h-full">
                 <div className="flex gap-0">
                   <button
                     onClick={() => toggle("asistentes", p.id)}
                     disabled={locked}
                     className={cn(
-                      "flex items-center justify-center h-9 min-w-9 px-2 text-sm font-semibold transition-colors",
+                      "flex items-center justify-center h-9 min-w-9 px-2 text-sm font-semibold transition-colors rounded-l-2xl border",
                       locked && "opacity-50 cursor-not-allowed pointer-events-none",
+                      here
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-surface-light text-text-muted border-surface-dark",
+                      here ? "" : "border-r-0",
                     )}
-                    style={{
-                      backgroundColor: here ? "var(--color-primary)" : "#f5f5f5",
-                      border: `1px solid ${here ? "var(--color-primary)" : "#e5e5e5"}`,
-                      borderRight: "none",
-                      color: here ? "var(--color-primary-foreground)" : "#999",
-                      borderRadius: "12px 0 0 12px",
-                    }}
                   >
                     {here ? <CalendarCheck className="w-3.5 h-3.5" /> : <CalendarX className="w-3.5 h-3.5" />}
                   </button>
@@ -507,24 +540,20 @@ export default function AsistenciaPage() {
                     onClick={() => toggle("puntuales", p.id)}
                     disabled={locked}
                     className={cn(
-                      "flex items-center justify-center h-9 min-w-9 px-2 text-sm font-semibold transition-colors",
+                      "flex items-center justify-center h-9 min-w-9 px-2 text-sm font-semibold transition-colors rounded-r-2xl border border-l-0",
                       locked && "opacity-50 cursor-not-allowed pointer-events-none",
+                      punct
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-surface-light text-text-muted border-surface-dark",
                     )}
-                    style={{
-                      backgroundColor: punct ? "var(--color-primary)" : "#f5f5f5",
-                      border: `1px solid ${punct ? "var(--color-primary)" : "#e5e5e5"}`,
-                      color: punct ? "var(--color-primary-foreground)" : "#999",
-                      borderRadius: "0 12px 12px 0",
-                    }}
                   >
                     <Clock className="w-3.5 h-3.5" />
                   </button>
                 </div>
                 <Avatar p={p} size={30} />
-                <div className="flex-1">
+                <div className="flex-1 min-w-0">
                   <div
-                    className="font-bold text-sm"
-                    style={{ color: here ? "#1a1a1a" : "#999" }}
+                    className={cn("font-bold text-sm", here ? "text-foreground" : "text-text-muted")}
                   >
                     {p.nombre} {p.apellido}
                   </div>
@@ -538,21 +567,12 @@ export default function AsistenciaPage() {
                       onClick={() => toggle("socials", p.id)}
                       disabled={locked}
                       className={cn(
-                        "flex items-center gap-1 h-9 min-w-9 px-3 text-sm font-semibold transition-colors",
+                        "flex items-center gap-1 h-9 min-w-9 px-3 text-sm font-semibold transition-colors rounded-2xl border",
                         locked && "opacity-50 cursor-not-allowed pointer-events-none",
+                        (act.socials || []).includes(p.id)
+                          ? "bg-[#F59E0B33] border-[#F59E0B66] text-[#F59E0B]"
+                          : "bg-primary/20 border-primary/40 text-primary",
                       )}
-                      style={{
-                        backgroundColor: (act.socials || []).includes(p.id)
-                          ? "#F59E0B33"
-                          : "color-mix(in srgb, var(--color-primary) 20%, transparent)",
-                        border: (act.socials || []).includes(p.id)
-                          ? "1px solid #F59E0B66"
-                          : "1px solid color-mix(in srgb, var(--color-primary) 40%, transparent)",
-                        color: (act.socials || []).includes(p.id)
-                          ? "#F59E0B"
-                          : "var(--color-primary)",
-                        borderRadius: "12px",
-                      }}
                     >
                       {(act.socials || []).includes(p.id) ? <Coffee className="w-3.5 h-3.5" /> : <Zap className="w-3.5 h-3.5" />}
                       <span className="text-xs font-medium">

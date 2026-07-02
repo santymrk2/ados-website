@@ -107,12 +107,12 @@ export function TeamTable({
                   className="px-1 pt-2 pb-0.5 text-center"
                   style={{
                     borderRight: `2px solid ${TEAM_COLORS[team]}22`,
-                    backgroundColor: "#fdf2f8",
+                    backgroundColor: "#F8F8F8",
                   }}
                 >
                   <div className="flex items-center justify-center gap-1">
-                    <SexBadge sex="F" />
-                    <span className="text-[10px] font-bold text-pink-400 uppercase tracking-wide">
+                    <SexBadge sex="F" size={12} />
+                    <span className="text-[10px] font-bold text-text-muted uppercase tracking-wide">
                       Mujeres ({women.length})
                     </span>
                   </div>
@@ -129,8 +129,8 @@ export function TeamTable({
                     <td
                       key={team}
                       className={cn(
-                        "px-1 py-0.5 cursor-pointer hover:bg-pink-50",
-                        rowIdx % 2 === 0 ? "bg-pink-50/10" : "bg-pink-100/30",
+                        "px-1 py-0.5 cursor-pointer hover:bg-surface-light",
+                        rowIdx % 2 === 0 ? "bg-surface-light/10" : "bg-surface-dark/10",
                       )}
                       style={{
                         borderRight: `2px solid ${TEAM_COLORS[team]}22`,
@@ -157,12 +157,12 @@ export function TeamTable({
                   className="px-1 pt-2 pb-0.5 text-center"
                   style={{
                     borderRight: `2px solid ${TEAM_COLORS[team]}22`,
-                    backgroundColor: "#eff6ff",
+                    backgroundColor: "#F8F8F8",
                   }}
                 >
                   <div className="flex items-center justify-center gap-1">
-                    <SexBadge sex="M" />
-                    <span className="text-[10px] font-bold text-cyan-500 uppercase tracking-wide">
+                    <SexBadge sex="M" size={12} />
+                    <span className="text-[10px] font-bold text-text-muted uppercase tracking-wide">
                       Varones ({men.length})
                     </span>
                   </div>
@@ -179,8 +179,8 @@ export function TeamTable({
                     <td
                       key={team}
                       className={cn(
-                        "px-1 py-0.5 cursor-pointer hover:bg-cyan-50",
-                        rowIdx % 2 === 0 ? "bg-cyan-50/10" : "bg-cyan-100/30",
+                        "px-1 py-0.5 cursor-pointer hover:bg-surface-light",
+                        rowIdx % 2 === 0 ? "bg-surface-light/10" : "bg-surface-dark/10",
                       )}
                       style={{
                         borderRight: `2px solid ${TEAM_COLORS[team]}22`,

@@ -26,37 +26,7 @@ const MONTHS = [
 
 const DAYS = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
 
-function getInitials(nombre: string, apellido: string) {
-  return `${nombre?.[0] || ""}${apellido?.[0] || ""}`.toUpperCase();
-}
 
-function SimpleAvatar({ p, size = 36 }: { p: ParticipantBasic; size?: number }) {
-  const initials = getInitials(p.nombre, p.apellido);
-  const isM = p.sexo === "M";
-  const isMX = p.sexo === "MX";
-  const bgColor = isM ? "#0891B2" : isMX ? "#4342FF" : "#EC4899";
-
-  return (
-    <div
-      style={{
-        width: size,
-        height: size,
-        backgroundColor: bgColor,
-        borderRadius: "50%",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        flexShrink: 0,
-      }}
-    >
-      <span
-        style={{ color: "white", fontSize: size * 0.4, fontWeight: "bold" }}
-      >
-        {initials || "?"}
-      </span>
-    </div>
-  );
-}
 
 function getAge(fechaNacimiento: string | null | undefined) {
   if (!fechaNacimiento) return null;
@@ -302,7 +272,7 @@ export default function Page() {
                     className="flex items-center gap-1 cursor-pointer hover:bg-white/50 rounded p-0.5 -mx-0.5"
                     onClick={() => setSelectedPlayer(p)}
                   >
-                    <SimpleAvatar p={p} size={20} />
+                    <Avatar p={p} size={20} />
                     <span className="text-[10px] lg:text-xs font-medium truncate">
                       {p.nombre}
                     </span>
@@ -331,7 +301,7 @@ export default function Page() {
                 className="flex flex-col items-center gap-1 flex-shrink-0 cursor-pointer hover:scale-105 transition-transform"
                 onClick={() => setSelectedPlayer(p)}
               >
-                <SimpleAvatar p={p} size={48} />
+                <Avatar p={p} size={48} />
                 <span className="text-xs font-bold text-center">
                   {p.nombre} {p.apellido}
                 </span>
@@ -357,7 +327,7 @@ export default function Page() {
                   className="flex items-center gap-3 p-2 rounded-lg bg-surface-dark/30 cursor-pointer hover:bg-surface-dark/60 transition-colors"
                   onClick={() => setSelectedPlayer(p)}
                 >
-                  <SimpleAvatar p={p} size={32} />
+                  <Avatar p={p} size={32} />
                   <div className="flex-1">
                     <div className="font-bold text-sm">
                       {p.nombre} {p.apellido}

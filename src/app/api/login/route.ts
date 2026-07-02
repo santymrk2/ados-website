@@ -1,4 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
+import {
+  AUTH_COOKIE_MAX_AGE_SECONDS,
+  AUTH_ROLES,
+  REQUIRED_AUTH_ENV_VARS,
+  createAuthCookieValue,
+  getMissingEnvVars,
+  handleApiError,
+  parseBody,
+  type AuthRole,
+} from "@/lib/api-utils";
+import { loginSchema } from "@/lib/validation";
+import { timingSafeEqual } from "crypto";
+import { RateLimitError, UnauthorizedError } from "@/lib/errors";
 
 // In-memory rate limiting: { ip: { count: number, resetTime: number } }
 const rateLimitStore = new Map<string, { count: number; resetTime: number }>();
@@ -31,52 +44,71 @@ function checkRateLimit(ip: string): boolean {
   return true;
 }
 
+function passwordsMatch(input: string, expected: string): boolean {
+  const inputBuffer = Buffer.from(input);
+  const expectedBuffer = Buffer.from(expected);
+
+  return (
+    inputBuffer.length === expectedBuffer.length &&
+    timingSafeEqual(inputBuffer, expectedBuffer)
+  );
+}
+
 export async function POST(request: NextRequest) {
   try {
     const clientIp = getClientIp(request);
 
     // Check rate limit
     if (!checkRateLimit(clientIp)) {
-      return NextResponse.json(
-        { success: false, error: "Demasiados intentos. Intenta en 15 minutos." },
-        { status: 429 }
-      );
+      throw new RateLimitError("Demasiados intentos. Intenta en 15 minutos.");
     }
 
-    const body = await request.json();
-    const { password, role } = body;
+    const parsed = await parseBody(request, loginSchema);
+    if (!parsed.success) {
+      return parsed.error;
+    }
+
+    const { password, role } = parsed.data;
 
     // Require environment variables - no defaults!
-    const adminPassword = process.env.ADMIN_PASSWORD;
-    const viewerPassword = process.env.VIEWER_PASSWORD;
-
-    // If passwords not configured, fail securely
-    if (!adminPassword || !viewerPassword) {
-      console.error("[AUTH] Passwords not configured in environment variables");
+    const missingEnvVars = getMissingEnvVars(REQUIRED_AUTH_ENV_VARS);
+    if (missingEnvVars.length > 0) {
+      console.error(`[AUTH] Missing required environment variables: ${missingEnvVars.join(", ")}`);
       return NextResponse.json(
         { success: false, error: "Error de configuración del servidor" },
         { status: 500 }
       );
     }
 
-    let authenticatedRole: string | null = null;
+    const adminPassword = process.env.ADMIN_PASSWORD;
+    const viewerPassword = process.env.VIEWER_PASSWORD;
 
-    if (role === "admin") {
-      if (password === adminPassword) {
-        authenticatedRole = "admin";
+    // Keep TypeScript honest even though the environment was checked above.
+    if (!adminPassword || !viewerPassword) {
+      return NextResponse.json(
+        { success: false, error: "Error de configuración del servidor" },
+        { status: 500 }
+      );
+    }
+
+    let authenticatedRole: AuthRole | null = null;
+
+    if (role === AUTH_ROLES.ADMIN) {
+      if (passwordsMatch(password, adminPassword)) {
+        authenticatedRole = AUTH_ROLES.ADMIN;
       }
-    } else if (role === "viewer") {
-      if (password === viewerPassword) {
-        authenticatedRole = "viewer";
+    } else if (role === AUTH_ROLES.VIEWER) {
+      if (passwordsMatch(password, viewerPassword)) {
+        authenticatedRole = AUTH_ROLES.VIEWER;
       }
     } else {
-      if (password === adminPassword) {
-        authenticatedRole = "admin";
+      if (passwordsMatch(password, adminPassword)) {
+        authenticatedRole = AUTH_ROLES.ADMIN;
       }
     }
 
     if (!authenticatedRole) {
-      return NextResponse.json({ success: false, error: "Contraseña incorrecta" }, { status: 401 });
+      throw new UnauthorizedError("Contraseña incorrecta");
     }
 
     const cookieOptions = {
@@ -84,18 +116,13 @@ export async function POST(request: NextRequest) {
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax" as const,
       path: "/",
-      maxAge: 60 * 60 * 24, // 24 hours
+      maxAge: AUTH_COOKIE_MAX_AGE_SECONDS,
     };
 
-    const authData = JSON.stringify({
-      role: authenticatedRole,
-      iat: Date.now(),
-    });
-
     const response = NextResponse.json({ success: true, role: authenticatedRole });
-    response.cookies.set("activados_auth", authData, cookieOptions);
+    response.cookies.set("activados_auth", createAuthCookieValue(authenticatedRole), cookieOptions);
     return response;
   } catch (e) {
-    return NextResponse.json({ success: false, error: "Error en el servidor" }, { status: 500 });
+    return handleApiError(e);
   }
 }

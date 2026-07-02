@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { GetObjectCommand } from "@aws-sdk/client-s3";
 import { s3Client, minioConfig } from "@/services/minio";
-import { requireAuth } from "@/lib/api-utils";
+import { handleApiError, requireAuth } from "@/lib/api-utils";
+import { AppError, NotFoundError } from "@/lib/errors";
 
 export const dynamic = "force-dynamic";
 
@@ -15,13 +16,11 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
     const { id } = await context.params;
 
     if (!id) {
-      return NextResponse.json({ error: "Missing filename" }, { status: 400 });
+      throw new AppError("Nombre de archivo faltante", 400);
     }
 
-    // Verificar que MinIO esté configurado
     if (!minioConfig.isConfigured) {
-      console.error("[API Images] MinIO not configured");
-      return NextResponse.json({ error: "Image storage not configured" }, { status: 503 });
+      throw new AppError("El almacenamiento de imágenes no está configurado", 503);
     }
 
     const command = new GetObjectCommand({
@@ -32,7 +31,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
     const result = await s3Client.send(command);
 
     if (!result.Body) {
-      return NextResponse.json({ error: "Not found" }, { status: 404 });
+      throw new NotFoundError("Imagen no encontrada");
     }
 
     // transformToByteArray es el método más confiable del AWS SDK
@@ -47,25 +46,20 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
       },
     });
   } catch (e: unknown) {
-    // Detectar errores específicos de S3
     if (e instanceof Error) {
-      // NoSuchKey = archivo no existe
       if (e.name === "NoSuchKey") {
-        return NextResponse.json({ error: "Not found" }, { status: 404 });
+        return NextResponse.json({ success: false, error: "Imagen no encontrada" }, { status: 404 });
       }
-      // AccessDenied = credenciales inválidas
       if (e.name === "AccessDenied") {
         console.error("[API Images] Access denied to MinIO:", e.message);
-        return NextResponse.json({ error: "Image storage access denied" }, { status: 503 });
+        return NextResponse.json({ success: false, error: "Almacenamiento de imágenes no disponible" }, { status: 503 });
       }
-      // Network errors = no puede conectar
       if (e.message?.includes("ENOTFOUND") || e.message?.includes("ECONNREFUSED")) {
         console.error("[API Images] Cannot connect to MinIO:", e.message);
-        return NextResponse.json({ error: "Image storage unavailable" }, { status: 503 });
+        return NextResponse.json({ success: false, error: "Almacenamiento de imágenes no disponible" }, { status: 503 });
       }
     }
-    console.error("[API Images] Error proxying image:", e);
-    return NextResponse.json({ error: "Server error" }, { status: 500 });
+    return handleApiError(e);
   }
 }
 

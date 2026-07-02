@@ -1,35 +1,242 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { requireAuth, apiUnauthorized } from "@/lib/api-utils";
+import { apiForbidden, apiConflict, handleApiError, parseBody, requireAdmin, requireAuth } from "@/lib/api-utils";
+import { AppError } from "@/lib/errors";
 
 export const dynamic = 'force-dynamic';
 import * as schema from "@/lib/schema";
-import { eq, inArray, and } from "drizzle-orm";
+import { eq, inArray, and, gt, sql, isNull } from "drizzle-orm";
 import { eventBus } from "@/lib/eventBus";
-import { validate, configUpdateSchema } from "@/lib/validation";
+import {
+  activityPatchSchema,
+  activitySaveSchema,
+  configUpdateSchema,
+  deleteByIdSchema,
+  validate,
+} from "@/lib/validation";
 import { TEAMS } from "@/lib/constants";
-
-// Helper function to return server errors without exposing details
-function serverError(e: unknown) {
-  const errorId = Date.now();
-  console.error(`[API Error ${errorId}]`, e);
-  return NextResponse.json(
-    { success: false, error: "Error interno del servidor" },
-    { status: 500 }
-  );
-}
-
-// Helper for client errors
-function clientError(message: string) {
-  return NextResponse.json(
-    { success: false, error: message },
-    { status: 400 }
-  );
-}
 
 // Whitelist of allowed keys for config updates - prevents SQL column injection
 const ALLOWED_CONFIG_KEYS = ["locked", "titulo", "cantEquipos", "fecha"] as const;
 type AllowedConfigKey = typeof ALLOWED_CONFIG_KEYS[number];
+
+type ActivityParticipantRow = typeof schema.activityParticipants.$inferSelect;
+type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+type PositionMap = Record<string, string[]>;
+
+interface ActivityGamePayload {
+  id?: number | string;
+  nombre?: string | null;
+  tipo?: "grupal" | "individual";
+  pos?: PositionMap | null;
+}
+
+interface ActivityMatchPayload {
+  id?: number | string;
+  deporte?: string | null;
+  genero?: string | null;
+  eq1: string;
+  eq2: string;
+  resultado?: string | null;
+}
+
+interface ActivityGoalPayload {
+  id?: number;
+  pid?: number | null;
+  tipo: string;
+  cant: number;
+  matchId?: number | string | null;
+  team?: string | null;
+}
+
+interface ActivityExtraPayload {
+  id?: number;
+  pid?: number | null;
+  team?: string | null;
+  puntos: number;
+  motivo?: string | null;
+}
+
+interface ActivityInvitationPayload {
+  id?: number;
+  invitador?: number | null;
+  invitadoId?: number | null;
+  invitado_id?: number | null;
+}
+
+interface ActivitySavePayload extends Record<string, unknown> {
+  id?: number;
+  fecha: string;
+  titulo?: string | null;
+  cantEquipos?: number;
+  locked?: boolean;
+  version?: number;
+  asistentes?: number[];
+  equipos?: Record<string, string>;
+  puntuales?: number[];
+  biblias?: number[];
+  socials?: number[];
+  juegos?: ActivityGamePayload[];
+  partidos?: ActivityMatchPayload[];
+  goles?: ActivityGoalPayload[];
+  extras?: ActivityExtraPayload[];
+  descuentos?: ActivityExtraPayload[];
+  invitaciones?: ActivityInvitationPayload[];
+}
+
+interface ActivityPatchPayload extends Record<string, unknown> {
+  k: AllowedConfigKey;
+  v: boolean | string | number;
+  locked?: boolean;
+  titulo?: string | null;
+  fecha?: string | null;
+  cantEquipos?: number | string | null;
+  participantId: number;
+  value: boolean;
+  team: string | null;
+  equipos?: Record<string, string>;
+  pid: number | null;
+  tipo: string;
+  cant: number;
+  matchId: number | null;
+  id: number;
+  puntos: number;
+  motivo: string | null;
+  nombre: string;
+  juegoId: number;
+  pos: PositionMap;
+  deporte: string;
+  genero: string;
+  eq1: string;
+  eq2: string;
+  resultado: string | null;
+  invitador: number | null;
+  invitadoId: number | null;
+}
+
+function getActiveTeams(cantEquipos: number | null | undefined) {
+  return TEAMS.slice(0, cantEquipos || 4);
+}
+
+const INDIVIDUAL_GAME_MARKER = "__individual__";
+
+function isActiveTeam(team: string | null | undefined, cantEquipos: number | null | undefined) {
+  return !!team && getActiveTeams(cantEquipos).includes(team);
+}
+
+function getMergedParticipantRow(rows: ActivityParticipantRow[]) {
+  const sorted = [...rows].sort((a, b) => a.id - b.id);
+  const keeper = sorted[0];
+  if (!keeper) {
+    throw new Error("No hay filas de asistencia para combinar");
+  }
+  const hasSocial = sorted.some((row) => !!row.esSocial);
+
+  return {
+    keeper,
+    updates: {
+      equipo: hasSocial ? null : sorted.find((row) => !!row.equipo)?.equipo ?? null,
+      esPuntual: sorted.some((row) => !!row.esPuntual),
+      tieneBiblia: sorted.some((row) => !!row.tieneBiblia),
+      esSocial: hasSocial,
+    },
+    duplicateIds: sorted.slice(1).map((row) => row.id),
+  };
+}
+
+async function ensureSingleActivityParticipant(tx: Tx, activityId: number, participantId: number) {
+    const rows = await tx
+      .select()
+      .from(schema.activityParticipants)
+      .where(
+        and(
+          eq(schema.activityParticipants.activityId, activityId),
+          eq(schema.activityParticipants.participantId, participantId),
+        ),
+      );
+
+    if (rows.length === 0) {
+      await tx.insert(schema.activityParticipants).values({ activityId, participantId });
+      return;
+    }
+
+    if (rows.length === 1) return;
+
+    const { keeper, updates, duplicateIds } = getMergedParticipantRow(rows);
+
+    await tx
+      .update(schema.activityParticipants)
+      .set(updates)
+      .where(eq(schema.activityParticipants.id, keeper.id));
+
+    await tx
+      .delete(schema.activityParticipants)
+      .where(inArray(schema.activityParticipants.id, duplicateIds));
+}
+
+async function normalizeInactiveTeamData(tx: Tx, activityId: number, cantEquipos: number) {
+  const activeTeams = getActiveTeams(cantEquipos);
+  const inactiveTeams = TEAMS.filter((team) => !activeTeams.includes(team));
+  const allJuegos = await tx
+    .select()
+    .from(schema.juegos)
+    .where(eq(schema.juegos.activityId, activityId));
+  const juegoIds = allJuegos.map((juego) => juego.id);
+    if (inactiveTeams.length > 0) {
+      await tx
+        .update(schema.activityParticipants)
+        .set({ equipo: null })
+        .where(
+          and(
+            eq(schema.activityParticipants.activityId, activityId),
+            inArray(schema.activityParticipants.equipo, inactiveTeams),
+          ),
+        );
+    }
+
+    if (juegoIds.length > 0 && inactiveTeams.length > 0) {
+      await tx
+        .delete(schema.juegoPosiciones)
+        .where(
+          and(
+            inArray(schema.juegoPosiciones.juegoId, juegoIds),
+            inArray(schema.juegoPosiciones.equipo, inactiveTeams),
+          ),
+        );
+    }
+
+    if (juegoIds.length > 0) {
+      await tx
+        .delete(schema.juegoPosiciones)
+        .where(
+          and(
+            inArray(schema.juegoPosiciones.juegoId, juegoIds),
+            gt(schema.juegoPosiciones.posicion, cantEquipos),
+            isNull(schema.juegoPosiciones.participantId),
+          ),
+        );
+    }
+
+    if (inactiveTeams.length > 0) {
+      await tx
+        .delete(schema.extras)
+        .where(
+          and(
+            eq(schema.extras.activityId, activityId),
+            inArray(schema.extras.team, inactiveTeams),
+          ),
+        );
+
+      await tx
+        .delete(schema.goles)
+        .where(
+          and(
+            eq(schema.goles.activityId, activityId),
+            inArray(schema.goles.team, inactiveTeams),
+          ),
+        );
+    }
+}
 
 export async function GET(request: NextRequest) {
   const auth = requireAuth(request);
@@ -70,6 +277,7 @@ export async function GET(request: NextRequest) {
 
     const parsed = allActs.map((a) => {
       const actAp = ap.filter((x) => x.activityId === a.id);
+      const activeTeams = getActiveTeams(a.cantEquipos);
       const equipos: Record<number, string> = {};
 
       // Deduplicate asistentes to handle duplicate DB entries
@@ -80,19 +288,34 @@ export async function GET(request: NextRequest) {
           seenParticipants.add(x.participantId);
           uniqueAsistentes.push(x.participantId);
         }
-        if (x.equipo) equipos[x.participantId] = x.equipo;
+        if (x.equipo && isActiveTeam(x.equipo, a.cantEquipos)) {
+          equipos[x.participantId] = x.equipo;
+        }
       });
 
       const actJuegos = jj
         .filter((x) => x.activityId === a.id)
         .map((j) => {
+          const allJp = jp.filter((x) => x.juegoId === j.id);
+          const isIndividual = j.tipo === "individual" || allJp.some(
+            (x) => x.equipo === INDIVIDUAL_GAME_MARKER && x.posicion === 0,
+          );
           const pos: Record<string, string[]> = {};
-          jp.filter((x) => x.juegoId === j.id).forEach((x) => {
-            if (!pos[x.posicion]) pos[x.posicion] = [];
-            pos[x.posicion].push(x.equipo);
+          allJp.forEach((x) => {
+            if (x.equipo === INDIVIDUAL_GAME_MARKER && x.posicion === 0) return;
+            if (isIndividual) {
+              if (!x.participantId || x.posicion < 1) return;
+              if (!pos[x.posicion]) pos[x.posicion] = [];
+              pos[x.posicion].push(String(x.participantId));
+            } else {
+              if (!x.equipo || !activeTeams.includes(x.equipo)) return;
+              if (x.posicion < 1 || x.posicion > activeTeams.length) return;
+              if (!pos[x.posicion]) pos[x.posicion] = [];
+              pos[x.posicion].push(x.equipo);
+            }
           });
           Object.keys(pos).forEach((k) => pos[k].sort());
-          return { id: j.id, nombre: j.nombre, pos };
+          return { id: j.id, nombre: j.nombre, tipo: (isIndividual ? "individual" : "grupal") as "grupal" | "individual", pos };
         });
 
       return {
@@ -103,9 +326,9 @@ export async function GET(request: NextRequest) {
         cantEquipos: a.cantEquipos || 4,
         locked: !!a.locked,
         asistentes: uniqueAsistentes,
-        puntuales: actAp.filter((x) => x.esPuntual).map((x) => x.participantId),
-        biblias: actAp.filter((x) => x.tieneBiblia).map((x) => x.participantId),
-        socials: actAp.filter((x) => x.esSocial).map((x) => x.participantId),
+        puntuales: [...new Set(actAp.filter((x) => x.esPuntual).map((x) => x.participantId))],
+        biblias: [...new Set(actAp.filter((x) => x.tieneBiblia).map((x) => x.participantId))],
+        socials: [...new Set(actAp.filter((x) => x.esSocial).map((x) => x.participantId))],
         equipos,
         juegos: actJuegos,
         partidos: part
@@ -119,7 +342,7 @@ export async function GET(request: NextRequest) {
             resultado: p.resultado,
           })),
         goles: gol
-          .filter((x) => x.activityId === a.id)
+          .filter((x) => x.activityId === a.id && (!x.team || activeTeams.includes(x.team)))
           .map((x) => ({
             id: x.id,
             pid: x.participantId,
@@ -129,7 +352,7 @@ export async function GET(request: NextRequest) {
             team: x.team,
           })),
         extras: ext
-          .filter((x) => x.activityId === a.id && x.tipo === "extra")
+          .filter((x) => x.activityId === a.id && x.tipo === "extra" && (!x.team || activeTeams.includes(x.team)))
           .map((x) => ({
             id: x.id,
             pid: x.participantId,
@@ -138,7 +361,7 @@ export async function GET(request: NextRequest) {
             motivo: x.motivo,
           })),
         descuentos: ext
-          .filter((x) => x.activityId === a.id && x.tipo === "descuento")
+          .filter((x) => x.activityId === a.id && x.tipo === "descuento" && (!x.team || activeTeams.includes(x.team)))
           .map((x) => ({
             id: x.id,
             pid: x.participantId,
@@ -165,77 +388,68 @@ export async function GET(request: NextRequest) {
       }
     });
   } catch (e) {
-    return serverError(e);
+    return handleApiError(e);
   }
 }
 
 export async function POST(request: NextRequest) {
-  const auth = requireAuth(request);
+  const auth = requireAdmin(request);
   if (!auth.success) {
     return auth.error;
   }
 
   try {
-    const body = await request.json();
-    const { data, isNew } = body;
-
-    // DEBUG: Log incoming request
-    console.log("[POST /activities] isNew:", isNew, "data.id:", data?.id, "keys:", Object.keys(data || {}));
-
-    // Validar que tenemos data
-    if (!data) {
-      console.error("[POST /activities] Error: data es undefined");
-      return clientError("Datos inválidos");
+    const parsed = await parseBody(request, activitySaveSchema);
+    if (!parsed.success) {
+      return parsed.error;
     }
 
-    let currentActId = data.id;
+    const { isNew } = parsed.data;
+    const data = parsed.data.data as ActivitySavePayload;
 
-    if (isNew) {
-      console.log("[POST /activities] Creating new activity");
-      const result = await db
-        .insert(schema.activities)
-        .values({
-          fecha: data.fecha,
-          titulo: data.titulo || "",
-          cantEquipos: data.cantEquipos || 4,
-          locked: !!data.locked,
-          version: 1,
-        })
-        .returning({ id: schema.activities.id });
-      currentActId = result[0].id;
-    } else {
-      // Validar que tenemos ID
+    if (!data) {
+      return NextResponse.json({ success: false, error: "Datos inválidos" }, { status: 400 });
+    }
+
+    let currentActId = Number(data.id || 0);
+    let dbVersion = 1;
+
+    if (!isNew) {
       if (!currentActId) {
-        console.error("[POST /activities] Error: update sin ID, data:", data);
-        return clientError("ID de actividad requerido");
-      }
-      console.log("[POST /activities] Updating activity:", currentActId, "version:", data.version);
-
-      // Validar versión para optimistic locking
-      let dbVersion = 1;
-      try {
-        const currentAct = await db.select()
-          .from(schema.activities)
-          .where(eq(schema.activities.id, currentActId));
-        dbVersion = currentAct[0]?.version || 1;
-      } catch (e) {
-        console.error("[POST /activities] Error getting version:", e);
+        return NextResponse.json({ success: false, error: "ID de actividad requerido" }, { status: 400 });
       }
 
+      const currentAct = await db
+        .select()
+        .from(schema.activities)
+        .where(eq(schema.activities.id, currentActId));
+
+      if (currentAct.length === 0) {
+        return NextResponse.json({ success: false, error: "Actividad no encontrada" }, { status: 400 });
+      }
+
+      dbVersion = currentAct[0]?.version || 1;
       const clientVersion = data.version || 1;
 
       if (clientVersion !== dbVersion) {
-        console.log("[POST /activities] Version mismatch! client:", clientVersion, "server:", dbVersion);
-        return new Response(JSON.stringify({
-          error: "Versión desactualizada",
-          currentVersion: dbVersion,
-        }), {
-          status: 409,
-          headers: { "Content-Type": "application/json" }
-        });
+        return apiConflict(dbVersion);
       }
+    }
 
-      await db.transaction(async (tx) => {
+    await db.transaction(async (tx) => {
+      if (isNew) {
+        const result = await tx
+          .insert(schema.activities)
+          .values({
+            fecha: data.fecha,
+            titulo: data.titulo || "",
+            cantEquipos: data.cantEquipos || 4,
+            locked: !!data.locked,
+            version: 1,
+          })
+          .returning({ id: schema.activities.id });
+        currentActId = result[0].id;
+      } else {
         await tx
           .update(schema.activities)
           .set({
@@ -277,42 +491,90 @@ export async function POST(request: NextRequest) {
         await tx
           .delete(schema.invitaciones)
           .where(eq(schema.invitaciones.activityId, currentActId));
-      });
-    }
+      }
 
-    await db.transaction(async (tx) => {
-      if (data.asistentes && data.asistentes.length > 0) {
-        const apData = data.asistentes.map((pid: number) => ({
-          activityId: currentActId,
-          participantId: pid,
-          equipo: data.equipos && data.equipos[pid] ? data.equipos[pid] : null,
-          esPuntual: (data.puntuales || []).includes(pid),
-          tieneBiblia: (data.biblias || []).includes(pid),
-          esSocial: (data.socials || []).includes(pid),
-        }));
+      const activeTeams = getActiveTeams(data.cantEquipos || 4);
+      const attendeeIds = Array.from(
+        new Set<number>(
+          (Array.isArray(data.asistentes) ? data.asistentes : [])
+            .map((pid: unknown) => Number(pid))
+            .filter((pid: number) => Number.isFinite(pid) && pid > 0),
+        ),
+      );
+
+      if (attendeeIds.length > 0) {
+        const apData = attendeeIds.map((pid: number) => {
+          const assignedTeam = data.equipos?.[String(pid)];
+
+          return {
+            activityId: currentActId,
+            participantId: pid,
+            equipo: assignedTeam && activeTeams.includes(assignedTeam) ? assignedTeam : null,
+            esPuntual: (data.puntuales || []).includes(pid),
+            tieneBiblia: (data.biblias || []).includes(pid),
+            esSocial: (data.socials || []).includes(pid),
+          };
+        });
         await tx.insert(schema.activityParticipants).values(apData);
       }
 
       if (data.juegos && data.juegos.length > 0) {
         for (const j of data.juegos) {
+          const isIndividual = j.tipo === "individual";
           const jRes = await tx
             .insert(schema.juegos)
             .values({
               activityId: currentActId,
               nombre: j.nombre || "",
+              tipo: j.tipo || "grupal",
             })
             .returning({ id: schema.juegos.id });
           const jId = jRes[0].id;
 
-          if (j.pos && Object.keys(j.pos).length > 0) {
+          if (isIndividual) {
+            await tx.insert(schema.juegoPosiciones).values({
+              juegoId: jId,
+              equipo: INDIVIDUAL_GAME_MARKER,
+              posicion: 0,
+            });
+
+            if (j.pos && Object.keys(j.pos).length > 0) {
+              for (const [posStr, pIds] of Object.entries(j.pos)) {
+                const posicion = Number(posStr);
+                if (posicion < 1) continue;
+                if (Array.isArray(pIds)) {
+                  for (const pidStr of pIds) {
+                    const pid = Number(pidStr);
+                    if (Number.isFinite(pid) && pid > 0) {
+                      await tx
+                        .insert(schema.juegoPosiciones)
+                        .values({
+                          juegoId: jId,
+                          participantId: pid,
+                          posicion,
+                        })
+                        .onConflictDoUpdate({
+                          target: [
+                            schema.juegoPosiciones.juegoId,
+                            schema.juegoPosiciones.participantId,
+                          ],
+                          set: { posicion },
+                        });
+                    }
+                  }
+                }
+              }
+            }
+          } else if (j.pos && Object.keys(j.pos).length > 0) {
             const jpData: { juegoId: number; equipo: string; posicion: number }[] = [];
             const seenEquipos = new Set<string>();
             Object.entries(j.pos).forEach(
               ([posStr, equipos]) => {
                 const posicion = Number(posStr);
+                if (posicion < 1 || posicion > activeTeams.length) return;
                 if (Array.isArray(equipos) && equipos.length > 0) {
                   equipos.forEach((eqName) => {
-                    if (!seenEquipos.has(eqName)) {
+                    if (activeTeams.includes(eqName) && !seenEquipos.has(eqName)) {
                       seenEquipos.add(eqName);
                       jpData.push({ juegoId: jId, equipo: eqName, posicion });
                     }
@@ -321,7 +583,6 @@ export async function POST(request: NextRequest) {
               },
             );
             if (jpData.length > 0) {
-              // Insert each position individually to handle conflicts correctly
               for (const jp of jpData) {
                 await tx
                   .insert(schema.juegoPosiciones)
@@ -362,29 +623,32 @@ export async function POST(request: NextRequest) {
       }
 
       if (data.goles && data.goles.length > 0) {
-        const gData = data.goles.map((g) => ({
-          activityId: currentActId,
-          participantId: g.pid || null,
-          matchId: g.matchId ? matchIdMap[g.matchId] || null : null,
-          team: g.team || null,
-          tipo: g.tipo,
-          cant: g.cant,
-        }));
-        await tx.insert(schema.goles).values(gData);
+        const gData = data.goles
+          .filter((g) => !g.team || activeTeams.includes(g.team))
+          .map((g) => ({
+            activityId: currentActId,
+            participantId: g.pid || null,
+            matchId: g.matchId ? matchIdMap[g.matchId] || null : null,
+            team: g.team || null,
+            tipo: g.tipo,
+            cant: g.cant,
+          }));
+        if (gData.length > 0) {
+          await tx.insert(schema.goles).values(gData);
+        }
       }
 
-      const activeTeams = TEAMS.slice(0, data.cantEquipos || 4);
       const extrasData: { activityId: number; participantId: number | null; team: string | null; tipo: string; puntos: number; motivo: string }[] = [];
 
       if (data.extras && data.extras.length > 0) {
         data.extras.forEach((e) => {
-          if (e.team && !activeTeams.includes(e.team)) return;
-          if (e.pid && e.team) e.team = null;
+          const team = e.pid ? null : e.team || null;
+          if (team && !activeTeams.includes(team)) return;
 
           extrasData.push({
             activityId: currentActId,
             participantId: e.pid || null,
-            team: e.team || null,
+            team,
             tipo: "extra",
             puntos: e.puntos,
             motivo: e.motivo || "",
@@ -394,13 +658,13 @@ export async function POST(request: NextRequest) {
 
       if (data.descuentos && data.descuentos.length > 0) {
         data.descuentos.forEach((e) => {
-          if (e.team && !activeTeams.includes(e.team)) return;
-          if (e.pid && e.team) e.team = null;
+          const team = e.pid ? null : e.team || null;
+          if (team && !activeTeams.includes(team)) return;
 
           extrasData.push({
             activityId: currentActId,
             participantId: e.pid || null,
-            team: e.team || null,
+            team,
             tipo: "descuento",
             puntos: e.puntos,
             motivo: e.motivo || "",
@@ -429,286 +693,549 @@ export async function POST(request: NextRequest) {
       { status: 200 },
     );
   } catch (e) {
-    return serverError(e);
+    return handleApiError(e);
   }
 }
 
 export async function PATCH(request: NextRequest) {
-  const auth = requireAuth(request);
+  const auth = requireAdmin(request);
   if (!auth.success) {
     return auth.error;
   }
 
   try {
-    const body = await request.json();
-    const { activityId, type, data } = body;
+    const parsed = await parseBody(request, activityPatchSchema);
+    if (!parsed.success) {
+      return parsed.error;
+    }
 
-    if (!activityId) throw new Error("Activity ID is required");
+    const { activityId, type, version } = parsed.data;
+    const data = parsed.data.data as ActivityPatchPayload;
+    const result = await db.transaction(async (tx) => {
+      const clientVersion = Number(version || 1);
+      const [versionClaim] = await tx
+        .update(schema.activities)
+        .set({ version: sql`${schema.activities.version} + 1` })
+        .where(and(eq(schema.activities.id, activityId), eq(schema.activities.version, clientVersion)))
+        .returning({ version: schema.activities.version });
 
-    switch (type) {
-      case "config": {
-        // Validate using Zod schema
-        const validation = validate(configUpdateSchema, { id: activityId, data });
-        if (!validation.success) {
-          return clientError(validation.error);
-        }
+      let currentActivity: { version: number; locked: boolean | null } | null = null;
+      [currentActivity] = await tx
+        .select({ version: schema.activities.version, locked: schema.activities.locked })
+        .from(schema.activities)
+        .where(eq(schema.activities.id, activityId));
 
-        const { k, v } = data;
-
-        // Whitelist check - prevents SQL column injection
-        if (!ALLOWED_CONFIG_KEYS.includes(k as AllowedConfigKey)) {
-          console.warn(`[SECURITY] Blocked attempt to set disallowed config key: ${k}`);
-          return clientError("Clave de configuración no permitida");
-        }
-
-        await db
-          .update(schema.activities)
-          .set({ [k]: v })
-          .where(eq(schema.activities.id, activityId));
-        break;
+      if (!versionClaim) {
+        throw new AppError("Versión desactualizada", 409, {
+          currentVersion: currentActivity?.version || clientVersion,
+        });
       }
-      case "attendance": {
-        const { participantId, value } = data;
-        if (value) {
-          await db
-            .insert(schema.activityParticipants)
-            .values({ activityId, participantId })
-            .onConflictDoNothing();
-        } else {
-          await db
-            .delete(schema.activityParticipants)
+
+      const requestedData = data as Record<string, unknown> | null | undefined;
+      const isUnlockRequest = type === "config" && requestedData?.k === "locked" && requestedData?.v === false;
+      if (currentActivity?.locked && !isUnlockRequest) {
+        return apiForbidden("La actividad está bloqueada");
+      }
+
+      switch (type) {
+        case "config": {
+          const validation = validate(configUpdateSchema, { id: activityId, data });
+          if (!validation.success) throw new AppError(validation.error, 400);
+          const config = validation.data;
+          const { k, v } = config.data;
+          if (!ALLOWED_CONFIG_KEYS.includes(k as AllowedConfigKey)) {
+            console.warn(`[SECURITY] Blocked attempt to set disallowed config key: ${k}`);
+            throw new AppError("Clave de configuración no permitida");
+          }
+
+          await tx
+            .update(schema.activities)
+            .set({ [k]: v })
+            .where(eq(schema.activities.id, activityId));
+
+          if (k === "cantEquipos") {
+            await normalizeInactiveTeamData(tx, activityId, Number(v));
+          }
+
+          return { success: true, version: versionClaim.version };
+        }
+        case "config_bulk": {
+          const updates: Partial<{
+            locked: boolean;
+            titulo: string;
+            cantEquipos: number;
+            fecha: string;
+          }> = {};
+
+          if ("locked" in data) updates.locked = !!data.locked;
+          if ("titulo" in data) updates.titulo = String(data.titulo || "");
+          if ("fecha" in data) updates.fecha = String(data.fecha || "");
+          if ("cantEquipos" in data) {
+            const cantEquipos = Number(data.cantEquipos);
+            if (![2, 4, 6].includes(cantEquipos)) throw new AppError("Cantidad de equipos inválida");
+            updates.cantEquipos = cantEquipos;
+          }
+
+          if (Object.keys(updates).length === 0) throw new AppError("No hay cambios de configuración");
+
+          await tx
+            .update(schema.activities)
+            .set(updates)
+            .where(eq(schema.activities.id, activityId));
+
+          if (updates.cantEquipos) {
+            await normalizeInactiveTeamData(tx, activityId, updates.cantEquipos);
+          }
+
+          return { success: true, version: versionClaim.version };
+        }
+        case "attendance": {
+          const { participantId, value } = data;
+          if (value) {
+            await ensureSingleActivityParticipant(tx, activityId, participantId);
+          } else {
+            await tx
+              .delete(schema.activityParticipants)
+              .where(
+                and(
+                  eq(schema.activityParticipants.activityId, activityId),
+                  eq(schema.activityParticipants.participantId, participantId),
+                ),
+              );
+            await tx
+              .delete(schema.goles)
+              .where(
+                and(
+                  eq(schema.goles.activityId, activityId),
+                  eq(schema.goles.participantId, participantId),
+                ),
+              );
+            await tx
+              .delete(schema.extras)
+              .where(
+                and(
+                  eq(schema.extras.activityId, activityId),
+                  eq(schema.extras.participantId, participantId),
+                ),
+              );
+          }
+          return { success: true, version: versionClaim.version };
+        }
+        case "puntuales": {
+          const { participantId, value } = data;
+          if (value) {
+            await ensureSingleActivityParticipant(tx, activityId, participantId);
+          }
+          await tx
+            .update(schema.activityParticipants)
+            .set({ esPuntual: value })
             .where(
               and(
                 eq(schema.activityParticipants.activityId, activityId),
                 eq(schema.activityParticipants.participantId, participantId),
               ),
             );
+          return { success: true, version: versionClaim.version };
         }
-        break;
-      }
-      case "puntuales": {
-        const { participantId, value } = data;
-        await db
-          .update(schema.activityParticipants)
-          .set({ esPuntual: value })
-          .where(
-            and(
-              eq(schema.activityParticipants.activityId, activityId),
-              eq(schema.activityParticipants.participantId, participantId),
-            ),
-          );
-        break;
-      }
-      case "biblias": {
-        const { participantId, value } = data;
-        await db
-          .update(schema.activityParticipants)
-          .set({ tieneBiblia: value })
-          .where(
-            and(
-              eq(schema.activityParticipants.activityId, activityId),
-              eq(schema.activityParticipants.participantId, participantId),
-            ),
-          );
-        break;
-      }
-      case "team": {
-        const { participantId, team } = data;
-        await db
-          .update(schema.activityParticipants)
-          .set({ equipo: team })
-          .where(
-            and(
-              eq(schema.activityParticipants.activityId, activityId),
-              eq(schema.activityParticipants.participantId, participantId),
-            ),
-          );
-        break;
-      }
-      case "socials": {
-        const { participantId, value } = data;
-        await db
-          .update(schema.activityParticipants)
-          .set({ esSocial: value, equipo: null })
-          .where(
-            and(
-              eq(schema.activityParticipants.activityId, activityId),
-              eq(schema.activityParticipants.participantId, participantId),
-            ),
-          );
-        break;
-      }
-      case "goal_add": {
-        const result = await db
-          .insert(schema.goles)
-          .values({
-            activityId,
-            participantId: data.pid,
-            tipo: data.tipo,
-            cant: data.cant || 1,
-            team: data.team || null,
-            matchId: data.matchId || null,
-          })
-          .returning({ id: schema.goles.id });
-        return NextResponse.json(
-          { success: true, id: result[0].id },
-          { status: 200 },
-        );
-      }
-      case "goal_remove": {
-        if (data.id) {
-          await db.delete(schema.goles).where(eq(schema.goles.id, data.id));
-        } else {
-          const existing = await db
-            .select()
-            .from(schema.goles)
-            .where(
-              and(
-                eq(schema.goles.activityId, activityId),
-                eq(schema.goles.participantId, data.pid),
-                eq(schema.goles.tipo, data.tipo),
-              ),
-            )
-            .limit(1);
-          if (existing.length > 0) {
-            await db
-              .delete(schema.goles)
-              .where(eq(schema.goles.id, existing[0].id));
+        case "biblias": {
+          const { participantId, value } = data;
+          if (value) {
+            await ensureSingleActivityParticipant(tx, activityId, participantId);
           }
-        }
-        break;
-      }
-case "goal_update": {
-        const { id, pid, tipo, cant } = data;
-        const updateData: Partial<{
-          participantId: number | null;
-          tipo: string;
-          cant: number;
-        }> = {};
-        if (pid !== undefined) updateData.participantId = pid;
-        if (tipo !== undefined) updateData.tipo = tipo;
-        if (cant !== undefined) updateData.cant = cant;
-
-        await db
-          .update(schema.goles)
-          .set(updateData)
-          .where(eq(schema.goles.id, id));
-        break;
-      }
-      case "extra_update": {
-        const { id, pid, team, puntos, motivo } = data;
-        const updateData: Partial<{
-          participantId: number | null;
-          team: string | null;
-          puntos: number;
-          motivo: string;
-        }> = {};
-        if (pid !== undefined) updateData.participantId = pid;
-        if (team !== undefined) updateData.team = team;
-        if (puntos !== undefined) updateData.puntos = puntos;
-        if (motivo !== undefined) updateData.motivo = motivo;
-
-        await db
-          .update(schema.extras)
-          .set(updateData)
-          .where(eq(schema.extras.id, id));
-        break;
-      }
-      case "extra_toggle": {
-        const { participantId, tipo, puntos, value } = data;
-        if (value) {
-          await db.insert(schema.extras).values({
-            activityId,
-            participantId,
-            tipo,
-            puntos,
-          });
-        } else {
-          await db
-            .delete(schema.extras)
+          await tx
+            .update(schema.activityParticipants)
+            .set({ tieneBiblia: value })
             .where(
               and(
-                eq(schema.extras.activityId, activityId),
-                eq(schema.extras.participantId, participantId),
-                eq(schema.extras.tipo, tipo),
+                eq(schema.activityParticipants.activityId, activityId),
+                eq(schema.activityParticipants.participantId, participantId),
               ),
             );
+          return { success: true, version: versionClaim.version };
         }
-        break;
-      }
-      case "extra_add": {
-        const [newExtra] = await db
-          .insert(schema.extras)
-          .values({
-            activityId,
-            participantId: data.pid || null,
-            team: data.team || null,
-            tipo: data.tipo || "extra",
-            puntos: data.puntos || 0,
-            motivo: data.motivo || "",
-          })
-          .returning();
-        return NextResponse.json(newExtra);
-      }
-      case "extra_delete": {
-        const { id } = data;
-        await db.delete(schema.extras).where(eq(schema.extras.id, id));
-        break;
-      }
-      case "game_add": {
-        const gameResult = await db
-          .insert(schema.juegos)
-          .values({
-            activityId,
-            nombre: data.nombre || "",
-          })
-          .returning({ id: schema.juegos.id });
-        return NextResponse.json(
-          { success: true, id: gameResult[0].id },
-          { status: 200 },
-        );
-      }
-      case "game_update": {
-        const { id, nombre } = data;
-        await db
-          .update(schema.juegos)
-          .set({ nombre })
-          .where(eq(schema.juegos.id, id));
-        break;
-      }
-      case "game_delete": {
-        await db
-          .delete(schema.juegoPosiciones)
-          .where(eq(schema.juegoPosiciones.juegoId, data.id));
-        await db.delete(schema.juegos).where(eq(schema.juegos.id, data.id));
-        break;
-      }
-      case "game_pos": {
-        const { juegoId, pos } = data;
-        if (!juegoId || !pos)
-          throw new Error("Datos inválidos: juegoId y pos son requeridos");
+        case "team": {
+          const { participantId, team } = data;
+          if (team) {
+            const [activity] = await tx
+              .select({ cantEquipos: schema.activities.cantEquipos })
+              .from(schema.activities)
+              .where(eq(schema.activities.id, activityId));
 
-        const allTeams: { equipo: string; posicion: number }[] = [];
-        const seenTeams = new Set<string>();
-        Object.entries(pos).forEach(([posStr, equipos]) => {
-          const posicion = Number(posStr);
-          if (Array.isArray(equipos)) {
-            equipos.forEach((eqName: unknown) => {
-              if (typeof eqName === "string" && !seenTeams.has(eqName)) {
-                seenTeams.add(eqName);
-                allTeams.push({ equipo: eqName, posicion });
-              }
+            if (!activity) throw new AppError("Actividad no encontrada");
+            if (!isActiveTeam(team, activity?.cantEquipos)) throw new AppError("Equipo no habilitado para esta actividad");
+
+            await ensureSingleActivityParticipant(tx, activityId, participantId);
+          }
+          await tx
+            .update(schema.activityParticipants)
+            .set({ equipo: team })
+            .where(
+              and(
+                eq(schema.activityParticipants.activityId, activityId),
+                eq(schema.activityParticipants.participantId, participantId),
+              ),
+            );
+          return { success: true, version: versionClaim.version };
+        }
+        case "socials": {
+          const { participantId, value } = data;
+          if (value) {
+            await ensureSingleActivityParticipant(tx, activityId, participantId);
+            const juegos = await tx
+              .select({ id: schema.juegos.id })
+              .from(schema.juegos)
+              .where(eq(schema.juegos.activityId, activityId));
+            if (juegos.length > 0) {
+              await tx
+                .delete(schema.juegoPosiciones)
+                .where(
+                  and(
+                    eq(schema.juegoPosiciones.participantId, participantId),
+                    inArray(schema.juegoPosiciones.juegoId, juegos.map((j: { id: number }) => j.id)),
+                  ),
+                );
+            }
+          }
+          await tx
+            .update(schema.activityParticipants)
+            .set({ esSocial: value, equipo: null })
+            .where(
+              and(
+                eq(schema.activityParticipants.activityId, activityId),
+                eq(schema.activityParticipants.participantId, participantId),
+              ),
+            );
+          return { success: true, version: versionClaim.version };
+        }
+        case "teams_bulk": {
+          const [activity] = await tx
+            .select({ cantEquipos: schema.activities.cantEquipos })
+            .from(schema.activities)
+            .where(eq(schema.activities.id, activityId));
+
+          if (!activity) throw new AppError("Actividad no encontrada");
+
+          const activeTeams = getActiveTeams(activity.cantEquipos);
+          const equipos = data.equipos || {};
+          const entries = Object.entries(equipos).filter(
+            ([, team]) => typeof team === "string" && activeTeams.includes(team),
+          );
+
+          await tx
+            .update(schema.activityParticipants)
+            .set({ equipo: null })
+            .where(eq(schema.activityParticipants.activityId, activityId));
+
+          for (const [participantId, team] of entries) {
+            const numericParticipantId = Number(participantId);
+            if (!numericParticipantId) continue;
+
+            const rows = await tx
+              .select()
+              .from(schema.activityParticipants)
+              .where(
+                and(
+                  eq(schema.activityParticipants.activityId, activityId),
+                  eq(schema.activityParticipants.participantId, numericParticipantId),
+                ),
+              );
+
+            if (rows.length === 0) {
+              await tx.insert(schema.activityParticipants).values({
+                activityId,
+                participantId: numericParticipantId,
+                equipo: team as string,
+              });
+              continue;
+            }
+
+            await tx
+              .update(schema.activityParticipants)
+              .set({ equipo: team as string, esSocial: false })
+              .where(
+                and(
+                  eq(schema.activityParticipants.activityId, activityId),
+                  eq(schema.activityParticipants.participantId, numericParticipantId),
+                ),
+              );
+          }
+
+          return { success: true, version: versionClaim.version };
+        }
+        case "goal_add": {
+          if (data.team) {
+            const [activity] = await tx
+              .select({ cantEquipos: schema.activities.cantEquipos })
+              .from(schema.activities)
+              .where(eq(schema.activities.id, activityId));
+
+            if (!activity || !isActiveTeam(data.team, activity.cantEquipos)) {
+              throw new AppError("Equipo no habilitado para esta actividad");
+            }
+          }
+
+          const [goal] = await tx
+            .insert(schema.goles)
+            .values({
+              activityId,
+              participantId: data.pid,
+              tipo: data.tipo,
+              cant: data.cant || 1,
+              team: data.team || null,
+              matchId: data.matchId || null,
+            })
+            .returning({ id: schema.goles.id });
+
+          return { success: true, id: goal.id, version: versionClaim.version };
+        }
+        case "goal_remove": {
+          if (data.id) {
+            await tx.delete(schema.goles).where(eq(schema.goles.id, data.id));
+          } else {
+            if (!data.pid) throw new AppError("ID de participante requerido", 400);
+            const participantId = data.pid;
+
+            const existing = await tx
+              .select()
+              .from(schema.goles)
+              .where(
+                and(
+                  eq(schema.goles.activityId, activityId),
+                  eq(schema.goles.participantId, participantId),
+                  eq(schema.goles.tipo, data.tipo),
+                ),
+              )
+              .limit(1);
+            if (existing.length > 0) {
+              await tx.delete(schema.goles).where(eq(schema.goles.id, existing[0].id));
+            }
+          }
+          return { success: true, version: versionClaim.version };
+        }
+        case "goal_update": {
+          const { id, pid, tipo, cant } = data;
+          const updateData: Partial<{
+            participantId: number | null;
+            tipo: string;
+            cant: number;
+          }> = {};
+          if (pid !== undefined) updateData.participantId = pid;
+          if (tipo !== undefined) updateData.tipo = tipo;
+          if (cant !== undefined) updateData.cant = cant;
+
+          await tx
+            .update(schema.goles)
+            .set(updateData)
+            .where(eq(schema.goles.id, id));
+          return { success: true, version: versionClaim.version };
+        }
+        case "extra_update": {
+          const { id, pid, team, puntos, motivo } = data;
+          if (team) {
+            const [activity] = await tx
+              .select({ cantEquipos: schema.activities.cantEquipos })
+              .from(schema.activities)
+              .where(eq(schema.activities.id, activityId));
+
+            if (!activity || !isActiveTeam(team, activity.cantEquipos)) {
+              throw new AppError("Equipo no habilitado para esta actividad");
+            }
+          }
+
+          const updateData: Partial<{
+            participantId: number | null;
+            team: string | null;
+            puntos: number;
+            motivo: string | null;
+          }> = {};
+          if (pid !== undefined) updateData.participantId = pid;
+          if (team !== undefined) updateData.team = team;
+          if (puntos !== undefined) updateData.puntos = puntos;
+          if (motivo !== undefined) updateData.motivo = motivo;
+
+          await tx
+            .update(schema.extras)
+            .set(updateData)
+            .where(eq(schema.extras.id, id));
+          return { success: true, version: versionClaim.version };
+        }
+        case "extra_toggle": {
+          const { participantId, tipo, puntos, value } = data;
+          if (value) {
+            await tx.insert(schema.extras).values({
+              activityId,
+              participantId,
+              tipo,
+              puntos,
+            });
+          } else {
+            await tx
+              .delete(schema.extras)
+              .where(
+                and(
+                  eq(schema.extras.activityId, activityId),
+                  eq(schema.extras.participantId, participantId),
+                  eq(schema.extras.tipo, tipo),
+                ),
+              );
+          }
+          return { success: true, version: versionClaim.version };
+        }
+        case "extra_add": {
+          if (data.team) {
+            const [activity] = await tx
+              .select({ cantEquipos: schema.activities.cantEquipos })
+              .from(schema.activities)
+              .where(eq(schema.activities.id, activityId));
+
+            if (!activity || !isActiveTeam(data.team, activity.cantEquipos)) {
+              throw new AppError("Equipo no habilitado para esta actividad");
+            }
+          }
+
+          const [extra] = await tx
+            .insert(schema.extras)
+            .values({
+              activityId,
+              participantId: data.pid || null,
+              team: data.team || null,
+              tipo: data.tipo || "extra",
+              puntos: data.puntos || 0,
+              motivo: data.motivo || "",
+            })
+            .returning();
+
+          return { success: true, ...extra, version: versionClaim.version };
+        }
+        case "extra_delete": {
+          const { id } = data;
+          await tx.delete(schema.extras).where(eq(schema.extras.id, id));
+          return { success: true, version: versionClaim.version };
+        }
+        case "game_add": {
+          const [game] = await tx
+            .insert(schema.juegos)
+              .values({
+                activityId,
+                nombre: data.nombre || "",
+                tipo: data.tipo || "grupal",
+              })
+              .returning({ id: schema.juegos.id });
+
+          if (data.tipo === "individual") {
+            await tx.insert(schema.juegoPosiciones).values({
+              juegoId: game.id,
+              equipo: INDIVIDUAL_GAME_MARKER,
+              posicion: 0,
             });
           }
-        });
 
-        await db.transaction(async (tx) => {
+          return { success: true, id: game.id, version: versionClaim.version };
+        }
+        case "game_update": {
+          const { id, nombre } = data;
+          await tx
+            .update(schema.juegos)
+            .set({ nombre })
+            .where(eq(schema.juegos.id, id));
+          return { success: true, version: versionClaim.version };
+        }
+        case "game_delete": {
+          await tx
+            .delete(schema.juegoPosiciones)
+            .where(eq(schema.juegoPosiciones.juegoId, data.id));
+          await tx.delete(schema.juegos).where(eq(schema.juegos.id, data.id));
+          return { success: true, version: versionClaim.version };
+        }
+        case "game_pos": {
+          const { juegoId, pos } = data;
+          if (!juegoId || !pos) throw new AppError("Datos inválidos: juegoId y pos son requeridos");
+
+          const [activity] = await tx
+            .select({ cantEquipos: schema.activities.cantEquipos })
+            .from(schema.activities)
+            .where(eq(schema.activities.id, activityId));
+
+          if (!activity) throw new AppError("Actividad no encontrada");
+
+          const activeTeams = getActiveTeams(activity.cantEquipos);
+          const existingPositions = await tx
+            .select({
+              equipo: schema.juegoPosiciones.equipo,
+              posicion: schema.juegoPosiciones.posicion,
+              participantId: schema.juegoPosiciones.participantId,
+            })
+            .from(schema.juegoPosiciones)
+            .where(eq(schema.juegoPosiciones.juegoId, juegoId));
+
+          const isIndividualGame = existingPositions.some(
+            (row) => row.posicion === 0 && row.equipo === INDIVIDUAL_GAME_MARKER,
+          );
+
           await tx
             .delete(schema.juegoPosiciones)
             .where(eq(schema.juegoPosiciones.juegoId, juegoId));
 
-          for (const teamData of allTeams) {
-            try {
+          if (isIndividualGame) {
+            await tx.insert(schema.juegoPosiciones).values({
+              juegoId,
+              equipo: INDIVIDUAL_GAME_MARKER,
+              posicion: 0,
+            });
+
+            const seenPIds = new Set<number>();
+            for (const [posStr, pIds] of Object.entries(pos)) {
+              const posicion = Number(posStr);
+              if (posicion < 1) continue;
+
+              if (Array.isArray(pIds)) {
+                for (const pidStr of pIds) {
+                  const participantId = Number(pidStr);
+                  if (!Number.isFinite(participantId) || participantId < 1) continue;
+                  if (seenPIds.has(participantId)) continue;
+                  seenPIds.add(participantId);
+
+                  await tx
+                    .insert(schema.juegoPosiciones)
+                    .values({
+                      juegoId,
+                      participantId,
+                      posicion,
+                    })
+                    .onConflictDoUpdate({
+                      target: [
+                        schema.juegoPosiciones.juegoId,
+                        schema.juegoPosiciones.participantId,
+                      ],
+                      set: { posicion },
+                    });
+                }
+              }
+            }
+          } else {
+            const allTeams: { equipo: string; posicion: number }[] = [];
+            const seenTeams = new Set<string>();
+            for (const [posStr, equipos] of Object.entries(pos)) {
+              const posicion = Number(posStr);
+              if (posicion < 1 || posicion > activeTeams.length) {
+                throw new AppError("Posición inválida para la cantidad de equipos");
+              }
+
+              if (Array.isArray(equipos)) {
+                for (const eqName of equipos) {
+                  if (typeof eqName !== "string") continue;
+                  if (!activeTeams.includes(eqName)) {
+                    throw new AppError("Equipo no habilitado para esta actividad");
+                  }
+                  if (!seenTeams.has(eqName)) {
+                    seenTeams.add(eqName);
+                    allTeams.push({ equipo: eqName, posicion });
+                  }
+                }
+              }
+            }
+
+            for (const teamData of allTeams) {
               await tx
                 .insert(schema.juegoPosiciones)
                 .values({
@@ -723,105 +1250,100 @@ case "goal_update": {
                   ],
                   set: { posicion: teamData.posicion },
                 });
-            } catch (insertErr: unknown) {
-              console.error("[game_pos] Insert Error:", insertErr instanceof Error ? insertErr.message : insertErr);
             }
           }
-        });
-        break;
-      }
-      case "partido_add": {
-        await db.insert(schema.partidos).values({
-          activityId,
-          deporte: data.deporte,
-          genero: data.genero,
-          eq1: data.eq1,
-          eq2: data.eq2,
-          resultado: data.resultado,
-        });
-        break;
-      }
-      case "partido_update": {
-        await db
-          .update(schema.partidos)
-          .set({
-            resultado: data.resultado,
-            eq1: data.eq1,
-            eq2: data.eq2,
+
+          return { success: true, version: versionClaim.version };
+        }
+        case "partido_add": {
+          await tx.insert(schema.partidos).values({
+            activityId,
             deporte: data.deporte,
             genero: data.genero,
-          })
-          .where(eq(schema.partidos.id, data.id));
-        break;
-      }
-      case "partido_delete": {
-        await db.delete(schema.goles).where(eq(schema.goles.matchId, data.id));
-        await db.delete(schema.partidos).where(eq(schema.partidos.id, data.id));
-        break;
-      }
-      // === INVITACIONES (operaciones atómicas) ===
-      case "invitacion_add": {
-        const { invitador, invitadoId } = data;
-        // Validar que tenga invitadoId
-        if (!invitadoId) {
-          throw new Error("La invitación debe tener un invitado seleccionado");
+            eq1: data.eq1,
+            eq2: data.eq2,
+            resultado: data.resultado,
+          });
+          return { success: true, version: versionClaim.version };
         }
-        const result = await db
-          .insert(schema.invitaciones)
-          .values({
-            activityId,
-            invitadorId: invitador || null,
-            invitadoId: Number(invitadoId),
-          })
-          .returning({ id: schema.invitaciones.id });
-        return NextResponse.json(
-          { success: true, id: result[0].id },
-          { status: 200 },
-        );
-      }
-      case "invitacion_update": {
-        const { id, invitador, invitadoId } = data;
-        if (!id) throw new Error("ID de invitación requerido");
-        if (!invitadoId) {
-          throw new Error("La invitación debe tener un invitado seleccionado");
+        case "partido_update": {
+          await tx
+            .update(schema.partidos)
+            .set({
+              resultado: data.resultado,
+              eq1: data.eq1,
+              eq2: data.eq2,
+              deporte: data.deporte,
+              genero: data.genero,
+            })
+            .where(eq(schema.partidos.id, data.id));
+          return { success: true, version: versionClaim.version };
         }
-        await db
-          .update(schema.invitaciones)
-          .set({
-            invitadorId: invitador ? Number(invitador) : null,
-            invitadoId: Number(invitadoId),
-          })
-          .where(eq(schema.invitaciones.id, id));
-        break;
+        case "partido_delete": {
+          await tx.delete(schema.goles).where(eq(schema.goles.matchId, data.id));
+          await tx.delete(schema.partidos).where(eq(schema.partidos.id, data.id));
+          return { success: true, version: versionClaim.version };
+        }
+        case "invitacion_add": {
+          const { invitador, invitadoId } = data;
+          if (!invitadoId) throw new AppError("La invitación debe tener un invitado seleccionado");
+
+          const [created] = await tx
+            .insert(schema.invitaciones)
+            .values({
+              activityId,
+              invitadorId: invitador || null,
+              invitadoId: Number(invitadoId),
+            })
+            .returning({ id: schema.invitaciones.id });
+
+          return { success: true, id: created.id, version: versionClaim.version };
+        }
+        case "invitacion_update": {
+          const { id, invitador, invitadoId } = data;
+          if (!id) throw new AppError("ID de invitación requerido");
+          if (!invitadoId) throw new AppError("La invitación debe tener un invitado seleccionado");
+
+          await tx
+            .update(schema.invitaciones)
+            .set({
+              invitadorId: invitador ? Number(invitador) : null,
+              invitadoId: Number(invitadoId),
+            })
+            .where(eq(schema.invitaciones.id, id));
+          return { success: true, version: versionClaim.version };
+        }
+        case "invitacion_delete": {
+          const { id } = data;
+          if (!id) throw new AppError("ID de invitación requerido");
+          await tx.delete(schema.invitaciones).where(eq(schema.invitaciones.id, id));
+          return { success: true, version: versionClaim.version };
+        }
+        default:
+          throw new AppError("Invalid update type");
       }
-      case "invitacion_delete": {
-        const { id } = data;
-        if (!id) throw new Error("ID de invitación requerido");
-        await db
-          .delete(schema.invitaciones)
-          .where(eq(schema.invitaciones.id, id));
-        break;
-      }
-      default:
-        throw new Error("Invalid update type");
-    }
+    });
 
     eventBus.emit("data-changed");
-    return NextResponse.json({ success: true }, { status: 200 });
+    return NextResponse.json(result, { status: 200 });
   } catch (e) {
-    return serverError(e);
+    return handleApiError(e);
   }
 }
 
 export async function DELETE(request: NextRequest) {
-  const auth = requireAuth(request);
+  const auth = requireAdmin(request);
   if (!auth.success) {
     return auth.error;
   }
 
   try {
-    const body = await request.json();
-    const { id } = body;
+    const parsed = await parseBody(request, deleteByIdSchema);
+    if (!parsed.success) {
+      return parsed.error;
+    }
+
+    const { id } = parsed.data;
 
     await db
       .delete(schema.activityParticipants)
@@ -852,6 +1374,6 @@ export async function DELETE(request: NextRequest) {
 
     return NextResponse.json({ success: true }, { status: 200 });
   } catch (e) {
-    return serverError(e);
+    return handleApiError(e);
   }
 }

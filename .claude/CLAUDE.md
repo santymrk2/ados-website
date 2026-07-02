@@ -31,3 +31,6 @@ Use codegraph for **structural** questions — what calls what, what would break
 
 The MCP server returns "not initialized." Ask the user: *"I notice this project doesn't have CodeGraph initialized. Want me to run `codegraph init -i` to build the index?"*
 <!-- CODEGRAPH_END -->
+## Local Skills
+
+Before implementing code changes, read `.claude/skills/coding-discipline/SKILL.md` and apply it together with the project-specific instructions.

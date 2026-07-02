@@ -24,10 +24,11 @@ interface FloatingNavProps {
   searchPlaceholder?: string;
   /** Si se provee, habilita el modo filtros con contenido personalizado */
   filterContent?: React.ReactNode;
+  hasActiveSearch?: boolean;
+  hasActiveFilters?: boolean;
+  onSearchModeChange?: (open: boolean) => void;
 }
 
-// Dimensiones fijas para cada estado
-const COLLAPSED_WIDTH = 100;
 const COLLAPSED_HEIGHT = 56;
 const EXPANDED_WIDTH = 320;
 
@@ -43,16 +44,22 @@ export function FloatingNav({
   onSearchChange,
   searchPlaceholder = "Buscar...",
   filterContent,
+  hasActiveSearch,
+  hasActiveFilters,
+  onSearchModeChange,
 }: FloatingNavProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchMode, setSearchMode] = useState(false);
   const [filterMode, setFilterMode] = useState(false);
+  const [keyboardInset, setKeyboardInset] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   const showSearch = searchValue !== undefined && onSearchChange !== undefined;
   const showFilter = filterContent !== undefined;
   const hasExtras = showSearch || showFilter;
+  const isSearchActive = hasActiveSearch ?? Boolean(searchValue?.trim());
+  const isFilterActive = Boolean(hasActiveFilters);
 
   const rows = Math.ceil(items.length / 3);
   const expandedHeight = rows * 72 + 16;
@@ -83,13 +90,6 @@ export function FloatingNav({
         document.removeEventListener("mousedown", handleClickOutside);
     }
   }, [isOpen, searchMode, filterMode]);
-
-  // Auto-focus en el input de búsqueda
-  useEffect(() => {
-    if (searchMode && searchInputRef.current) {
-      searchInputRef.current.focus();
-    }
-  }, [searchMode]);
 
   const handleSelect = (item: NavItem) => {
     if (lockedValues.includes(item.value)) return;
@@ -128,19 +128,63 @@ export function FloatingNav({
     setFilterMode(false);
   };
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const viewport = window.visualViewport;
+
+    const updateKeyboardInset = () => {
+      if (!viewport) {
+        setKeyboardInset(0);
+        return;
+      }
+
+      const inset = Math.max(
+        0,
+        window.innerHeight - viewport.height - viewport.offsetTop,
+      );
+      setKeyboardInset(inset);
+    };
+
+    updateKeyboardInset();
+
+    if (!viewport) return;
+
+    viewport.addEventListener("resize", updateKeyboardInset);
+    viewport.addEventListener("scroll", updateKeyboardInset);
+
+    return () => {
+      viewport.removeEventListener("resize", updateKeyboardInset);
+      viewport.removeEventListener("scroll", updateKeyboardInset);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (searchMode || filterMode) {
+      searchInputRef.current?.focus({ preventScroll: true });
+    }
+  }, [searchMode, filterMode]);
+
+  useEffect(() => {
+    onSearchModeChange?.(searchMode);
+  }, [onSearchModeChange, searchMode]);
+
   // Dimensiones según estado
   const targetWidth = EXPANDED_WIDTH; // Siempre 320px, no se achica
   const targetHeight = isOpen ? expandedHeight : filterMode ? filterHeight : COLLAPSED_HEIGHT;
+  const bottomOffset = `calc(24px + env(safe-area-inset-bottom, 0px) + ${searchMode || filterMode ? keyboardInset : 0}px)`;
 
   return (
     <div
       ref={containerRef}
-      className="fixed bottom-6 left-1/2 z-[60] -translate-x-1/2 pb-safe"
+      className="fixed left-1/2 z-[60] -translate-x-1/2 pb-safe"
+      style={{ bottom: bottomOffset }}
     >
       <motion.div
         className={cn(
           "rounded-2xl border border-border bg-white shadow-lg overflow-hidden",
           (isOpen || searchMode || filterMode) && "border-primary",
+          (isSearchActive || isFilterActive) && "ring-2 ring-primary/20",
           !searchMode && !filterMode && "cursor-pointer",
         )}
         animate={{
@@ -270,7 +314,7 @@ export function FloatingNav({
                         className={cn(
                           "flex flex-col items-center justify-center gap-1 rounded-2xl border border-border py-2 px-3 text-sm font-medium transition-colors",
                           isActive
-                            ? "bg-primary text-white border-primary"
+                            ? "bg-primary text-white border-primary shadow-sm ring-2 ring-primary/20"
                             : "hover:bg-muted",
                         )}
                       >
@@ -293,7 +337,7 @@ export function FloatingNav({
                       className={cn(
                         "flex flex-col items-center justify-center gap-1 rounded-2xl border border-border py-2 px-3 text-sm font-medium transition-colors",
                         isActive
-                          ? "bg-primary text-white border-primary"
+                          ? "bg-primary text-white border-primary shadow-sm ring-2 ring-primary/20"
                           : "hover:bg-muted",
                       )}
                     >

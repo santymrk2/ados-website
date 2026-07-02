@@ -2,9 +2,17 @@ import { test, expect } from "@playwright/test";
 import { ParticipantsPage } from "./participants-page";
 import { TEST_USERS } from "../login/login-page";
 import { LoginPage } from "../login/login-page";
+import { mockDatabaseApi } from "../helpers/mock-database-api";
 
 test.describe("Participants", () => {
-  test("Participants page renders", async ({ page }) => {
+  test.beforeEach(async ({ page }) => {
+    await mockDatabaseApi(page);
+  });
+
+  test(
+    "Participants page renders",
+    { tag: ["@critical", "@e2e", "@participants", "@PARTICIPANTS-E2E-001"] },
+    async ({ page }) => {
     const loginPage = new LoginPage(page);
     await loginPage.login(TEST_USERS.viewer.password, TEST_USERS.viewer.role);
 
@@ -12,7 +20,8 @@ test.describe("Participants", () => {
     await participantsPage.goto();
 
     await expect(participantsPage.header).toBeVisible();
-  });
+    },
+  );
 
   test.skip("Can view participants list", async ({ page }) => {
     const loginPage = new LoginPage(page);

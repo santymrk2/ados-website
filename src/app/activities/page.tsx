@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useStore } from "@nanostores/react";
 import {
@@ -8,9 +8,11 @@ import {
   Trash2,
   Users,
   Gamepad2,
-  Award,
   Trophy,
   Plus,
+  Eye,
+  Lock,
+  Unlock,
 } from "lucide-react";
 import { PageHeader, Empty } from "@/components/ui/Common";
 import { Chip } from "@/components/ui/Badges";
@@ -44,9 +46,8 @@ export default function ActivitiesPage() {
   const [confirmText, setConfirmText] = useState("");
   const [newActivityOpen, setNewActivityOpen] = useState(false);
 
-  const sorted = useMemo(
-    () => [...db.activities].sort((a, b) => b.fecha.localeCompare(a.fecha)),
-    [db.activities],
+  const sorted = [...db.activities].sort((a, b) =>
+    b.fecha.localeCompare(a.fecha),
   );
 
   const handleView = (activity: Activity) => {
@@ -105,47 +106,74 @@ export default function ActivitiesPage() {
               <div
                 key={a.id}
                 onClick={() => handleView(a)}
-                className="bg-surface rounded-2xl border border-surface-dark overflow-hidden cursor-pointer hover:shadow-md transition-shadow"
+                className="bg-surface rounded-2xl border border-surface-dark overflow-hidden cursor-pointer hover:shadow-md hover:border-primary/30 transition-all"
               >
-                <div className="p-4 flex justify-between">
-                  <div>
-                    <div className="font-black text-base">
-                      {a.titulo || "Sin título"}
+                <div className="p-4 flex items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <div className="font-black text-base leading-tight">
+                        {a.titulo || "Sin título"}
+                      </div>
+                      <span
+                        className={cn(
+                          "inline-flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-bold uppercase",
+                          a.locked
+                            ? "bg-amber-50 text-amber-700 border border-amber-200"
+                            : "bg-emerald-50 text-emerald-700 border border-emerald-200",
+                        )}
+                      >
+                        {a.locked ? (
+                          <Lock className="w-3 h-3" />
+                        ) : (
+                          <Unlock className="w-3 h-3" />
+                        )}
+                        {a.locked ? "Bloqueada" : "Editable"}
+                      </span>
                     </div>
                     <div className="text-sm text-text-muted mt-1">
                       {formatDate(a.fecha)}
                     </div>
                   </div>
                   {isAdmin && (
-                    <div className="flex gap-2">
+                    <div className="flex shrink-0 gap-2">
                       <Button
                         variant="outline"
-                        size="icon"
+                        size="sm"
                         onClick={(e) => handleEdit(a, e)}
+                        className="min-h-10 px-3"
                       >
                         <Pencil className="w-4 h-4 text-primary" />
+                        Editar
                       </Button>
                       <Button
-                        variant="destructive"
-                        size="icon"
+                        variant="outline"
+                        size="sm"
                         onClick={(e) => del(a.id, e)}
+                        className="min-h-10 px-3 border-destructive/30 text-destructive hover:bg-destructive/10"
                       >
                         <Trash2 className="w-4 h-4" />
+                        Eliminar
                       </Button>
                     </div>
                   )}
                 </div>
-                <div className="p-3 flex gap-2 border-t border-surface-dark flex-wrap">
-                  <Chip icon={Users} val={a.asistentes.length} label="asist." />
-                  <Chip icon={Gamepad2} val={a.juegos.length} label="juegos" />
-                  <Chip
-                    icon={Trophy}
-                    val={(a.goles || []).reduce(
-                      (s: number, g: Gol) => s + g.cant,
-                      0,
-                    )}
-                    label="goles"
-                  />
+                <div className="p-3 flex items-center justify-between gap-3 border-t border-surface-dark">
+                  <div className="flex gap-2 flex-wrap">
+                    <Chip icon={Users} val={a.asistentes.length} label="asist." />
+                    <Chip icon={Gamepad2} val={a.juegos.length} label="juegos" />
+                    <Chip
+                      icon={Trophy}
+                      val={(a.goles || []).reduce(
+                        (s: number, g: Gol) => s + g.cant,
+                        0,
+                      )}
+                      label="goles"
+                    />
+                  </div>
+                  <span className="inline-flex shrink-0 items-center gap-1 text-xs font-bold text-primary">
+                    <Eye className="w-4 h-4" />
+                    Abrir
+                  </span>
                 </div>
               </div>
             ))}

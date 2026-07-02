@@ -65,8 +65,8 @@ function GoalRow({
   return (
     <div
       className={cn(
-        "flex items-center gap-2 p-2 bg-white rounded-xl border border-surface-dark shadow-sm",
-        "transition-all duration-200 hover:border-yellow-400/50"
+        "flex items-center gap-2 p-2 bg-white rounded-2xl border border-surface-dark shadow-sm",
+        "transition-all duration-200 hover:border-primary/30"
       )}
     >
       {/* JUGADOR - Popover Selector con Avatar */}
@@ -121,8 +121,8 @@ function GoalRow({
                     onClick={() => handleSelect(p.id)}
                     className={cn(
                       "flex items-center gap-2 w-full px-3 py-2 text-left transition-colors",
-                      "hover:bg-yellow-50",
-                      p.id === g.pid && "bg-yellow-50/50"
+                      "hover:bg-indigo-50",
+                      p.id === g.pid && "bg-indigo-50/50"
                     )}
                   >
                     <Avatar p={p} size={24} />
@@ -151,7 +151,7 @@ function GoalRow({
             className={cn(
               "px-2 py-1 rounded-md text-[10px] font-black transition-all",
               g.tipo === type.id 
-                ? "bg-white text-yellow-600 shadow-sm" 
+                ? "bg-white text-primary shadow-sm" 
                 : "text-text-muted hover:text-text-primary"
             )}
           >
@@ -176,7 +176,7 @@ function GoalRow({
         <button
           disabled={locked}
           onClick={() => g.id != null && onUpdate(g.id, "cant", (g.cant || 1) + 1)}
-          className="w-6 h-6 flex items-center justify-center text-text-muted hover:text-teal-500 transition-colors"
+          className="w-6 h-6 flex items-center justify-center text-text-muted hover:text-primary transition-colors"
         >
           <Plus className="w-3 h-3" />
         </button>
@@ -217,7 +217,6 @@ export default function GolesPage() {
   const add = () => {
     const ng: Gol = { id: generateTempId(), pid: null, tipo: "f", cant: 1 };
     setLocal("goles", (prev: Gol[]) => [...(prev || []), ng], true);
-    toast.success("Fila de gol agregada");
   };
 
   const del = async (id: number) => {
@@ -228,7 +227,8 @@ export default function GolesPage() {
     }
 
     try {
-      await syncWithServer("goal_remove", { id }, "goles", updateFn);
+      setLocal("goles", updateFn, true);
+      await syncWithServer("goal_remove", { id });
       toast.success("Gol eliminado");
     } catch (e) {
       const err = e as Error;
@@ -245,7 +245,7 @@ export default function GolesPage() {
     if (id < 0) return;
 
     try {
-      await syncWithServer("goal_update", { id, [k]: v }, "goles", updateFn);
+      await syncWithServer("goal_update", { id, [k]: v });
     } catch (e) {
       const err = e as Error;
       toast.error("Error al actualizar: " + err.message);
@@ -257,7 +257,8 @@ export default function GolesPage() {
     const updateFn = (prev: Gol[]) => (prev || []).map(g => g.id === tempId ? goal : g);
     
     try {
-      const result = await syncWithServer("goal_add", { pid: goal.pid, tipo: goal.tipo, cant: goal.cant }, "goles", updateFn);
+      setLocal("goles", updateFn, true);
+      const result = await syncWithServer("goal_add", { pid: goal.pid, tipo: goal.tipo, cant: goal.cant });
       const realId = (result as { id: number }).id;
       setLocal("goles", (prev: Gol[]) => (prev || []).map(g => g.id === tempId ? { ...g, id: realId } : g), true);
     } catch (e) {
@@ -277,7 +278,7 @@ export default function GolesPage() {
           variant="ghost"
           size="sm"
           disabled={locked}
-          className="bg-yellow-50 text-yellow-600 hover:bg-yellow-100 flex items-center gap-1"
+          className="bg-indigo-50 text-primary hover:bg-indigo-100 flex items-center gap-1"
         >
           <Plus className="w-4 h-4" />
           <span>Agregar</span>
@@ -301,8 +302,8 @@ export default function GolesPage() {
           ))
         ) : (
           <div className="py-12 flex flex-col items-center justify-center border-2 border-dashed border-surface-dark rounded-2xl bg-surface-light/30">
-            <div className="w-12 h-12 rounded-full bg-yellow-50 flex items-center justify-center mb-3">
-              <Plus className="w-6 h-6 text-yellow-500" />
+            <div className="w-12 h-12 rounded-full bg-indigo-50 flex items-center justify-center mb-3">
+              <Plus className="w-6 h-6 text-primary" />
             </div>
             <p className="text-sm text-text-muted mb-4">No hay goles registrados</p>
             <Button
@@ -310,7 +311,7 @@ export default function GolesPage() {
               variant="outline"
               size="sm"
               disabled={locked}
-              className="border-yellow-200 text-yellow-600 hover:bg-yellow-50"
+              className="border-primary/30 text-primary hover:bg-indigo-50"
             >
               Registrar primer gol
             </Button>

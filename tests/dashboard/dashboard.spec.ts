@@ -1,20 +1,26 @@
 import { test, expect } from "@playwright/test";
 import { DashboardPage, BottomNav } from "./dashboard-page";
+import { mockDatabaseApi } from "../helpers/mock-database-api";
 
 test.describe("Dashboard", () => {
   let dashboardPage: DashboardPage;
   let bottomNav: BottomNav;
 
   test.beforeEach(async ({ page }) => {
+    await mockDatabaseApi(page);
     dashboardPage = new DashboardPage(page);
     bottomNav = new BottomNav(page);
   });
 
-  test("Dashboard loads with header", async ({ page }) => {
+  test(
+    "Dashboard loads with header",
+    { tag: ["@critical", "@e2e", "@dashboard", "@DASHBOARD-E2E-001"] },
+    async ({ page }) => {
     await dashboardPage.loginAsViewer();
     await dashboardPage.goto();
     await expect(dashboardPage.header).toBeVisible();
-  });
+    },
+  );
 
   test.skip("Bottom navigation is visible", async ({ page }) => {
     await dashboardPage.loginAsViewer();

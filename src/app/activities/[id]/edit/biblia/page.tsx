@@ -10,21 +10,24 @@ import { cn } from "@/lib/utils";
 import type { ParticipantBasic } from "@/lib/types";
 
 export default function BibliaPage() {
-  const { activity: act, setLocal, syncWithServer, db, locked, searchQuery, setFilterContent } = useEditContext();
+  const { activity: act, setLocal, syncWithServer, db, locked, searchQuery, setFilterContent, setFiltersActive } = useEditContext();
+  const [sortBy, setSortBy] = useState<"apellido" | "nombre">("apellido");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
   const [selectedAges, setSelectedAges] = useState<number[]>([]);
 
   // Edades disponibles de TODOS los participantes
   const availableAges = useMemo(() => {
     const ages = new Set<number>();
-    db.participants.forEach((p) => {
+    db.participants
+      .filter((p) => act.asistentes.includes(p.id))
+      .forEach((p) => {
       if (p.fechaNacimiento) {
         const edad = getEdad(p.fechaNacimiento);
         if (edad !== null) ages.add(edad);
       }
     });
     return Array.from(ages).sort((a, b) => a - b);
-  }, [db.participants]);
+  }, [db.participants, act.asistentes]);
 
   const toggleAge = useCallback((age: number) => {
     setSelectedAges((prev) =>
@@ -36,11 +39,39 @@ export default function BibliaPage() {
 
   // Proveer filtros al FloatingNav
   useEffect(() => {
+    setFiltersActive(sortBy !== "apellido" || sortOrder !== "asc" || selectedAges.length > 0);
     setFilterContent(
       <div className="space-y-3">
         <div>
           <span className="text-[11px] font-bold text-text-muted uppercase tracking-wider mb-2 block">
-            Orden alfabético
+            Ordenar por
+          </span>
+          <div className="flex gap-2 mb-3">
+            <button
+              onClick={() => setSortBy("apellido")}
+              className={cn(
+                "flex-1 px-3 py-2 rounded-lg text-sm font-bold transition-colors border",
+                sortBy === "apellido"
+                  ? "bg-primary text-white border-primary"
+                  : "bg-white text-foreground border-border hover:bg-surface-light",
+              )}
+            >
+              Apellido
+            </button>
+            <button
+              onClick={() => setSortBy("nombre")}
+              className={cn(
+                "flex-1 px-3 py-2 rounded-lg text-sm font-bold transition-colors border",
+                sortBy === "nombre"
+                  ? "bg-primary text-white border-primary"
+                  : "bg-white text-foreground border-border hover:bg-surface-light",
+              )}
+            >
+              Nombre
+            </button>
+          </div>
+          <span className="text-[11px] font-bold text-text-muted uppercase tracking-wider mb-2 block">
+            Dirección
           </span>
           <div className="flex gap-2">
             <button
@@ -102,8 +133,11 @@ export default function BibliaPage() {
         </div>
       </div>,
     );
-    return () => setFilterContent(null);
-  }, [sortOrder, selectedAges, availableAges, setFilterContent, toggleAge, clearAges]);
+    return () => {
+      setFilterContent(null);
+      setFiltersActive(false);
+    };
+  }, [sortBy, sortOrder, selectedAges, availableAges, setFilterContent, setFiltersActive, toggleAge, clearAges]);
 
   const toggle = (id: number) => {
     const c = act.biblias || [];
@@ -112,12 +146,14 @@ export default function BibliaPage() {
       const arr = prev || [];
       return arr.includes(id) ? arr.filter((x) => x !== id) : [...arr, id];
     };
-    setLocal("biblias", updateFn);
-    syncWithServer("biblias", { participantId: id, value: !isIncluded }, "biblias", updateFn);
+    setLocal("biblias", updateFn, true);
+    syncWithServer("biblias", { participantId: id, value: !isIncluded });
   };
 
   const sorted = useMemo<ParticipantBasic[]>(() => {
-    let arr: ParticipantBasic[] = [...db.participants];
+    let arr: ParticipantBasic[] = db.participants.filter((p) =>
+      act.asistentes.includes(p.id),
+    );
 
     // Filtro por búsqueda
     if (searchQuery) {
@@ -139,12 +175,14 @@ export default function BibliaPage() {
 
     // Orden
     arr.sort((a, b) => {
-      const cmp = `${a.apellido} ${a.nombre}`.localeCompare(`${b.apellido} ${b.nombre}`);
+      const nameA = sortBy === "nombre" ? `${a.nombre} ${a.apellido}` : `${a.apellido} ${a.nombre}`;
+      const nameB = sortBy === "nombre" ? `${b.nombre} ${b.apellido}` : `${b.apellido} ${b.nombre}`;
+      const cmp = nameA.localeCompare(nameB);
       return sortOrder === "asc" ? cmp : -cmp;
     });
 
     return arr;
-  }, [db.participants, searchQuery, selectedAges, sortOrder]);
+  }, [db.participants, act.asistentes, searchQuery, selectedAges, sortBy, sortOrder]);
 
   return (
     <div>
@@ -168,14 +206,13 @@ export default function BibliaPage() {
             return (
               <div
                 key={p.id}
-                className={`rounded-lg border bg-white ${bib ? "border-primary shadow-md shadow-primary/20" : "border-surface-dark"}`}
+                className={`rounded-2xl border bg-white ${bib ? "border-primary shadow-md shadow-primary/20" : "border-surface-dark"}`}
               >
                 <div className="flex items-center p-3 gap-3">
                   <Avatar p={p} size={30} />
                   <div className="flex-1">
                     <div
-                      className="font-bold text-sm"
-                      style={{ color: bib ? "#1a1a1a" : "#999" }}
+                      className={cn("font-bold text-sm", bib ? "text-foreground" : "text-text-muted")}
                     >
                       {p.nombre} {p.apellido}
                     </div>
@@ -187,15 +224,12 @@ export default function BibliaPage() {
                     onClick={() => toggle(p.id)}
                     disabled={locked}
                     className={cn(
-                      "flex items-center justify-center h-9 min-w-9 px-3 text-sm font-semibold transition-colors",
+                      "flex items-center justify-center h-9 min-w-9 px-3 text-sm font-semibold transition-colors rounded-2xl border",
                       locked && "opacity-50 cursor-not-allowed pointer-events-none",
+                      bib
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-surface-light text-text-muted border-surface-dark",
                     )}
-                    style={{
-                      backgroundColor: bib ? "var(--color-primary)" : "#f5f5f5",
-                      border: `1px solid ${bib ? "var(--color-primary)" : "#e5e5e5"}`,
-                      color: bib ? "var(--color-primary-foreground)" : "#999",
-                      borderRadius: "12px",
-                    }}
                   >
                     <BookOpen className="w-3.5 h-3.5" />
                   </button>

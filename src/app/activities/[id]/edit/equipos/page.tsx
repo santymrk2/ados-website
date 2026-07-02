@@ -4,7 +4,7 @@ import { useState, useMemo, useEffect } from "react";
 import { useEditContext } from "../layout";
 import { toast } from "@/hooks/use-toast";
 import { Zap, Shuffle } from "lucide-react";
-import { TEAMS, TEAM_COLORS, getTeamBg } from "@/lib/constants";
+import { TEAMS, TEAM_COLORS } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import { Avatar } from "@/components/ui/Avatar";
 import { SexBadge } from "@/components/ui/Badges";
@@ -23,8 +23,9 @@ import {
 import type { Activity, ParticipantBasic } from "@/lib/types";
 
 export default function EquiposPage() {
-  const { activity: act, setLocal, syncWithServer, db, locked, searchQuery, setFilterContent } = useEditContext();
+  const { activity: act, setLocal, syncWithServer, db, locked, searchQuery, setFilterContent, setFiltersActive } = useEditContext();
   const [selectedTeam, setSelectedTeam] = useState<string | null>(null);
+  const [sortBy, setSortBy] = useState<"apellido" | "nombre">("apellido");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
   const [confirmChange, setConfirmChange] = useState<{
     player: ParticipantBasic;
@@ -34,10 +35,38 @@ export default function EquiposPage() {
 
   // Proveer filtro de orden al FloatingNav
   useEffect(() => {
+    setFiltersActive(sortBy !== "apellido" || sortOrder !== "asc");
     setFilterContent(
       <div>
         <span className="text-[11px] font-bold text-text-muted uppercase tracking-wider mb-2 block">
-          Orden alfabético
+          Ordenar por
+        </span>
+        <div className="flex gap-2 mb-3">
+          <button
+            onClick={() => setSortBy("apellido")}
+            className={cn(
+              "flex-1 px-3 py-2 rounded-lg text-sm font-bold transition-colors border",
+              sortBy === "apellido"
+                ? "bg-primary text-white border-primary"
+                : "bg-white text-foreground border-border hover:bg-surface-light",
+            )}
+          >
+            Apellido
+          </button>
+          <button
+            onClick={() => setSortBy("nombre")}
+            className={cn(
+              "flex-1 px-3 py-2 rounded-lg text-sm font-bold transition-colors border",
+              sortBy === "nombre"
+                ? "bg-primary text-white border-primary"
+                : "bg-white text-foreground border-border hover:bg-surface-light",
+            )}
+          >
+            Nombre
+          </button>
+        </div>
+        <span className="text-[11px] font-bold text-text-muted uppercase tracking-wider mb-2 block">
+          Dirección
         </span>
         <div className="flex gap-2">
           <button
@@ -45,7 +74,7 @@ export default function EquiposPage() {
             className={cn(
               "flex-1 px-3 py-2 rounded-lg text-sm font-bold transition-colors border",
               sortOrder === "asc"
-                ? "bg-primary text-white border-primary"
+                ? "bg-primary text-white border-primary shadow-sm ring-2 ring-primary/20"
                 : "bg-white text-foreground border-border hover:bg-surface-light",
             )}
           >
@@ -65,8 +94,11 @@ export default function EquiposPage() {
         </div>
       </div>,
     );
-    return () => setFilterContent(null);
-  }, [sortOrder, setFilterContent]);
+    return () => {
+      setFilterContent(null);
+      setFiltersActive(false);
+    };
+  }, [sortBy, sortOrder, setFilterContent, setFiltersActive]);
 
   const activeTeams = useMemo(
     () => TEAMS.slice(0, act.cantEquipos || 4),
@@ -101,16 +133,17 @@ export default function EquiposPage() {
     }
 
     arr.sort((a, b) => {
-      const cmp = `${a.apellido} ${a.nombre}`.localeCompare(
-        `${b.apellido} ${b.nombre}`,
-      );
+      const nameA = sortBy === "nombre" ? `${a.nombre} ${a.apellido}` : `${a.apellido} ${a.nombre}`;
+      const nameB = sortBy === "nombre" ? `${b.nombre} ${b.apellido}` : `${b.apellido} ${b.nombre}`;
+      const cmp = nameA.localeCompare(nameB);
       return sortOrder === "asc" ? cmp : -cmp;
     });
 
     return arr;
-  }, [present, searchQuery, sortOrder]);
+  }, [present, searchQuery, sortBy, sortOrder]);
 
   const setTeam = async (pid: number, team: string) => {
+    const previousEquipos = { ...(act.equipos || {}) };
     const updateFn = (prev: Record<string, string>) => {
       const next = { ...(prev || {}) };
       if (next[pid] === team) {
@@ -121,52 +154,76 @@ export default function EquiposPage() {
       return next;
     };
 
-    setLocal("equipos", updateFn);
+    setLocal("equipos", updateFn, true);
 
     try {
       const currentTeam = act.equipos?.[pid];
       const finalTeam = currentTeam === team ? null : team;
-      await syncWithServer("team", { participantId: pid, team: finalTeam }, "equipos", updateFn);
-      toast.success("Equipo actualizado");
+      await syncWithServer("team", { participantId: pid, team: finalTeam });
     } catch (e) {
+      setLocal("equipos", () => previousEquipos, true);
       const err = e as Error;
       toast.error("Error al actualizar equipo: " + err.message);
     }
   };
 
-  const autoBalance = (resetAll = false) => {
-    setLocal("equipos", (prev: Record<string, string>) => {
-      const eq = resetAll ? {} : { ...(prev || {}) };
-      const counts: Record<string, { M: number; F: number; total: number }> = {};
-      activeTeams.forEach((t) => {
-        counts[t] = { M: 0, F: 0, total: 0 };
-      });
-
-      present.forEach((p) => {
-        const t = eq[p.id];
-        if (t && activeTeams.includes(t)) {
-          counts[t][p.sexo as "M" | "F"]++;
-          counts[t].total++;
-        }
-      });
-
-      const unassigned = present.filter((p) => !eq[p.id]);
-      const masc = unassigned.filter((p) => p.sexo === "M");
-      const fem = unassigned.filter((p) => p.sexo === "F");
-
-      [...masc, ...fem].forEach((p: ParticipantBasic) => {
-        const best = [...activeTeams].sort(
-          (a, b) =>
-            counts[a][p.sexo as "M" | "F"] - counts[b][p.sexo as "M" | "F"] ||
-            counts[a].total - counts[b].total,
-        )[0];
-        eq[p.id] = best;
-        counts[best][p.sexo as "M" | "F"]++;
-        counts[best].total++;
-      });
-      return eq;
+  const buildBalancedTeams = (resetAll = false) => {
+    const eq: Record<string, string> = resetAll
+      ? {}
+      : Object.fromEntries(
+        Object.entries(act.equipos || {}).filter(
+          ([participantId, team]) =>
+            activeTeams.includes(team) &&
+            present.some((participant) => participant.id === Number(participantId)),
+        ),
+      ) as Record<string, string>;
+    const counts: Record<string, { M: number; F: number; total: number }> = {};
+    activeTeams.forEach((t) => {
+      counts[t] = { M: 0, F: 0, total: 0 };
     });
-    toast.success(resetAll ? "Equipos redistribuidos" : "Equipos completados");
+
+    present.forEach((p) => {
+      const t = eq[p.id];
+      if (t && activeTeams.includes(t)) {
+        counts[t][p.sexo as "M" | "F"]++;
+        counts[t].total++;
+      }
+    });
+
+    const unassigned = present.filter((p) => !eq[p.id]);
+    const masc = unassigned.filter((p) => p.sexo === "M");
+    const fem = unassigned.filter((p) => p.sexo === "F");
+
+    [...masc, ...fem].forEach((p: ParticipantBasic) => {
+      const best = [...activeTeams].sort(
+        (a, b) =>
+          counts[a][p.sexo as "M" | "F"] - counts[b][p.sexo as "M" | "F"] ||
+          counts[a].total - counts[b].total,
+      )[0];
+      if (!best) return;
+      eq[p.id] = best;
+      counts[best][p.sexo as "M" | "F"]++;
+      counts[best].total++;
+    });
+
+    return eq;
+  };
+
+  const autoBalance = async (resetAll = false) => {
+    const previousEquipos = { ...(act.equipos || {}) };
+    const nextEquipos = buildBalancedTeams(resetAll);
+
+    setLocal("equipos", () => nextEquipos, true);
+
+    try {
+      if (act.id) {
+        await syncWithServer("teams_bulk", { equipos: nextEquipos });
+      }
+    } catch (e) {
+      setLocal("equipos", () => previousEquipos, true);
+      const err = e as Error;
+      toast.error("Error al actualizar equipos: " + err.message);
+    }
   };
 
   const handleCompletar = async () => {
@@ -176,7 +233,7 @@ export default function EquiposPage() {
       { title: "Completar equipos", confirmText: "Completar", isDestructive: false },
     );
     if (!confirmed) return;
-    autoBalance(false);
+    await autoBalance(false);
   };
 
   const handleRedistribuir = async () => {
@@ -186,7 +243,7 @@ export default function EquiposPage() {
       { title: "Redistribuir equipos", confirmText: "Redistribuir", isDestructive: true },
     );
     if (!confirmed) return;
-    autoBalance(true);
+    await autoBalance(true);
   };
 
   const teamStats = activeTeams.map((t) => ({
@@ -246,18 +303,16 @@ export default function EquiposPage() {
         {teamStats.map(({ team, total, m, f }) => (
           <div
             key={team}
-            className="rounded-2xl p-3 flex items-center gap-2 border-2 cursor-pointer hover:scale-[1.02] transition-transform"
+            className="rounded-2xl border border-surface-dark bg-white p-3 flex items-center gap-2 cursor-pointer transition-shadow hover:shadow-md"
             style={{
-              backgroundColor: getTeamBg(team),
-              borderColor:
-                selectedTeam === team
-                  ? TEAM_COLORS[team]
-                  : TEAM_COLORS[team] + "44",
+              borderLeftColor: TEAM_COLORS[team],
+              borderLeftWidth: 4,
+              ...(selectedTeam === team ? { boxShadow: `0 0 0 2px ${TEAM_COLORS[team]}` } : {}),
             }}
             onClick={() => handleTeamClick(team)}
           >
             <div
-              className="font-black text-lg"
+              className="font-black text-lg shrink-0"
               style={{ color: TEAM_COLORS[team] }}
             >
               {team}
@@ -265,8 +320,8 @@ export default function EquiposPage() {
             <div className="flex-1 text-center">
               <div className="font-black text-xl">{total}</div>
               <div className="text-[10px] text-text-muted flex items-center justify-center gap-0.5">
-                <SexBadge sex="M" className="w-3 h-3" />
-                {m} <SexBadge sex="F" className="w-3 h-3" />
+                <SexBadge sex="M" size={12} />
+                {m} <SexBadge sex="F" size={12} />
                 {f}
               </div>
             </div>
@@ -309,15 +364,15 @@ export default function EquiposPage() {
           </div>
           <div className="flex flex-col gap-3">
             {selectedTeamData.women.length > 0 && (
-              <div className="bg-pink-50 rounded-xl p-3 border border-pink-100">
-                <div className="font-bold text-sm text-pink-700 mb-2 flex items-center gap-2">
-                  Mujer ({selectedTeamData.women.length})
+              <div className="bg-surface-light/50 rounded-xl p-3 border border-surface-dark">
+                <div className="font-bold text-sm text-muted-foreground mb-2 flex items-center gap-2">
+                  <SexBadge sex="F" size={16} /> Mujer ({selectedTeamData.women.length})
                 </div>
                 <div className="flex flex-col gap-1">
                   {selectedTeamData.women.map((p: ParticipantBasic) => (
                     <div
                       key={p.id}
-                      className="bg-white rounded-lg p-2 flex items-center gap-2"
+                      className="rounded-lg p-2 flex items-center gap-2"
                     >
                       <Avatar p={p} size={24} />
                       <div className="flex-1">
@@ -332,15 +387,15 @@ export default function EquiposPage() {
             )}
 
             {selectedTeamData.men.length > 0 && (
-              <div className="bg-cyan-50 rounded-xl p-3 border border-cyan-100">
-                <div className="font-bold text-sm text-cyan-700 mb-2 flex items-center gap-2">
-                  Varón ({selectedTeamData.men.length})
+              <div className="bg-surface-light/50 rounded-xl p-3 border border-surface-dark">
+                <div className="font-bold text-sm text-muted-foreground mb-2 flex items-center gap-2">
+                  <SexBadge sex="M" size={16} /> Varón ({selectedTeamData.men.length})
                 </div>
                 <div className="flex flex-col gap-1">
                   {selectedTeamData.men.map((p: ParticipantBasic) => (
                     <div
                       key={p.id}
-                      className="bg-white rounded-lg p-2 flex items-center gap-2"
+                      className="rounded-lg p-2 flex items-center gap-2"
                     >
                       <Avatar p={p} size={24} />
                       <div className="flex-1">
@@ -377,9 +432,10 @@ export default function EquiposPage() {
               return (
                 <div
                   key={p.id}
-                  className="bg-white rounded-lg p-3 flex items-center gap-3 border"
+                  className="rounded-2xl border border-surface-dark bg-white p-3 flex items-center gap-3"
                   style={{
-                    borderColor: cur ? TEAM_COLORS[cur] + "55" : "#e5e5e5",
+                    borderLeftColor: cur ? TEAM_COLORS[cur] : "transparent",
+                    borderLeftWidth: 4,
                   }}
                 >
                   <Avatar p={p} size={32} />
@@ -390,8 +446,9 @@ export default function EquiposPage() {
                   </div>
                   <div className="flex gap-1">
                     {activeTeams.map((t) => (
-                      <Button
+                      <button
                         key={t}
+                        type="button"
                         onClick={() => {
                           if (cur && cur !== t) {
                             setConfirmChange({ player: p, fromTeam: cur, toTeam: t });
@@ -399,18 +456,16 @@ export default function EquiposPage() {
                             setTeam(p.id, t);
                           }
                         }}
-                        variant="ghost"
-                        size="sm"
                         disabled={locked}
-                        className="w-8 h-7 rounded font-black text-[10px] p-0"
+                        className="rounded-full px-3 py-1 text-xs font-bold transition border disabled:opacity-50"
                         style={{
-                          backgroundColor:
-                            cur === t ? TEAM_COLORS[t] : getTeamBg(t),
-                          color: cur === t ? "white" : "#666",
+                          backgroundColor: cur === t ? TEAM_COLORS[t] : "transparent",
+                          borderColor: cur === t ? TEAM_COLORS[t] : TEAM_COLORS[t] + "44",
+                          color: cur === t ? "white" : TEAM_COLORS[t],
                         }}
                       >
                         {t}
-                      </Button>
+                      </button>
                     ))}
                   </div>
                 </div>

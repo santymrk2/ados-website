@@ -1,0 +1,71 @@
+name: CI
+
+on:
+  pull_request:
+    branches:
+      - develop
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - ready_for_review
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  branch-rules:
+    name: Branch Rules
+    if: github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Validate branch model
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          HEAD="${{ github.head_ref }}"
+          BASE="${{ github.base_ref }}"
+
+          echo "Validating branch flow: ${HEAD} -> ${BASE}"
+
+          case "$BASE" in
+            develop)
+              case "$HEAD" in
+                feature/*|fix/*|refactor/*|enhancement/*|dependabot/*|backport/*)
+                  echo "OK: day-to-day or backport branch targeting develop."
+                  ;;
+                *)
+                  echo "::error::Only feature/*, fix/*, refactor/*, enhancement/*, dependabot/*, or backport/* may target develop."
+                  exit 1
+                  ;;
+              esac
+              ;;
+            main)
+              case "$HEAD" in
+                develop|hotfix/*)
+                  echo "OK: release or hotfix branch targeting main."
+                  ;;
+                *)
+                  echo "::error::Only develop or hotfix/* may target main. Day-to-day branches like feature/*, fix/*, refactor/*, enhancement/*, dependabot/*, and backport/* must target develop."
+                  exit 1
+                  ;;
+              esac
+              ;;
+            *)
+              echo "::error::Unsupported PR base branch: ${BASE}"
+              exit 1
+              ;;
+          esac
+
+  quality-gate:
+    name: Quality Gate
+    if: github.event.pull_request.draft == false
+    needs: branch-rules
+    uses: ./.github/workflows/_quality-gate.yml

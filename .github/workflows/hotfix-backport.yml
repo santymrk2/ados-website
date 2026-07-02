@@ -1,0 +1,21 @@
+name: Hotfix Backport
+
+on:
+  pull_request:
+    types:
+      - closed
+    branches:
+      - main
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  backport-hotfix:
+    name: Backport hotfix to develop
+    if: github.event.pull_request.merged == true && startsWith(github.event.pull_request.head.ref, 'hotfix/')
+    uses: ./.github/workflows/backport.yml
+    with:
+      source_sha: ${{ github.event.pull_request.merge_commit_sha }}
+      source_label: "PR #${{ github.event.pull_request.number }}"

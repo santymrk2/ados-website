@@ -8,6 +8,7 @@ import { Avatar } from "@/components/ui/Avatar";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import type { ParticipantBasic } from "@/lib/types";
+import { ArrowRight, X, Plus, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface InvitacionWithId {
@@ -79,12 +80,12 @@ function InvitationRow({
   return (
     <div
       className={cn(
-        "flex items-center gap-2 px-3 py-2 bg-white rounded-lg border border-surface-dark relative",
-        "transition-all duration-150 hover:border-teal-400/50"
+        "flex items-center gap-2 px-3 py-2 bg-white rounded-2xl border border-surface-dark relative",
+        "transition-all duration-150 hover:border-primary/30"
       )}
     >
       {/* Label sutil para clarificar roles */}
-      <div className="absolute -top-2 left-2 text-[9px] font-black text-teal-600 bg-white px-1 z-0 pointer-events-none">
+      <div className="absolute -top-2 left-2 text-[9px] font-black text-primary bg-white px-1 z-0 pointer-events-none">
         INVITA
       </div>
       <div className="absolute -top-2 right-8 text-[9px] font-black text-purple-600 bg-white px-1 z-0 pointer-events-none">
@@ -127,7 +128,7 @@ function InvitationRow({
                       className={cn(
                         "flex items-center gap-2 w-full px-3 py-2 text-left",
                         "hover:bg-surface-light transition-colors",
-                        p.id === (invitador as ParticipantBasic | null)?.id && "bg-teal-50"
+                        p.id === (invitador as ParticipantBasic | null)?.id && "bg-indigo-50"
                       )}
                     >
                       <Avatar p={p} size={24} />
@@ -151,7 +152,7 @@ function InvitationRow({
                 className={cn(
                   "flex items-center gap-2 w-full text-left",
                   "p-2 rounded-lg border border-dashed border-surface-dark",
-                  "hover:border-teal-400 hover:bg-teal-50/30 transition-colors",
+                  "hover:border-primary/40 hover:bg-indigo-50/30 transition-colors",
                   "text-sm text-text-muted"
                 )}
                 onClick={() => !locked && setOpenDropdown(inv.id + "_invitador")}
@@ -171,7 +172,7 @@ function InvitationRow({
                     className={cn(
                       "flex items-center gap-2 w-full px-3 py-2 text-left",
                       "hover:bg-surface-light transition-colors",
-                      false && "bg-teal-50"
+                      false && "bg-indigo-50"
                     )}
                   >
                     <Avatar p={p} size={24} />
@@ -187,21 +188,8 @@ function InvitationRow({
       </div>
 
       {/* FLECHA DIRECCIONAL - El elemento que comunica la relación */}
-      <div className="flex-shrink-0 text-teal-600">
-        <svg
-          width="20"
-          height="20"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="rotate-0 rtl:rotate-180"
-        >
-          <path d="M5 12h14" />
-          <path d="m12 5 7 7-7 7" />
-        </svg>
+      <div className="flex-shrink-0 text-primary">
+        <ArrowRight className="w-5 h-5 rotate-0 rtl:rotate-180" />
       </div>
 
       {/* INVITADO - Clickable trigger */}
@@ -241,7 +229,7 @@ function InvitationRow({
                       className={cn(
                         "flex items-center gap-2 w-full px-3 py-2 text-left",
                         "hover:bg-surface-light transition-colors",
-                        p.id === (invitado as ParticipantBasic | null)?.id && "bg-teal-50"
+                        p.id === (invitado as ParticipantBasic | null)?.id && "bg-indigo-50"
                       )}
                     >
                       <Avatar p={p} size={24} />
@@ -265,7 +253,7 @@ function InvitationRow({
                 className={cn(
                   "flex items-center gap-2 w-full text-left",
                   "p-2 rounded-lg border border-dashed border-surface-dark",
-                  "hover:border-teal-400 hover:bg-teal-50/30 transition-colors",
+                  "hover:border-primary/40 hover:bg-indigo-50/30 transition-colors",
                   "text-sm text-text-muted"
                 )}
                 onClick={() => !locked && setOpenDropdown(inv.id + "_invitado")}
@@ -294,7 +282,7 @@ function InvitationRow({
                       className={cn(
                         "flex items-center gap-2 w-full px-3 py-2 text-left",
                         "hover:bg-surface-light transition-colors",
-                        false && "bg-teal-50"
+                        false && "bg-indigo-50"
                       )}
                     >
                       <Avatar p={p} size={24} />
@@ -322,10 +310,7 @@ function InvitationRow({
         disabled={locked}
         className="flex-shrink-0 text-red-500 hover:bg-red-50 w-8 h-8"
       >
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M18 6 6 18" />
-          <path d="m6 6 12 12" />
-        </svg>
+        <X className="w-4 h-4" />
       </Button>
     </div>
   );
@@ -346,7 +331,6 @@ export default function InvitadosPage() {
       ...currentList,
       { id: tempId, invitador: null, invitadoId: null },
     ], true);
-    toast.success("Invitación agregada");
   };
 
   const del = async (id: number) => {
@@ -362,11 +346,10 @@ export default function InvitadosPage() {
     }
 
     try {
+      setLocal("invitaciones", newList, true);
       await syncWithServer(
         "invitacion_delete",
         { id },
-        "invitaciones",
-        newList,
       );
       toast.success("Invitación eliminada");
     } catch (e) {
@@ -397,10 +380,7 @@ export default function InvitadosPage() {
             invitador: k === "invitador" ? v : inv.invitador,
             invitadoId: k === "invitadoId" ? v : inv.invitadoId,
           },
-          "invitaciones",
-          newList,
         );
-        toast.success("Invitación actualizada");
       } catch (e) {
         const err = e as Error;
         toast.error("Error: " + err.message);
@@ -418,8 +398,6 @@ export default function InvitadosPage() {
             invitador: updatedInv.invitador,
             invitadoId: updatedInv.invitadoId,
           },
-          "invitaciones",
-          newList,
         );
         
         // Actualizar el ID temporal por el real del servidor
@@ -431,7 +409,6 @@ export default function InvitadosPage() {
           ),
           true
         );
-        toast.success("Invitación guardada");
       } catch (e) {
         const err = e as Error;
         toast.error("Error al guardar: " + err.message);
@@ -450,21 +427,9 @@ export default function InvitadosPage() {
           variant="ghost"
           size="sm"
           disabled={locked}
-          className="bg-teal-50 text-teal-600 hover:bg-teal-100"
+          className="bg-indigo-50 text-primary hover:bg-indigo-100"
         >
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M5 12h14" />
-            <path d="M12 5v14" />
-          </svg>
+          <Plus className="w-4 h-4" />
           <span className="ml-1">Agregar</span>
         </Button>
       </div>
@@ -489,22 +454,7 @@ export default function InvitadosPage() {
         /* Estado vacío */
         <div className="flex flex-col items-center justify-center py-8 text-center">
           <div className="w-12 h-12 rounded-full bg-surface-dark flex items-center justify-center mb-3">
-            <svg
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="text-text-muted"
-            >
-              <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-              <circle cx="9" cy="7" r="4" />
-              <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
-              <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-            </svg>
+            <Users className="w-6 h-6 text-text-muted" />
           </div>
           <p className="text-sm text-text-muted mb-3">No hay invitaciones aún</p>
           <Button
@@ -512,7 +462,7 @@ export default function InvitadosPage() {
             variant="outline"
             size="sm"
             disabled={locked}
-            className="border-teal-500 text-teal-600 hover:bg-teal-50"
+            className="border-primary/30 text-primary hover:bg-indigo-50"
           >
             Agregar primera invitación
           </Button>

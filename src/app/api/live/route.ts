@@ -1,9 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { eventBus } from "@/lib/eventBus";
+import { requireAuth } from "@/lib/api-utils";
 
 const encoder = new TextEncoder();
 
 export async function GET(request: NextRequest) {
+  const auth = requireAuth(request);
+  if (!auth.success) {
+    return auth.error;
+  }
 
   let isClosed = false;
   let interval: NodeJS.Timeout;
@@ -21,8 +26,8 @@ export async function GET(request: NextRequest) {
         }
       };
 
-      // Listen to data-changed events
       eventBus.on("data-changed", notify);
+      eventBus.on("rankings-changed", notify);
 
 
       // Send ping every 5 seconds to keep connection alive
@@ -30,7 +35,7 @@ export async function GET(request: NextRequest) {
         if (isClosed) return;
         try {
           controller.enqueue(encoder.encode(": ping\n\n"));
-        } catch (e) {}
+        } catch {}
       }, 5000);
 
       // Cleanup on disconnect
@@ -38,16 +43,18 @@ export async function GET(request: NextRequest) {
 
         isClosed = true;
         eventBus.off("data-changed", notify);
+        eventBus.off("rankings-changed", notify);
         clearInterval(interval);
         try {
           controller.close();
-        } catch (e) {}
+        } catch {}
       });
     },
     cancel() {
 
       isClosed = true;
       eventBus.off("data-changed", notify);
+      eventBus.off("rankings-changed", notify);
       clearInterval(interval);
     },
   });

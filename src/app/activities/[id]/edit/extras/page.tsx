@@ -245,16 +245,44 @@ export default function ExtrasPage() {
 
   const savingRef = useRef(false);
   const [savingKey, setSavingKey] = useState<string | null>(null);
+  const [sortBy, setSortBy] = useState<"apellido" | "nombre">("apellido");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
 
   // ---- Filter content (sort toggle) ----
 
   useEffect(() => {
-    setFiltersActive(sortOrder !== "asc");
+    setFiltersActive(sortBy !== "apellido" || sortOrder !== "asc");
     setFilterContent(
       <div>
         <span className="text-[11px] font-bold text-text-muted uppercase tracking-wider mb-2 block">
-          Orden alfabético
+          Ordenar por
+        </span>
+        <div className="flex gap-2 mb-3">
+          <button
+            onClick={() => setSortBy("apellido")}
+            className={cn(
+              "flex-1 px-3 py-2 rounded-lg text-sm font-bold transition-colors border",
+              sortBy === "apellido"
+                ? "bg-primary text-white border-primary"
+                : "bg-white text-foreground border-border hover:bg-surface-light",
+            )}
+          >
+            Apellido
+          </button>
+          <button
+            onClick={() => setSortBy("nombre")}
+            className={cn(
+              "flex-1 px-3 py-2 rounded-lg text-sm font-bold transition-colors border",
+              sortBy === "nombre"
+                ? "bg-primary text-white border-primary"
+                : "bg-white text-foreground border-border hover:bg-surface-light",
+            )}
+          >
+            Nombre
+          </button>
+        </div>
+        <span className="text-[11px] font-bold text-text-muted uppercase tracking-wider mb-2 block">
+          Dirección
         </span>
         <div className="flex gap-2">
           <button
@@ -286,33 +314,32 @@ export default function ExtrasPage() {
       setFilterContent(null);
       setFiltersActive(false);
     };
-  }, [sortOrder, setFilterContent, setFiltersActive]);
+  }, [sortBy, sortOrder, setFilterContent, setFiltersActive]);
 
   // ---- Derived data ----
 
-  const availablePlayers = useMemo(
+  const eligiblePlayers = useMemo(
     () =>
-      db.participants
-        .filter((p: ParticipantBasic) => act.asistentes.includes(p.id))
-        .sort((a: ParticipantBasic, b: ParticipantBasic) =>
-          `${a.apellido} ${a.nombre}`.localeCompare(
-            `${b.apellido} ${b.nombre}`,
-            "es",
-            { sensitivity: "base" },
-          ),
-        ),
+      db.participants.filter((p: ParticipantBasic) =>
+        act.asistentes.includes(p.id),
+      ),
     [db.participants, act.asistentes],
   );
 
   const filteredPlayers = useMemo(() => {
-    const filtered = searchQuery.trim()
-      ? availablePlayers.filter((p: ParticipantBasic) =>
+    const base = searchQuery.trim()
+      ? eligiblePlayers.filter((p: ParticipantBasic) =>
           `${p.nombre} ${p.apellido}`.toLowerCase().includes(searchQuery.toLowerCase()),
         )
-      : [...availablePlayers];
-    if (sortOrder === "desc") filtered.reverse();
-    return filtered;
-  }, [availablePlayers, searchQuery, sortOrder]);
+      : [...eligiblePlayers];
+    base.sort((a, b) => {
+      const nameA = sortBy === "nombre" ? `${a.nombre} ${a.apellido}` : `${a.apellido} ${a.nombre}`;
+      const nameB = sortBy === "nombre" ? `${b.nombre} ${b.apellido}` : `${b.apellido} ${b.nombre}`;
+      return nameA.localeCompare(nameB, "es", { sensitivity: "base" });
+    });
+    if (sortOrder === "desc") base.reverse();
+    return base;
+  }, [eligiblePlayers, searchQuery, sortBy, sortOrder]);
 
   const activeTeams = useMemo(
     () => TEAMS.slice(0, act.cantEquipos || 4),

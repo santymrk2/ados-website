@@ -11,6 +11,7 @@ import type { ParticipantBasic } from "@/lib/types";
 
 export default function BibliaPage() {
   const { activity: act, setLocal, syncWithServer, db, locked, searchQuery, setFilterContent, setFiltersActive } = useEditContext();
+  const [sortBy, setSortBy] = useState<"apellido" | "nombre">("apellido");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
   const [selectedAges, setSelectedAges] = useState<number[]>([]);
 
@@ -38,12 +39,39 @@ export default function BibliaPage() {
 
   // Proveer filtros al FloatingNav
   useEffect(() => {
-    setFiltersActive(sortOrder !== "asc" || selectedAges.length > 0);
+    setFiltersActive(sortBy !== "apellido" || sortOrder !== "asc" || selectedAges.length > 0);
     setFilterContent(
       <div className="space-y-3">
         <div>
           <span className="text-[11px] font-bold text-text-muted uppercase tracking-wider mb-2 block">
-            Orden alfabético
+            Ordenar por
+          </span>
+          <div className="flex gap-2 mb-3">
+            <button
+              onClick={() => setSortBy("apellido")}
+              className={cn(
+                "flex-1 px-3 py-2 rounded-lg text-sm font-bold transition-colors border",
+                sortBy === "apellido"
+                  ? "bg-primary text-white border-primary"
+                  : "bg-white text-foreground border-border hover:bg-surface-light",
+              )}
+            >
+              Apellido
+            </button>
+            <button
+              onClick={() => setSortBy("nombre")}
+              className={cn(
+                "flex-1 px-3 py-2 rounded-lg text-sm font-bold transition-colors border",
+                sortBy === "nombre"
+                  ? "bg-primary text-white border-primary"
+                  : "bg-white text-foreground border-border hover:bg-surface-light",
+              )}
+            >
+              Nombre
+            </button>
+          </div>
+          <span className="text-[11px] font-bold text-text-muted uppercase tracking-wider mb-2 block">
+            Dirección
           </span>
           <div className="flex gap-2">
             <button
@@ -109,7 +137,7 @@ export default function BibliaPage() {
       setFilterContent(null);
       setFiltersActive(false);
     };
-  }, [sortOrder, selectedAges, availableAges, setFilterContent, setFiltersActive, toggleAge, clearAges]);
+  }, [sortBy, sortOrder, selectedAges, availableAges, setFilterContent, setFiltersActive, toggleAge, clearAges]);
 
   const toggle = (id: number) => {
     const c = act.biblias || [];
@@ -147,12 +175,14 @@ export default function BibliaPage() {
 
     // Orden
     arr.sort((a, b) => {
-      const cmp = `${a.apellido} ${a.nombre}`.localeCompare(`${b.apellido} ${b.nombre}`);
+      const nameA = sortBy === "nombre" ? `${a.nombre} ${a.apellido}` : `${a.apellido} ${a.nombre}`;
+      const nameB = sortBy === "nombre" ? `${b.nombre} ${b.apellido}` : `${b.apellido} ${b.nombre}`;
+      const cmp = nameA.localeCompare(nameB);
       return sortOrder === "asc" ? cmp : -cmp;
     });
 
     return arr;
-  }, [db.participants, act.asistentes, searchQuery, selectedAges, sortOrder]);
+  }, [db.participants, act.asistentes, searchQuery, selectedAges, sortBy, sortOrder]);
 
   return (
     <div>

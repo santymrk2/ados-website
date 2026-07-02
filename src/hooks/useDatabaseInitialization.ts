@@ -13,6 +13,7 @@ import { checkDbConnection, refreshData } from "@/store/appStore";
 
 export function useDatabaseInitialization(enabled = true) {
   const eventSourceRef = useRef<EventSource | null>(null);
+  const connectSSERef = useRef<(() => void) | null>(null);
   const isInitializedRef = useRef(false);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -58,15 +59,17 @@ export function useDatabaseInitialization(enabled = true) {
         clearTimeout(reconnectTimeoutRef.current);
       }
       reconnectTimeoutRef.current = setTimeout(() => {
-        // Re-call connectSSE by accessing it through the ref would not work
-        // since ref.current is null. Instead, we trigger a page-level refresh
-        // which will re-initialize the connection through the useEffect
         refreshData(false);
+        connectSSERef.current?.();
       }, 5000);
     };
 
 
   }, []);
+
+  useEffect(() => {
+    connectSSERef.current = connectSSE;
+  }, [connectSSE]);
 
   const initialize = useCallback(async () => {
     if (!enabled) return;

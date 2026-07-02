@@ -483,7 +483,7 @@ export default function AsistenciaPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-[repeat(auto-fill,minmax(310px,1fr))] gap-2">
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(310px,1fr))] gap-2 items-start">
         {sorted.map((p: ParticipantBasic) => {
           const here = act.asistentes.includes(p.id);
           const punct = (act.puntuales || []).includes(p.id);
@@ -492,7 +492,7 @@ export default function AsistenciaPage() {
               key={p.id}
                className={`rounded-2xl border bg-white ${here ? "border-primary shadow-md shadow-primary/20" : "border-surface-dark"}`}
             >
-              <div className="flex items-center p-3 gap-2">
+              <div className="flex items-center p-3 gap-2 h-full">
                 <div className="flex gap-0">
                   <button
                     onClick={() => toggle("asistentes", p.id)}
@@ -523,7 +523,7 @@ export default function AsistenciaPage() {
                   </button>
                 </div>
                 <Avatar p={p} size={30} />
-                <div className="flex-1">
+                <div className="flex-1 min-w-0">
                   <div
                     className={cn("font-bold text-sm", here ? "text-foreground" : "text-text-muted")}
                   >

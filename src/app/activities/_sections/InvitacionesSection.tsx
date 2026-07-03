@@ -265,6 +265,7 @@ export function InvitacionesSection() {
   const [openDropdown, setOpenDropdown] = useState<number | string | null>(null);
   const [tempIdCounter, setTempIdCounter] = useState(1);
   const [selectedInviter, setSelectedInviter] = useState<number | null>(null);
+  const [draftInvitaciones, setDraftInvitaciones] = useState<InvitacionWithId[]>([]);
 
   const isEditing = editingSection === "invitaciones";
   const participants = db.participants;
@@ -273,6 +274,7 @@ export function InvitacionesSection() {
     () => (activity.invitaciones || []) as InvitacionWithId[],
     [activity.invitaciones],
   );
+  const visibleInvitaciones = [...invitacionesList, ...draftInvitaciones];
 
   const inviterData = useMemo(() => {
     const counts: Record<number, number> = {};
@@ -310,15 +312,17 @@ export function InvitacionesSection() {
   const add = async () => {
     const tempId = -(Date.now() + tempIdCounter);
     setTempIdCounter((prev) => prev + 1);
-    const currentList = (activity.invitaciones || []) as InvitacionWithId[];
-    const newList = [...currentList, { id: tempId, invitador: null, invitadoId: null }];
-    performQuickUpdate("invitacion_add", newList, "invitaciones").catch(() => {
-      // Error already handled by performQuickUpdate
-    });
+    setDraftInvitaciones((prev) => [
+      ...prev,
+      { id: tempId, invitador: null, invitadoId: null },
+    ]);
   };
 
   const del = async (id: number) => {
-    if (id < 0) return;
+    if (id < 0) {
+      setDraftInvitaciones((prev) => prev.filter((inv) => inv.id !== id));
+      return;
+    }
 
     const newList = ((activity.invitaciones || []) as InvitacionWithId[]).filter(
       (i) => i.id !== id,
@@ -331,15 +335,46 @@ export function InvitacionesSection() {
   };
 
   const upd = async (id: number, k: string, v: unknown) => {
-    const currentList = (activity.invitaciones || []) as InvitacionWithId[];
+    const currentList = [...visibleInvitaciones];
     const oldInv = currentList.find((i) => i.id === id);
     if (!oldInv) return;
 
-    const updatedInv = { ...oldInv, [k]: v };
-    const newList = currentList.map((i) => (i.id === id ? updatedInv : i));
+    const updatedInv = { ...oldInv, [k]: v } as InvitacionWithId;
+
+    if (id < 0) {
+      setDraftInvitaciones((prev) =>
+        prev.map((i) => (i.id === id ? updatedInv : i)),
+      );
+
+      if (updatedInv.invitador != null && updatedInv.invitadoId != null) {
+        try {
+          await performQuickUpdate(
+            "invitacion_add",
+            {
+              invitador: updatedInv.invitador,
+              invitadoId: updatedInv.invitadoId,
+            },
+            "invitaciones",
+          );
+          setDraftInvitaciones((prev) => prev.filter((i) => i.id !== id));
+        } catch {
+          // Error already handled
+        }
+      }
+
+      return;
+    }
 
     try {
-      await performQuickUpdate("invitacion_update", { invitaciones: newList }, "invitaciones");
+      await performQuickUpdate(
+        "invitacion_update",
+        {
+          id,
+          invitador: updatedInv.invitador,
+          invitadoId: updatedInv.invitadoId,
+        },
+        "invitaciones",
+      );
     } catch {
       // Error already handled
     }
@@ -377,9 +412,9 @@ export function InvitacionesSection() {
             </div>
           </div>
 
-          {invitacionesList.length > 0 ? (
+          {visibleInvitaciones.length > 0 ? (
             <div className="flex flex-col gap-2">
-              {invitacionesList.map((inv) => (
+              {visibleInvitaciones.map((inv) => (
                 <InvitationRow
                   key={inv.id}
                   inv={inv}

@@ -644,7 +644,7 @@ export function AsistenciaSection() {
           )}
 
           <div className="flex items-center justify-between mb-4">
-            <h3 className="font-bold text-lg">Asistencia</h3>
+            <h3 className="font-bold text-lg text-white">Asistencia</h3>
             <Button
               onClick={() => setShowNewPlayer(true)}
               variant="ghost"

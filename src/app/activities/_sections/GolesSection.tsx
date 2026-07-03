@@ -333,7 +333,7 @@ export function GolesSection() {
                 <div className="w-12 h-12 rounded-full bg-indigo-50 flex items-center justify-center mb-3">
                   <Plus className="w-6 h-6 text-primary" />
                 </div>
-                <p className="text-sm text-white/60 mb-4">No hay goles registrados</p>
+                <p className="text-sm text-text-muted mb-4">No hay goles registrados</p>
                 <Button
                   onClick={add}
                   variant="outline"

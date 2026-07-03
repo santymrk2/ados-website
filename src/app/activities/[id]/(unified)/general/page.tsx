@@ -247,7 +247,7 @@ export default function GeneralPage() {
               </p>
             </div>
           </div>
-          {isAdmin && (
+          {editing && isAdmin && (
             <Switch
               checked={!locked}
               onCheckedChange={handleLockToggle}

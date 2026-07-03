@@ -129,7 +129,7 @@ function GameDetailModal({
             <DialogTitle>Detalle del juego</DialogTitle>
           </DialogHeader>
           <div className="flex items-center justify-center gap-2 flex-wrap">
-                  <span className="inline-flex items-center gap-1 rounded-full border border-surface-dark/60 bg-surface-light px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white/70">
+                  <span className="inline-flex items-center gap-1 rounded-full border border-surface-dark/60 bg-surface-light px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
               {game.tipo === "individual" ? <Users className="h-3 w-3" /> : <Gamepad2 className="h-3 w-3" />}
               {gameTypeLabel(game.tipo || "grupal")}
             </span>
@@ -244,7 +244,7 @@ function GameDetailModal({
                     </Button>
                   </div>
                 ) : (
-                  <span className="text-xs text-white/70">
+                  <span className="text-xs text-muted-foreground">
                     {selected.length} {selected.length === 1 ? "equipo" : "equipos"}
                   </span>
                 )}

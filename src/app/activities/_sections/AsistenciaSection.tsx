@@ -650,7 +650,7 @@ export function AsistenciaSection() {
               variant="ghost"
               size="sm"
               disabled={locked}
-              className="bg-primary/10 text-primary text-xs flex items-center gap-1"
+              className="bg-white/20 text-white hover:bg-white/30 text-xs flex items-center gap-1"
             >
               <Plus className="w-3 h-3" /> Nuevo Jugador
             </Button>
@@ -699,18 +699,20 @@ export function AsistenciaSection() {
                         <Clock className="w-3.5 h-3.5" />
                       </button>
                     </div>
-                    <Avatar p={p} size={30} />
-                    <div className="flex-1 min-w-0">
-                      <div
-                        className={cn(
-                          "font-bold text-sm",
-                          here ? "text-foreground" : "text-text-muted",
-                        )}
-                      >
-                        {p.nombre} {p.apellido}
-                      </div>
-                      <div className="text-xs text-text-muted">
-                        {getEdad(p.fechaNacimiento)}a
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <Avatar p={p} size={30} />
+                      <div className="flex-1 min-w-0">
+                        <div
+                          className={cn(
+                            "font-bold text-sm",
+                            here ? "text-foreground" : "text-text-muted",
+                          )}
+                        >
+                          {p.nombre} {p.apellido}
+                        </div>
+                        <div className="text-xs text-text-muted">
+                          {getEdad(p.fechaNacimiento)}a
+                        </div>
                       </div>
                     </div>
                     {here && (

@@ -201,8 +201,6 @@ export function EquiposSection() {
   const handleTeamClick = (team: string) => {
     if (!editing) {
       setSelectedTeam((prev) => (prev === team ? null : team));
-    } else {
-      setSelectedTeam((prev) => (prev === team ? null : team));
     }
   };
 
@@ -213,7 +211,7 @@ export function EquiposSection() {
       {canEdit && !editing && (
         <div className="flex justify-end mb-4">
           <Button
-            onClick={() => setEditing(true)}
+            onClick={() => { setEditing(true); setSelectedTeam(null); }}
             variant="outline"
             size="sm"
             className="gap-1"
@@ -293,7 +291,7 @@ export function EquiposSection() {
       )}
 
       {/* Team detail */}
-      {selectedTeam && selectedTeamData
+      {!editing && selectedTeam && selectedTeamData
         ? (
           <div>
             <div

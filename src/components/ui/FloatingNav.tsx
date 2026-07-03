@@ -30,7 +30,7 @@ interface FloatingNavProps {
 }
 
 const COLLAPSED_HEIGHT = 56;
-const EXPANDED_WIDTH = 320;
+const EXPANDED_WIDTH = "min(320px, calc(100vw - 24px))";
 
 // Cuánto crece el alto en modo filtro según el contenido
 const FILTER_HEIGHT = 200;
@@ -171,7 +171,7 @@ export function FloatingNav({
   }, [onSearchModeChange, searchMode]);
 
   // Dimensiones según estado
-  const targetWidth = EXPANDED_WIDTH; // Siempre 320px, no se achica
+  const targetWidth = EXPANDED_WIDTH;
   const targetHeight = isOpen ? expandedHeight : filterMode ? filterHeight : COLLAPSED_HEIGHT;
   const bottomOffset = `calc(24px + env(safe-area-inset-bottom, 0px) + ${searchMode || filterMode ? keyboardInset : 0}px)`;
 

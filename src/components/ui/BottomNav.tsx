@@ -17,6 +17,7 @@ function shouldShowNav(pathname: string) {
   // Hide on form pages
   if (pathname.includes("/new")) return false;
   if (pathname.includes("/edit")) return false;
+  if (pathname.startsWith("/activities/") && pathname !== "/activities") return false;
   // Hide on activity view pages (they have their own FloatingNav)
   if (pathname.includes("/activities/") && (pathname.includes("/view/") || pathname.includes("/edit/"))) return false;
   // Hide on participant detail pages

@@ -60,7 +60,7 @@ export default function ActivitiesPage() {
 
   const handleEdit = (activity: Activity, e: React.MouseEvent) => {
     e.stopPropagation();
-    router.push(`/activities/${activity.id}/edit`);
+    router.push(`/activities/${activity.id}/general`);
   };
 
   const handleDelete = async (id: number) => {

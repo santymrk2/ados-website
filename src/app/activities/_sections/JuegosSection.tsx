@@ -2,10 +2,9 @@
 
 import { useState, useMemo, useCallback } from "react";
 import { useUnifiedActivity } from "@/lib/activity-context";
-import type { SectionId } from "@/lib/activity-sections";
 
 import { Gamepad2, Users, Plus, X, Search, Trash2 } from "lucide-react";
-import { TEAMS, TEAM_COLORS, PTS } from "@/lib/constants";
+import { TEAMS, PTS } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -520,7 +519,7 @@ export function JuegosSection() {
                         {values.length > 0 ? (
                           values.map((value) => {
                             const isTeam = j.tipo === "grupal";
-                            const teamColor = isTeam ? TEAM_COLORS[value] : undefined;
+                            // teamColor removed (unused)
                             return (
                               <span
                                 key={`${pos}-${value}`}

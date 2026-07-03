@@ -331,7 +331,7 @@ export function AsistenciaSection() {
     });
 
     return { total, males, females, puntuales, juegos, social };
-  }, [act, act?.asistentes, act?.puntuales, act?.socials, db.participants]);
+  }, [act, db.participants]);
 
   const filteredAsistentes = useMemo(() => {
     if (!act) return [];
@@ -352,7 +352,7 @@ export function AsistenciaSection() {
       `${a.apellido} ${a.nombre}`.localeCompare(`${b.apellido} ${b.nombre}`),
     );
     return enriched;
-  }, [act, act?.asistentes, db.participants, searchQuery]);
+  }, [act, db.participants, searchQuery]);
 
   const sortedAll = useMemo(() => {
     let arr = [...db.participants];
@@ -376,7 +376,7 @@ export function AsistenciaSection() {
       }
     }
     return pts;
-  }, [act, act?.asistentes, db.participants]);
+  }, [act, db.participants]);
 
   const toggleAttendance = async (id: number) => {
     const isPresent = act.asistentes.includes(id);

@@ -20,7 +20,7 @@ import { Button } from "@/components/ui/button";
 import { NewActivityModal } from "./_components/NewActivityModal";
 import { formatDate, cn } from "@/lib/utils";
 import { $role } from "@/store/appStore";
-import { deleteActivity as dbDeleteActivity } from "@/lib/api-client";
+
 import {
   AlertDialog,
   AlertDialogAction,
@@ -37,7 +37,7 @@ import type { Activity, Gol } from "@/lib/types";
 
 export default function ActivitiesPage() {
   const router = useRouter();
-  const { db, refresh, deleteActivity } = useApp();
+  const { db, deleteActivity } = useApp();
   const role = useStore($role);
   const isAdmin = role === "admin";
 

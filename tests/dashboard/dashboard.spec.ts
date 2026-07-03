@@ -15,26 +15,26 @@ test.describe("Dashboard", () => {
   test(
     "Dashboard loads with header",
     { tag: ["@critical", "@e2e", "@dashboard", "@DASHBOARD-E2E-001"] },
-    async ({ page }) => {
+    async () => {
     await dashboardPage.loginAsViewer();
     await dashboardPage.goto();
     await expect(dashboardPage.header).toBeVisible();
     },
   );
 
-  test.skip("Bottom navigation is visible", async ({ page }) => {
+  test.skip("Bottom navigation is visible", async () => {
     await dashboardPage.loginAsViewer();
     await dashboardPage.goto();
     await dashboardPage.expectBottomNavVisible();
   });
 
-  test.skip("Stats cards are displayed", async ({ page }) => {
+  test.skip("Stats cards are displayed", async () => {
     await dashboardPage.loginAsViewer();
     await dashboardPage.goto();
     await dashboardPage.expectStatsCardsVisible();
   });
 
-  test.skip("Can open and close settings panel", async ({ page }) => {
+  test.skip("Can open and close settings panel", async () => {
     await dashboardPage.loginAsViewer();
     await dashboardPage.goto();
     await dashboardPage.openSettings();

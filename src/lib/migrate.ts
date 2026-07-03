@@ -1,5 +1,5 @@
 import { db } from './db';
-import { sql, eq, and } from 'drizzle-orm';
+import { sql, eq } from 'drizzle-orm';
 import * as schema from './schema';
 
 interface DuplicateRow {

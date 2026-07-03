@@ -34,7 +34,7 @@ export function BibliaSection() {
           `${b.apellido} ${b.nombre}`,
         ),
       );
-  }, [act, act?.biblias, db.participants]);
+  }, [act, db.participants]);
 
   const sortedParticipants = useMemo(() => {
     let arr = db.participants.filter((p) =>

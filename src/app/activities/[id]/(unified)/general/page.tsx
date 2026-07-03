@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useUnifiedActivity } from "@/lib/activity-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,9 +31,7 @@ export default function GeneralPage() {
 
   const canEdit = isAdmin && !locked;
 
-  useEffect(() => {
-    if (editing) return;
-
+  const startEditing = () => {
     setDraftTitle(activity.titulo);
     setDraftDate(activity.fecha);
     setDraftTeams(activity.cantEquipos);
@@ -42,9 +40,10 @@ export default function GeneralPage() {
       fecha: activity.fecha,
       cantEquipos: activity.cantEquipos,
     };
-  }, [activity.titulo, activity.fecha, activity.cantEquipos, editing]);
+    setEditing(true);
+  };
 
-  const flushDrafts = async (showSuccessToast = false) => {
+  const flushDrafts = useCallback(async (showSuccessToast = false) => {
     const nextTitle = draftTitle.trim();
     if (!nextTitle) {
       toast.error("El título no puede estar vacío");
@@ -80,7 +79,7 @@ export default function GeneralPage() {
       toast.error("Error al guardar");
       throw error;
     }
-  };
+  }, [draftTitle, draftDate, draftTeams, performQuickUpdate]);
 
   const handleFinishEditing = async () => {
     try {
@@ -139,7 +138,7 @@ export default function GeneralPage() {
     }, 500);
 
     return () => clearTimeout(timeout);
-  }, [editing, draftTitle, draftDate, draftTeams]);
+  }, [editing, draftTitle, draftDate, draftTeams, flushDrafts]);
 
   return (
     <div className="space-y-4">
@@ -153,7 +152,7 @@ export default function GeneralPage() {
           <Button
             variant="ghost"
             size="sm"
-            onClick={editing ? handleFinishEditing : () => setEditing(true)}
+            onClick={editing ? handleFinishEditing : startEditing}
             className="bg-white/20 text-white hover:bg-white/30"
           >
             {editing ? "Listo" : "Editar"}

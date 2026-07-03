@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useParams } from "next/navigation";
 import { useApp } from "@/hooks/useApp";
 import { useAuth } from "@/hooks/useAuth";
@@ -8,7 +8,7 @@ import { useStore } from "@nanostores/react";
 import { $role } from "@/store/appStore";
 import { UnifiedActivityProvider } from "@/lib/activity-context";
 import { UnifiedActivityShell } from "./_components/UnifiedActivityShell";
-import type { Activity } from "@/lib/types";
+
 
 export default function UnifiedActivityLayout({
   children,
@@ -20,16 +20,11 @@ export default function UnifiedActivityLayout({
   const { isAdmin } = useAuth();
   const role = useStore($role);
 
-  const [resolvedId, setResolvedId] = useState<string | null>(null);
+  const resolvedId = (params?.id as string) ?? null;
 
-  useEffect(() => {
-    const id = params?.id as string | undefined;
-    if (id) setResolvedId(id);
-  }, [params?.id]);
-
-  const activity = useMemo<Activity | undefined>(() => {
+  const activity = useMemo(() => {
     if (!resolvedId || !db?.activities?.length) return undefined;
-    return db.activities.find((a) => a.id === Number(resolvedId));
+    return db?.activities?.find((a) => a.id === Number(resolvedId));
   }, [resolvedId, db?.activities]);
 
   const locked = activity?.locked ?? false;

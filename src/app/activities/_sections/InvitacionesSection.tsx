@@ -1,8 +1,7 @@
 "use client";
 
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo } from "react";
 import { useUnifiedActivity } from "@/lib/activity-context";
-import type { SectionId } from "@/lib/activity-sections";
 
 import { Mail, Users, X, Plus, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";

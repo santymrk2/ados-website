@@ -175,21 +175,6 @@ export function getEdad(fechaNacimiento: string | null | undefined): number {
   return calcularEdad(fechaNacimiento);
 }
 
-function generarFechaNacimiento(edad: string) {
-  if (!edad) return "";
-  const hoy = new Date();
-  const año = hoy.getFullYear() - parseInt(edad);
-  const mes = String(hoy.getMonth() + 1).padStart(2, '0');
-  const día = String(hoy.getDate()).padStart(2, '0');
-  return `${año}-${mes}-${día}`;
-}
-
-function generarEdadAPartirDeFecha(fecha: string) {
-  if (!fecha) return "";
-  const edad = calcularEdad(fecha);
-  return edad !== null ? String(edad) : "";
-}
-
 export const SEED_PARTICIPANTS = [
   { id: 1, nombre: "Ana Luz", apellido: "Aquino", fechaNacimiento: "2007-01-15", sexo: "F", foto: "" },
   { id: 2, nombre: "Gian Franco", apellido: "Carbone", fechaNacimiento: "2010-05-20", sexo: "M", foto: "" },
@@ -224,8 +209,6 @@ export const SEED_PARTICIPANTS = [
 ];
 
 export function newAct() {
-  const today = new Date();
-  const fecha = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
   return {
     id: null,
     fecha: new Date().toISOString().slice(0, 10),

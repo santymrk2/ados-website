@@ -2,7 +2,6 @@
 
 import { useState, useMemo } from "react";
 import { useUnifiedActivity } from "@/lib/activity-context";
-import type { SectionId } from "@/lib/activity-sections";
 
 import { Plus, Minus, X, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -18,17 +17,6 @@ const GOAL_TYPES = [
   { id: "b", label: "Básquet", short: "B" },
 ] as const;
 
-const GOAL_LABELS: Record<string, string> = {
-  f: "Fútbol",
-  h: "Handball",
-  b: "Básquet",
-};
-
-const GOAL_SHORT: Record<string, string> = {
-  f: "F",
-  h: "H",
-  b: "B",
-};
 
 function GoalRow({
   g,

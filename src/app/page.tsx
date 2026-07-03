@@ -23,7 +23,7 @@ import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/button";
 import { RankBadge, PodiumBadge } from "@/components/ui/Badges";
 import { cn, formatDate } from "@/lib/utils";
-import type { ParticipantBasic, Activity, Ranking, Invitacion } from "@/lib/types";
+import type { ParticipantBasic, Activity, Invitacion } from "@/lib/types";
 import { PlayerHistoryModal } from "@/app/_components/PlayerHistoryModal";
 
 // Tipo para ranking calculado con stats
@@ -45,20 +45,6 @@ interface InvitacionWithActivity {
 interface InvitacionRanking extends ParticipantBasic {
   invitedCount: number;
   invitaciones: InvitacionWithActivity[];
-}
-
-// Tipo para stats del dashboard
-interface DashboardStats {
-  jugadoresActivos: number;
-  porcentajeActivos: number;
-  totalGoles: number;
-  totalPlayers: number;
-  masGoles: { f: number; h: number; b: number };
-  totalPartidos: number;
-  top5ScorersM: RankingWithStats[];
-  top5ScorersF: RankingWithStats[];
-  maleCount: number;
-  femaleCount: number;
 }
 
 const PODIUM_COLORS = [
@@ -141,7 +127,7 @@ function RankRow({
 }
 
 export default function Page() {
-  const { db, showSettings, setShowSettings, refresh, logout } = useApp();
+  const { db, showSettings, setShowSettings, logout } = useApp();
   const { participants, activities, rankings } = db;
   const role = useStore($role);
   const router = useRouter();

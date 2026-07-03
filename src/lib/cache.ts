@@ -1,6 +1,6 @@
 import { eventBus } from './eventBus';
 import { calcPts } from './calc';
-import type { Activity, Participant, Ranking, Juego, Gol, Extra, Invitacion } from './types';
+import type { Ranking, Juego, Gol, Extra, Invitacion } from './types';
 
 // Objeto global en el proceso Node.js para mantener la caché entre llamadas
 const globalForCache = globalThis as unknown as {

@@ -2,7 +2,6 @@
 
 import { useState, useMemo, useCallback } from "react";
 import { useUnifiedActivity } from "@/lib/activity-context";
-import type { SectionId } from "@/lib/activity-sections";
 
 import { Plus, Minus, Trash2 } from "lucide-react";
 import { TEAMS, TEAM_COLORS, getTeamBg } from "@/lib/constants";
@@ -18,9 +17,6 @@ interface AdjustmentItem extends Extra {
   tipo: ExtraTipo;
 }
 
-function listKey(tipo: ExtraTipo): "extras" | "descuentos" {
-  return tipo === "extra" ? "extras" : "descuentos";
-}
 
 function balance(items: AdjustmentItem[]): number {
   return items.reduce((s, x) => s + (x.tipo === "extra" ? x.puntos : -x.puntos), 0);
@@ -229,15 +225,6 @@ export function ExtrasSection() {
     });
     return map;
   }, [adjustments, activeTeams]);
-
-  const playerItems = useMemo(() => {
-    const map: Record<number, AdjustmentItem[]> = {};
-    eligiblePlayers.forEach((p) => {
-      const items = adjustments.filter((x) => x.pid === p.id);
-      if (items.length > 0) map[p.id] = items;
-    });
-    return map;
-  }, [adjustments, eligiblePlayers]);
 
   const addAdjustment = useCallback(
     async (pid: number | null, team: string | null, tipo: ExtraTipo) => {

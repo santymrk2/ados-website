@@ -378,7 +378,7 @@ export function GolesSection() {
 
           {allPlayersTotal.length > 0 && (
             <div className="space-y-2">
-              <h3 className="text-xs font-black uppercase tracking-widest text-text-muted">
+              <h3 className="text-xs font-black uppercase tracking-widest text-white/70">
                 Por jugador
               </h3>
               <div className="flex flex-col gap-1">

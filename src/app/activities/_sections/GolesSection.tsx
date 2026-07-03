@@ -152,7 +152,7 @@ function GoalRow({
         >
           <Minus className="w-3 h-3" />
         </button>
-        <span className="w-4 text-center text-xs font-black text-white">
+        <span className="w-4 text-center text-xs font-black text-foreground">
           {g.cant || 1}
         </span>
         <button

@@ -20,7 +20,7 @@ import {
   AlertDialogCancel,
   AlertDialogAction,
 } from "@/components/ui/alert-dialog";
-import { Pencil, Zap, Shuffle } from "lucide-react";
+import { Zap, Shuffle } from "lucide-react";
 import type { ParticipantBasic } from "@/lib/types";
 
 export function EquiposSection() {
@@ -212,11 +212,11 @@ export function EquiposSection() {
         <div className="flex justify-end mb-4">
           <Button
             onClick={() => { setEditing(true); setSelectedTeam(null); }}
-            variant="outline"
+            variant="ghost"
             size="sm"
-            className="gap-1"
+            className="bg-white/20 text-white hover:bg-white/30"
           >
-            <Pencil className="w-3.5 h-3.5" /> Editar
+            Editar
           </Button>
         </div>
       )}

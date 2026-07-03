@@ -20,7 +20,6 @@ import {
   Zap,
   CalendarCheck,
   CalendarX,
-  Pencil,
   X,
   Plus,
 } from "lucide-react";
@@ -468,9 +467,9 @@ export function AsistenciaSection() {
             onClick={() => setEditing(true)}
             variant="ghost"
             size="sm"
-            className="gap-1 bg-white/20 text-white hover:bg-white/30"
+            className="bg-white/20 text-white hover:bg-white/30"
           >
-            <Pencil className="w-3.5 h-3.5" /> Editar
+            Editar
           </Button>
         </div>
       )}

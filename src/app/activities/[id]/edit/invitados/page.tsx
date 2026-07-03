@@ -164,23 +164,37 @@ function InvitationRow({
               </button>
             </PopoverTrigger>
             <PopoverContent align="start" className="w-56 p-0">
-              <div className="max-h-60 overflow-auto">
-                {allParticipants.map((p) => (
-                  <button
-                    key={p.id}
-                    onClick={() => handleSelect("invitador", p.id)}
-                    className={cn(
-                      "flex items-center gap-2 w-full px-3 py-2 text-left",
-                      "hover:bg-surface-light transition-colors",
-                      false && "bg-indigo-50"
-                    )}
-                  >
-                    <Avatar p={p} size={24} />
-                    <span className="text-sm truncate">
-                      {p.nombre} {p.apellido}
-                    </span>
-                  </button>
-                ))}
+              <div className="p-2 border-b border-surface-dark">
+                <Input
+                  placeholder="Buscar..."
+                  value={searchFilter}
+                  onChange={(e) => setSearchFilter(e.target.value)}
+                  className="h-8 text-sm"
+                />
+              </div>
+              <div className="max-h-44 overflow-auto">
+                {filteredInvitadores.length > 0 ? (
+                  filteredInvitadores.map((p) => (
+                    <button
+                      key={p.id}
+                      onClick={() => handleSelect("invitador", p.id)}
+                      className={cn(
+                        "flex items-center gap-2 w-full px-3 py-2 text-left",
+                        "hover:bg-surface-light transition-colors",
+                        false && "bg-indigo-50"
+                      )}
+                    >
+                      <Avatar p={p} size={24} />
+                      <span className="text-sm truncate">
+                        {p.nombre} {p.apellido}
+                      </span>
+                    </button>
+                  ))
+                ) : (
+                  <div className="px-3 py-4 text-center text-xs text-text-muted">
+                    {searchFilter ? `Sin resultados para "${searchFilter}"` : "No hay participantes disponibles"}
+                  </div>
+                )}
               </div>
             </PopoverContent>
           </Popover>

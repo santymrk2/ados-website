@@ -112,9 +112,10 @@ export function FloatingNav({
     setSearchMode(true);
   };
 
-  const handleCloseSearch = () => {
-    setSearchMode(false);
+  const handleClearSearch = () => {
     if (onSearchChange) onSearchChange("");
+    // Refocus para que el usuario pueda tipear de inmediato
+    searchInputRef.current?.focus({ preventScroll: true });
   };
 
   const handleOpenFilter = (e: React.MouseEvent) => {
@@ -374,9 +375,9 @@ export function FloatingNav({
                 className="flex-1 bg-transparent border-none outline-none text-sm text-foreground placeholder:text-text-muted"
               />
               <button
-                onClick={handleCloseSearch}
+                onClick={handleClearSearch}
                 className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-surface-light text-foreground transition-colors"
-                aria-label="Cerrar búsqueda"
+                aria-label="Limpiar búsqueda"
               >
                 <X className="size-4" />
               </button>

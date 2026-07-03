@@ -64,8 +64,8 @@ export function NewActivityModal({ open, onOpenChange }: NewActivityModalProps) 
       setLocked(false);
       onOpenChange(false);
       
-      // Navigate to edit the new activity
-      router.push(`/activities/${newId}/edit`);
+      // Navigate to the activity config section
+      router.push(`/activities/${newId}/general`);
     } catch (e) {
       console.error("Error creating activity:", e);
     } finally {

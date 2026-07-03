@@ -22,8 +22,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Avatar } from "@/components/ui/Avatar";
-import { cn } from "@/lib/utils";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { DBData, Participant } from "@/lib/types";
 
@@ -38,7 +36,6 @@ export function ParticipantForm({ db, initial, onClose, onSave }: ParticipantFor
   const [form, setForm] = useState({ ...newPart(), ...initial });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [tempImage, setTempImage] = useState<string | null>(null);
-  const [hasChanges, setHasChanges] = useState(false);
   const [showAgeAlert, setShowAgeAlert] = useState(false);
   const [pendingAge, setPendingAge] = useState<number | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -54,7 +51,6 @@ export function ParticipantForm({ db, initial, onClose, onSave }: ParticipantFor
 
   const F = (k: string, v: unknown) => {
     setForm((f) => ({ ...f, [k]: v }));
-    setHasChanges(true);
   };
 
   const handlePhoto = (file: File) => {
@@ -106,7 +102,6 @@ export function ParticipantForm({ db, initial, onClose, onSave }: ParticipantFor
       await onSave(p, isNew);
       toast.dismiss(loadingToast);
       toast.success("Guardado con éxito");
-      setHasChanges(false);
       onClose();
     } catch (e: unknown) {
       toast.dismiss(loadingToast);

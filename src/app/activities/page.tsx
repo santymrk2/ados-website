@@ -4,8 +4,6 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useStore } from "@nanostores/react";
 import {
-  Pencil,
-  Trash2,
   Users,
   Gamepad2,
   Trophy,
@@ -20,30 +18,15 @@ import { Button } from "@/components/ui/button";
 import { NewActivityModal } from "./_components/NewActivityModal";
 import { formatDate, cn } from "@/lib/utils";
 import { $role } from "@/store/appStore";
-import { deleteActivity as dbDeleteActivity } from "@/lib/api-client";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { Input } from "@/components/ui/input";
 import { useApp } from "@/hooks/useApp";
 import type { Activity, Gol } from "@/lib/types";
 
 export default function ActivitiesPage() {
   const router = useRouter();
-  const { db, refresh, deleteActivity } = useApp();
+  const { db } = useApp();
   const role = useStore($role);
   const isAdmin = role === "admin";
 
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [actAEliminar, setActAEliminar] = useState<Activity | null>(null);
-  const [confirmText, setConfirmText] = useState("");
   const [newActivityOpen, setNewActivityOpen] = useState(false);
 
   const sorted = [...db.activities].sort((a, b) =>
@@ -56,33 +39,6 @@ export default function ActivitiesPage() {
 
   const handleNew = () => {
     setNewActivityOpen(true);
-  };
-
-  const handleEdit = (activity: Activity, e: React.MouseEvent) => {
-    e.stopPropagation();
-    router.push(`/activities/${activity.id}/edit`);
-  };
-
-  const handleDelete = async (id: number) => {
-    await deleteActivity(id);
-  };
-
-  const del = (id: number, e: React.MouseEvent) => {
-    e.stopPropagation();
-    const activity = db.activities.find((a) => a.id === id);
-    if (!activity) return;
-    setActAEliminar(activity);
-    setConfirmText("");
-    setDeleteDialogOpen(true);
-  };
-
-  const handleConfirmDelete = () => {
-    if (confirmText.trim() === "Confirmar" && actAEliminar) {
-      handleDelete(actAEliminar.id);
-      setDeleteDialogOpen(false);
-      setActAEliminar(null);
-      setConfirmText("");
-    }
   };
 
   return (
@@ -116,10 +72,10 @@ export default function ActivitiesPage() {
                       </div>
                       <span
                         className={cn(
-                          "inline-flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-bold uppercase",
+                          "inline-flex items-center justify-center rounded-full p-1",
                           a.locked
-                            ? "bg-amber-50 text-amber-700 border border-amber-200"
-                            : "bg-emerald-50 text-emerald-700 border border-emerald-200",
+                            ? "bg-red-50 text-red-600"
+                            : "bg-emerald-50 text-emerald-600",
                         )}
                       >
                         {a.locked ? (
@@ -127,35 +83,12 @@ export default function ActivitiesPage() {
                         ) : (
                           <Unlock className="w-3 h-3" />
                         )}
-                        {a.locked ? "Bloqueada" : "Editable"}
                       </span>
                     </div>
                     <div className="text-sm text-text-muted mt-1">
                       {formatDate(a.fecha)}
                     </div>
                   </div>
-                  {isAdmin && (
-                    <div className="flex shrink-0 gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={(e) => handleEdit(a, e)}
-                        className="min-h-10 px-3"
-                      >
-                        <Pencil className="w-4 h-4 text-primary" />
-                        Editar
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={(e) => del(a.id, e)}
-                        className="min-h-10 px-3 border-destructive/30 text-destructive hover:bg-destructive/10"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                        Eliminar
-                      </Button>
-                    </div>
-                  )}
                 </div>
                 <div className="p-3 flex items-center justify-between gap-3 border-t border-surface-dark">
                   <div className="flex gap-2 flex-wrap">
@@ -180,38 +113,6 @@ export default function ActivitiesPage() {
           </div>
         )}
       </div>
-
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>¿Eliminar actividad?</AlertDialogTitle>
-            <AlertDialogDescription>
-              ¿Estás seguro que querés eliminar la actividad{" "}
-              <span className="font-semibold text-foreground">
-                &ldquo;{actAEliminar?.titulo || "Sin título"}&rdquo;
-              </span>
-              ? esta acción es irreversible.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <Input
-            type="text"
-            value={confirmText}
-            onChange={(e) => setConfirmText(e.target.value)}
-            placeholder="Escribí Confirmar"
-            className="mt-2"
-          />
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleConfirmDelete}
-              disabled={confirmText.trim() !== "Confirmar"}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Eliminar
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
 
       <NewActivityModal open={newActivityOpen} onOpenChange={setNewActivityOpen} />
     </div>

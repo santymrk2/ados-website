@@ -9,7 +9,7 @@ async function fetchAuthStatus() {
     const response = await fetch('/api/auth-check');
     const data = await response.json();
     return data;
-  } catch (e) {
+  } catch {
     return { authenticated: false, role: null };
   }
 }
@@ -53,7 +53,7 @@ export function useAuth() {
         return { success: true, role: result.role };
       }
       return { success: false, error: result.error || 'Contraseña incorrecta' };
-    } catch (e) {
+    } catch {
       return { success: false, error: 'Error de conexión con el servidor' };
     }
   }, []);

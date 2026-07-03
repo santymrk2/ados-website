@@ -5,7 +5,7 @@
 
 import { createContext, useContext, useMemo, useEffect, useState, useRef, useCallback } from "react";
 import { useStore } from "@nanostores/react";
-import { useRouter, useSearchParams, useParams, usePathname } from "next/navigation";
+import { useRouter, useParams, usePathname } from "next/navigation";
 import { useApp } from "@/hooks/useApp";
 import { $role } from "@/store/appStore";
 import { newAct } from "@/lib/constants";
@@ -31,7 +31,7 @@ import { toast } from "@/hooks/use-toast";
 
 import { Button } from "@/components/ui/button";
 
-import type { Activity, Participant, DBData } from "@/lib/types";
+import type { Activity, DBData } from "@/lib/types";
 import { VersionConflictError } from "@/lib/errors";
 
 type DbType = DBData;
@@ -88,7 +88,6 @@ interface EditLayoutProps {
 
 export default function EditLayout({ children, mode = "edit" }: EditLayoutProps) {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const params = useParams();
   const pathname = usePathname();
 
@@ -114,7 +113,7 @@ export default function EditLayout({ children, mode = "edit" }: EditLayoutProps)
     if (id) queueMicrotask(() => setResolvedId(id));
   }, [params?.id]);
 
-  const { db, saveActivity, quickUpdate, saveParticipant, isLoading: dbLoading } = useApp();
+  const { db, saveActivity, quickUpdate, isLoading: dbLoading } = useApp();
   const role = useStore($role);
   const isAdmin = role === "admin";
 
@@ -305,19 +304,6 @@ export default function EditLayout({ children, mode = "edit" }: EditLayoutProps)
     }, 500);
     return () => clearTimeout(timer);
   }, [db?.activities, activity.id, saveStatus, pendingOps.size]);
-
-  // Cambio de tab
-  const handleTabChange = (newTab: string) => {
-    if (mode === "edit" && resolvedId) {
-      // Base path sin subtab para "General" (empty string)
-      const base = `/activities/${resolvedId}/edit`;
-      router.push(newTab ? `${base}/${newTab}` : base);
-    } else if (mode === "new") {
-      router.push(`/activities/new${newTab ? `/${newTab}` : ""}`);
-    } else {
-      router.push(`/activities/new${newTab ? `/${newTab}` : ""}`);
-    }
-  };
 
   const handleClose = () => {
     if (mode === "edit" && activity.id) {

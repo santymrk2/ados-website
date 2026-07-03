@@ -8,22 +8,19 @@ import { $role } from "@/store/appStore";
 import {
   ChevronLeft,
   Star,
-  BookOpen,
   CheckCircle,
   Award,
   Trophy,
   Target,
   Clock,
 } from "lucide-react";
-import { TEAM_COLORS, getTeamBg, getEdad } from "@/lib/constants";
+import { TEAM_COLORS, getEdad } from "@/lib/constants";
 import { actPts } from "@/lib/calc";
-import { Empty } from "@/components/ui/Common";
 import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/button";
 import { formatDate, cn, getImg } from "@/lib/utils";
 import { ImageExpandModal } from "@/components/ui/ImageExpandModal";
 import { getParticipant } from "@/lib/api-client";
-import type { Activity } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -48,6 +45,8 @@ export default function Page({
   const [player, setPlayer] = useState(initialParticipant);
   const [isLoadingFull, setIsLoadingFull] = useState(false);
 
+  const playerId = player?.id;
+
   useEffect(() => {
     if (initialParticipant?.id) {
       queueMicrotask(() => setIsLoadingFull(true));
@@ -62,43 +61,43 @@ export default function Page({
   }, [initialParticipant?.id]);
 
   const stats = useMemo(() => {
-    if (!player) return { total: 0, gf: 0, gh: 0, gb: 0, acts: 0 };
-    const r = (db?.rankings || []).find((x) => x.id === player.id);
+    if (!playerId) return { total: 0, gf: 0, gh: 0, gb: 0, acts: 0 };
+    const r = (db?.rankings || []).find((x) => x.id === playerId);
     return r || { total: 0, gf: 0, gh: 0, gb: 0, acts: 0 };
-  }, [player?.id, db?.rankings]);
+  }, [playerId, db?.rankings]);
 
   const playerActivities = useMemo(() => {
-    if (!player || !db?.activities) return [];
+    if (!playerId || !db?.activities) return [];
     return db.activities
-      .filter((a) => a.asistentes.includes(player.id))
+      .filter((a) => a.asistentes.includes(playerId))
       .sort((a, b) => b.fecha.localeCompare(a.fecha));
-  }, [player?.id, db?.activities]);
+  }, [playerId, db]);
 
   const goalsBySport = useMemo(() => {
     const result = { f: 0, h: 0, b: 0 };
-    if (!player || !db?.activities) return result;
+    if (!playerId || !db?.activities) return result;
     db.activities.forEach((a) => {
       (a.goles || []).forEach((g) => {
-        if (g.pid === player.id) {
+        if (g.pid === playerId) {
           result[g.tipo as keyof typeof result] = (result[g.tipo as keyof typeof result] || 0) + g.cant;
         }
       });
     });
     return result;
-  }, [player?.id, db?.activities]);
+  }, [playerId, db]);
 
   const teamsPlayed = useMemo(() => {
-    if (!player || !db?.activities) return [];
+    if (!playerId || !db?.activities) return [];
     return Array.from(
       new Set(
         db.activities.flatMap((a) =>
-          a.asistentes.includes(player.id) && a.equipos?.[player.id]
-            ? [a.equipos[player.id]]
+          a.asistentes.includes(playerId) && a.equipos?.[playerId]
+            ? [a.equipos[playerId]]
             : [],
         ),
       ),
     );
-  }, [player?.id, db?.activities]);
+  }, [playerId, db]);
 
   if (dbLoading || !db) {
     return (

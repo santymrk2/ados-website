@@ -698,7 +698,7 @@ export async function POST(request: NextRequest) {
 }
 
 export async function PATCH(request: NextRequest) {
-  const auth = requireAdmin(request);
+  const auth = requireAuth(request);
   if (!auth.success) {
     return auth.error;
   }
@@ -711,6 +711,11 @@ export async function PATCH(request: NextRequest) {
 
     const { activityId, type, version } = parsed.data;
     const data = parsed.data.data as ActivityPatchPayload;
+
+    if (auth.role !== "admin" && type !== "biblias") {
+      return apiForbidden("Solo se permite editar Biblia con este rol");
+    }
+
     const result = await db.transaction(async (tx) => {
       const clientVersion = Number(version || 1);
       const [versionClaim] = await tx

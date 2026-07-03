@@ -30,7 +30,7 @@ interface FloatingNavProps {
 }
 
 const COLLAPSED_HEIGHT = 56;
-const EXPANDED_WIDTH = 320;
+const EXPANDED_WIDTH = "min(320px, calc(100vw - 24px))";
 
 // Cuánto crece el alto en modo filtro según el contenido
 const FILTER_HEIGHT = 200;
@@ -112,9 +112,10 @@ export function FloatingNav({
     setSearchMode(true);
   };
 
-  const handleCloseSearch = () => {
-    setSearchMode(false);
+  const handleClearSearch = () => {
     if (onSearchChange) onSearchChange("");
+    // Refocus para que el usuario pueda tipear de inmediato
+    searchInputRef.current?.focus({ preventScroll: true });
   };
 
   const handleOpenFilter = (e: React.MouseEvent) => {
@@ -170,7 +171,7 @@ export function FloatingNav({
   }, [onSearchModeChange, searchMode]);
 
   // Dimensiones según estado
-  const targetWidth = EXPANDED_WIDTH; // Siempre 320px, no se achica
+  const targetWidth = EXPANDED_WIDTH;
   const targetHeight = isOpen ? expandedHeight : filterMode ? filterHeight : COLLAPSED_HEIGHT;
   const bottomOffset = `calc(24px + env(safe-area-inset-bottom, 0px) + ${searchMode || filterMode ? keyboardInset : 0}px)`;
 
@@ -374,9 +375,9 @@ export function FloatingNav({
                 className="flex-1 bg-transparent border-none outline-none text-sm text-foreground placeholder:text-text-muted"
               />
               <button
-                onClick={handleCloseSearch}
+                onClick={handleClearSearch}
                 className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-surface-light text-foreground transition-colors"
-                aria-label="Cerrar búsqueda"
+                aria-label="Limpiar búsqueda"
               >
                 <X className="size-4" />
               </button>

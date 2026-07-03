@@ -508,7 +508,7 @@ export function JuegosSection() {
                       className="rounded-2xl border border-surface-dark/60 bg-surface-light/40 p-3"
                     >
                       <div className="flex items-center justify-between gap-2">
-                        <div className="text-[11px] font-black uppercase tracking-wide text-white/70">
+                        <div className="text-[11px] font-black uppercase tracking-wide text-foreground/70">
                           Puesto {pos}
                         </div>
                         <div className="text-[11px] font-medium text-text-muted">
@@ -595,7 +595,7 @@ export function JuegosSection() {
                   <span className="font-black text-sm truncate">
                     {game.nombre || `Juego ${index + 1}`}
                   </span>
-                  <span className="inline-flex items-center gap-1 rounded-full border border-surface-dark/60 bg-surface-light px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white/70">
+                  <span className="inline-flex items-center gap-1 rounded-full border border-surface-dark/60 bg-surface-light px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-text-muted">
                     {game.tipo === "individual" ? (
                       <Users className="h-3 w-3" />
                     ) : (
@@ -604,7 +604,7 @@ export function JuegosSection() {
                     {gameTypeLabel(game.tipo || "grupal")}
                   </span>
                 </div>
-                <p className="mt-1 text-xs text-white/70">{renderSummary(game)}</p>
+                <p className="mt-1 text-xs text-text-muted">{renderSummary(game)}</p>
               </div>
               <Button
                 type="button"

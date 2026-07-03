@@ -5,7 +5,7 @@ import { useUnifiedActivity } from "@/lib/activity-context";
 import { getEdad } from "@/lib/constants";
 import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/button";
-import { Label, Empty } from "@/components/ui/Common";
+import { Empty } from "@/components/ui/Common";
 import { cn } from "@/lib/utils";
 import { BookOpen, Pencil } from "lucide-react";
 import type { ParticipantBasic } from "@/lib/types";
@@ -143,14 +143,14 @@ export function BibliaSection() {
 
       {editing && (
         <>
-          <Label style={{ margin: 0 }}>
+          <h2 className="text-base font-black text-white">
             Biblia
             {searchQuery && (
               <span className="text-white/60 text-xs font-normal ml-1">
                 (filtrado: {sortedParticipants.length})
               </span>
             )}
-          </Label>
+          </h2>
 
           {sortedParticipants.length === 0
             ? <Empty text="No hay participantes" className="text-white/60" />

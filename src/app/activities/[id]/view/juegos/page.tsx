@@ -96,8 +96,8 @@ export default function JuegosPage() {
                           );
                         })
                       ) : (
-                        <span className="inline-flex items-center rounded-full border border-dashed border-surface-dark/60 px-3 py-1 text-xs font-medium text-text-muted">
-                          Vacante
+                        <span className="text-xs font-medium text-text-muted">
+                          No players
                         </span>
                       )}
                     </div>

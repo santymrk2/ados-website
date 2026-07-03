@@ -12,6 +12,7 @@ import { Label, Empty } from "@/components/ui/Common";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Avatar } from "@/components/ui/Avatar";
 import { cn } from "@/lib/utils";
+import { confirmDialog } from "@/components/ui/confirm-dialog";
 import type { Juego, ParticipantBasic } from "@/lib/types";
 
 const POSITIONS = ["1", "2", "3", "4"] as const;
@@ -613,7 +614,11 @@ export function JuegosSection() {
                 className="h-9 w-9 shrink-0 hover:bg-red-50 hover:text-red-500"
                 onClick={async (e) => {
                   e.stopPropagation();
-                  await deleteGame(game.id);
+                  const confirmed = await confirmDialog(
+                    `¿Eliminar "${game.nombre || 'Juego ' + (gameList.indexOf(game) + 1)}"?`,
+                    { title: "Eliminar juego", confirmText: "Eliminar", isDestructive: true },
+                  );
+                  if (confirmed) await deleteGame(game.id);
                 }}
               >
                 <X className="h-4 w-4" />
@@ -640,7 +645,7 @@ export function JuegosSection() {
                 <Gamepad2 className="h-4 w-4" />
                 Juego grupal
               </div>
-              <p className="mt-2 text-sm text-white/70">
+              <p className="mt-2 text-sm text-muted-foreground">
                 Equipos en posiciones y puntaje por equipo.
               </p>
             </button>
@@ -653,7 +658,7 @@ export function JuegosSection() {
                 <Users className="h-4 w-4" />
                 Juego individual
               </div>
-              <p className="mt-2 text-sm text-white/70">
+              <p className="mt-2 text-sm text-muted-foreground">
                 Asigna personas a posiciones y suma puntos por participante.
               </p>
             </button>
@@ -678,7 +683,13 @@ export function JuegosSection() {
               saving={saving}
               onClose={() => setSelectedId(null)}
               onRename={(nombre) => updateName(selectedGame.id, nombre)}
-              onDelete={async () => deleteGame(selectedGame.id)}
+              onDelete={async () => {
+                const confirmed = await confirmDialog(
+                  `¿Eliminar "${selectedGame.nombre || 'Juego ' + (gameList.indexOf(selectedGame) + 1)}"?`,
+                  { title: "Eliminar juego", confirmText: "Eliminar", isDestructive: true },
+                );
+                if (confirmed) await deleteGame(selectedGame.id);
+              }}
               onToggleItem={togglePositionItem}
               onFillRemaining={fillWithRemaining}
             />

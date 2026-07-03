@@ -1,18 +1,33 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useUnifiedActivity } from "@/lib/activity-context";
+import { useApp } from "@/hooks/useApp";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { DatePicker } from "@/components/ui/calendar";
 import { Label } from "@/components/ui/Common";
 import { cn } from "@/lib/utils";
-import { FileText, Lock, Unlock } from "lucide-react";
+import { FileText, Lock, Unlock, Trash2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { confirmDialog } from "@/components/ui/confirm-dialog";
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+
 export default function GeneralPage() {
+  const router = useRouter();
+  const { deleteActivity } = useApp();
   const {
     activity,
     isAdmin,
@@ -23,6 +38,8 @@ export default function GeneralPage() {
   const [draftTitle, setDraftTitle] = useState(activity.titulo);
   const [draftDate, setDraftDate] = useState(activity.fecha);
   const [draftTeams, setDraftTeams] = useState(activity.cantEquipos);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [confirmText, setConfirmText] = useState("");
   const lastSavedRef = useRef({
     titulo: activity.titulo,
     fecha: activity.fecha,
@@ -118,6 +135,16 @@ export default function GeneralPage() {
     }
 
     setDraftTeams(val);
+  };
+
+  const handleDelete = async () => {
+    if (confirmText.trim() !== "Confirmar") return;
+    try {
+      await deleteActivity(activity.id);
+      router.push("/activities");
+    } catch {
+      toast.error("Error al eliminar la actividad");
+    }
   };
 
   const readOnly = !editing || !canEdit;
@@ -255,6 +282,65 @@ export default function GeneralPage() {
           )}
         </div>
       </div>
+
+      {/* Delete section — only in edit mode */}
+      {editing && isAdmin && (
+        <div className="rounded-3xl border-2 border-dashed border-red-200 bg-red-50/50 p-6 space-y-3">
+          <div className="flex items-center gap-2">
+            <Trash2 className="w-5 h-5 text-red-500" />
+            <h3 className="font-bold text-sm text-red-700">Zona de peligro</h3>
+          </div>
+          <p className="text-sm text-red-600">
+            Una vez eliminada, la actividad no se puede recuperar.
+          </p>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setConfirmText("");
+              setDeleteDialogOpen(true);
+            }}
+            className="border-red-300 text-red-600 hover:bg-red-100"
+          >
+            <Trash2 className="w-4 h-4" />
+            Eliminar actividad
+          </Button>
+        </div>
+      )}
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar actividad?</AlertDialogTitle>
+            <AlertDialogDescription>
+              ¿Estás seguro que querés eliminar la actividad{" "}
+              <span className="font-semibold text-foreground">
+                &ldquo;{activity.titulo || "Sin título"}&rdquo;
+              </span>
+              ? Esta acción es irreversible. Escribí <strong>Confirmar</strong> para confirmar.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <Input
+            type="text"
+            value={confirmText}
+            onChange={(e) => setConfirmText(e.target.value)}
+            placeholder='Escribí "Confirmar"'
+            className="mt-2"
+          />
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setConfirmText("")}>
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={confirmText.trim() !== "Confirmar"}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

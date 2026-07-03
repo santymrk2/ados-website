@@ -7,7 +7,7 @@ import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/button";
 import { Empty } from "@/components/ui/Common";
 import { cn } from "@/lib/utils";
-import { BookOpen, Pencil } from "lucide-react";
+import { BookOpen } from "lucide-react";
 import type { ParticipantBasic } from "@/lib/types";
 
 export function BibliaSection() {
@@ -72,11 +72,11 @@ export function BibliaSection() {
         <div className="flex justify-end mb-4">
           <Button
             onClick={() => setEditing(true)}
-            variant="outline"
+            variant="ghost"
             size="sm"
-            className="gap-1"
+            className="bg-white/20 text-white hover:bg-white/30"
           >
-            <Pencil className="w-3.5 h-3.5" /> Editar
+            Editar
           </Button>
         </div>
       )}

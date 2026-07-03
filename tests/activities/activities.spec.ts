@@ -54,11 +54,11 @@ test.describe("Activities", () => {
     const count = await activitiesPage.getActivityCount();
     if (count > 0) {
       await activitiesPage.clickFirstActivity();
-      await expect(page).toHaveURL(/\/activities\/\d+/);
+      await expect(page).toHaveURL(/\/activities\/\d+\/asistencia/);
     }
   });
 
-  test("Admin sees save status and no success toast for simple edits", async ({ page }) => {
+  test("Admin can autosave general edits without save button", async ({ page }) => {
     const loginPage = new LoginPage(page);
     await loginPage.login(TEST_USERS.admin.password, TEST_USERS.admin.role);
 
@@ -72,18 +72,20 @@ test.describe("Activities", () => {
     }
 
     await activitiesPage.clickFirstActivity();
-    await expect(page).toHaveURL(/\/activities\/\d+/);
+    await expect(page).toHaveURL(/\/activities\/\d+\/asistencia/);
 
-    const editUrl = page.url().replace(/\/activities\/(\d+)(?:\/.*)?$/, "/activities/$1/edit");
+    const editUrl = page.url().replace(/\/activities\/(\d+)(?:\/.*)?$/, "/activities/$1/general");
     await page.goto(editUrl);
 
-    const titleInput = page.getByPlaceholder("Ej: Actividad Mayo");
+    await expect(page.getByRole("button", { name: "Guardar cambios" })).not.toBeVisible();
+    await page.getByRole("button", { name: "Editar" }).click();
+
+    const titleInput = page.getByPlaceholder("Nombre de la actividad");
     const nextTitle = `Actividad QA ${Date.now()}`;
 
     await titleInput.fill(nextTitle);
-    await expect(page.getByRole("button", { name: "Guardando..." })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Guardado" })).toBeVisible();
-    await expect(titleInput).toHaveValue(nextTitle);
+    await page.getByRole("button", { name: "Listo" }).click();
+    await expect(page.getByText(nextTitle)).toBeVisible();
     await expect(page.locator("[data-sonner-toast]")).toHaveCount(0);
   });
 
@@ -101,9 +103,9 @@ test.describe("Activities", () => {
     }
 
     await activitiesPage.clickFirstActivity();
-    await expect(page).toHaveURL(/\/activities\/\d+/);
+    await expect(page).toHaveURL(/\/activities\/\d+\/asistencia/);
 
-    const editUrl = page.url().replace(/\/activities\/(\d+)(?:\/.*)?$/, "/activities/$1/edit");
+    const editUrl = page.url().replace(/\/activities\/(\d+)(?:\/.*)?$/, "/activities/$1/general");
     await page.goto(editUrl);
 
     const lockSwitch = page.getByRole("switch").first();
@@ -111,7 +113,8 @@ test.describe("Activities", () => {
       await lockSwitch.check();
     }
 
-    await expect(page.getByText(/La actividad está bloqueada/)).toBeVisible();
-    await expect(page.getByPlaceholder("Ej: Actividad Mayo")).toBeDisabled();
+    await expect(page.getByText(/Bloqueada/)).toBeVisible();
+    await expect(page.getByText(/Solo lectura para todos/)).toBeVisible();
+    await expect(page.getByRole("button", { name: "Editar" })).not.toBeVisible();
   });
 });

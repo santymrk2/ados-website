@@ -95,7 +95,7 @@ function resolveOutputFormat(image: HTMLImageElement) {
     for (let i = 3; i < d.length; i += 4) {
       if (d[i] < 255) return { mime: 'image/png', quality: 1 };
     }
-  } catch (_) { }
+  } catch { }
 
   return { mime: 'image/jpeg', quality: 0.95 };
 }

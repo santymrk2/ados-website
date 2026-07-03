@@ -3,7 +3,7 @@
 import { useState, useCallback } from "react";
 import Cropper from "react-easy-crop";
 import { getDualCroppedImg, PixelCrop } from "@/lib/image-utils";
-import { ZoomIn, ZoomOut, Check } from "lucide-react";
+import { ZoomIn, ZoomOut } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import {
   Dialog,

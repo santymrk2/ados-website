@@ -1,4 +1,3 @@
-import { SEED_PARTICIPANTS, newAct } from './constants';
 import type { Activity, Participant } from './types';
 import { VersionConflictError } from './errors';
 
@@ -15,7 +14,7 @@ export async function checkDatabaseConnection() {
     try {
       const data = await res.json();
       if (data && data.message) errorMessage = data.message;
-    } catch (err) {
+    } catch {
       // Si falla el parseo JSON, probablemente sea una página de error HTML (Next.js Error Overlay)
       console.error("Respuesta no-JSON de /api/health:", await res.text().catch(() => ""));
     }

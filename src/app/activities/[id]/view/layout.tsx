@@ -1,8 +1,8 @@
 // Layout para la vista de actividad - provee contexto
 "use client";
 
-import { createContext, useContext, useEffect, useMemo, useState, useCallback, use } from "react";
-import { useRouter, useSearchParams, useParams, usePathname } from "next/navigation";
+import { createContext, useContext, useEffect, useMemo, useState, useCallback } from "react";
+import { useRouter, usePathname } from "next/navigation";
 import {
   LayoutGrid,
   Gamepad2,
@@ -17,7 +17,7 @@ import { formatDate } from "@/lib/utils";
 import { useApp } from "@/hooks/useApp";
 import { useAuth } from "@/hooks/useAuth";
 import { FloatingNav } from "@/components/ui/FloatingNav";
-import type { Activity, ParticipantBasic, AppState, DBData } from "@/lib/types";
+import type { Activity, ParticipantBasic, DBData } from "@/lib/types";
 
 export interface ViewContextValue {
   act: Activity | undefined;
@@ -57,8 +57,6 @@ export default function ViewLayout({
   params: Promise<{ id: string }>;
 }) {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const paramsAll = useParams();
   const { db, isLoading } = useApp();
   const { isAdmin } = useAuth();
   const { activities, participants } = db;
@@ -109,7 +107,7 @@ export default function ViewLayout({
 
   const activeTeams = useMemo(
     () => (act ? TEAMS.slice(0, act.cantEquipos || 4) : []),
-    [act?.cantEquipos],
+    [act],
   );
 
   const dayPts = useMemo(

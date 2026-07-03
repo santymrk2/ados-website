@@ -7,7 +7,6 @@ import {
   Plus,
   Pencil,
   Trash2,
-  Search,
   ArrowUp,
   ArrowDown,
   LayoutGrid,
@@ -20,7 +19,6 @@ import { PageHeader, Empty } from "@/components/ui/Common";
 import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { formatDate } from "@/lib/utils";
 import { useApp } from "@/hooks/useApp";
 import { $role } from "@/store/appStore";
 import {
@@ -40,7 +38,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import type { ParticipantBasic, Ranking } from "@/lib/types";
+import type { ParticipantBasic } from "@/lib/types";
 
 type SortBy = 'nombre' | 'apellido' | 'fechaNacimiento' | 'sexo' | 'total' | 'gf' | 'gh' | 'gb';
 type SortOrder = 'asc' | 'desc';
@@ -57,8 +55,8 @@ interface ParticipantWithStats extends ParticipantBasic {
 
 export default function Page() {
   const router = useRouter();
-  const { db, saveParticipant, deleteParticipant, refresh } = useApp();
-  const { participants, activities, rankings } = db;
+  const { db, deleteParticipant } = useApp();
+  const { participants, rankings } = db;
 
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<SortBy>("nombre");
@@ -139,7 +137,7 @@ export default function Page() {
     });
 
     return result;
-  }, [participants, activities, search, sortBy, sortOrder, filterSex]);
+  }, [participants, rankings, search, sortBy, sortOrder, filterSex]);
 
   const del = (id: number) => {
     const jugador = (participants || []).find((p) => p.id === id);
@@ -155,15 +153,6 @@ export default function Page() {
       setDeleteDialogOpen(false);
       setJugadorAEliminar(null);
       setConfirmName("");
-    }
-  };
-
-  const toggleSort = (field: SortBy) => {
-    if (sortBy === field) {
-      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
-    } else {
-      setSortBy(field);
-      setSortOrder("desc");
     }
   };
 

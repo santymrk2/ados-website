@@ -29,10 +29,8 @@ interface FloatingNavProps {
   onSearchModeChange?: (open: boolean) => void;
 }
 
-const COLLAPSED_HEIGHT = 56;
 const EXPANDED_WIDTH = "min(320px, calc(100vw - 24px))";
-
-// Cuánto crece el alto en modo filtro según el contenido
+const COLLAPSED_HEIGHT = 56;
 const FILTER_HEIGHT = 200;
 
 export function FloatingNav({
@@ -57,13 +55,11 @@ export function FloatingNav({
 
   const showSearch = searchValue !== undefined && onSearchChange !== undefined;
   const showFilter = filterContent !== undefined;
-  const hasExtras = showSearch || showFilter;
   const isSearchActive = hasActiveSearch ?? Boolean(searchValue?.trim());
   const isFilterActive = Boolean(hasActiveFilters);
 
   const rows = Math.ceil(items.length / 3);
   const expandedHeight = rows * 72 + 16;
-  // Calcular alto del filtro basado en contenido (mínimo 200, máximo 300 con scroll)
   const filterHeight = Math.min(Math.max(120, FILTER_HEIGHT), 320);
 
   const currentItem = items.find((item) => item.value === value) || items[0];
@@ -71,7 +67,17 @@ export function FloatingNav({
 
   const useCallback = !!onValueChange;
 
-  // Click outside para cerrar menú, search o filter
+  // ── ¿Qué modo está activo? ──────────────────────────────────────────────────
+  const activeMode: "section" | "search" | "filter" | null = isOpen
+    ? "section"
+    : searchMode
+      ? "search"
+      : filterMode
+        ? "filter"
+        : null;
+  const showAll = activeMode === null;
+
+  // Click outside para cerrar cualquier modo
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (
@@ -113,9 +119,14 @@ export function FloatingNav({
   };
 
   const handleClearSearch = () => {
-    if (onSearchChange) onSearchChange("");
-    // Refocus para que el usuario pueda tipear de inmediato
-    searchInputRef.current?.focus({ preventScroll: true });
+    // Si hay texto, solo lo limpia y mantiene el foco
+    if (searchValue?.trim()) {
+      if (onSearchChange) onSearchChange("");
+      searchInputRef.current?.focus({ preventScroll: true });
+      return;
+    }
+    // Si ya está vacío, cierra el modo búsqueda
+    setSearchMode(false);
   };
 
   const handleOpenFilter = (e: React.MouseEvent) => {
@@ -129,6 +140,7 @@ export function FloatingNav({
     setFilterMode(false);
   };
 
+  // Keyboard inset (para el teclado virtual en mobile)
   useEffect(() => {
     if (typeof window === "undefined") return;
 
@@ -170,254 +182,243 @@ export function FloatingNav({
     onSearchModeChange?.(searchMode);
   }, [onSearchModeChange, searchMode]);
 
-  // Dimensiones según estado
-  const targetWidth = EXPANDED_WIDTH;
-  const targetHeight = isOpen ? expandedHeight : filterMode ? filterHeight : COLLAPSED_HEIGHT;
   const bottomOffset = `calc(24px + env(safe-area-inset-bottom, 0px) + ${searchMode || filterMode ? keyboardInset : 0}px)`;
+
+  // ── Render: grilla de secciones (expandido) ─────────────────────────────────
+  const renderSectionGrid = () => (
+    <div className="grid grid-cols-3 gap-1 p-2 w-full h-full">
+      {items.map((item) => {
+        const Icon = item.icon;
+        const isActive = item.value === value;
+        const isLocked = lockedValues.includes(item.value);
+
+        if (isLocked) {
+          return (
+            <button
+              key={item.value}
+              disabled
+              className="flex flex-col items-center justify-center gap-1 rounded-2xl border border-border py-2 px-3 text-sm font-medium text-muted-foreground/50 cursor-not-allowed"
+            >
+              <Icon className="size-5" />
+              <span className="text-[10px] text-center leading-tight">
+                {item.label}
+              </span>
+            </button>
+          );
+        }
+
+        const href = useCallback
+          ? undefined
+          : item.href || (item.value ? `/${item.value}` : "/");
+
+        if (useCallback) {
+          return (
+            <button
+              key={item.value}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleSelect(item);
+              }}
+              className={cn(
+                "flex flex-col items-center justify-center gap-1 rounded-2xl border border-border py-2 px-3 text-sm font-medium transition-colors",
+                isActive
+                  ? "bg-primary text-white border-primary shadow-sm ring-2 ring-primary/20"
+                  : "hover:bg-muted",
+              )}
+            >
+              <Icon className="size-5" />
+              <span className="text-[10px] text-center leading-tight">
+                {item.label}
+              </span>
+            </button>
+          );
+        }
+
+        return (
+          <Link
+            key={item.value}
+            href={href!}
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsOpen(false);
+            }}
+            className={cn(
+              "flex flex-col items-center justify-center gap-1 rounded-2xl border border-border py-2 px-3 text-sm font-medium transition-colors",
+              isActive
+                ? "bg-primary text-white border-primary shadow-sm ring-2 ring-primary/20"
+                : "hover:bg-muted",
+            )}
+          >
+            <Icon className="size-5" />
+            <span className="text-[10px] text-center leading-tight">
+              {item.label}
+            </span>
+          </Link>
+        );
+      })}
+    </div>
+  );
+
+  // ── Pill animation config ──────────────────────────────────────────────────
+  const pillTransition = { duration: 0.2, ease: "easeOut" as const };
 
   return (
     <div
       ref={containerRef}
-      className="fixed left-1/2 z-[60] -translate-x-1/2 pb-safe"
+      className="fixed left-1/2 z-[60] -translate-x-1/2 pb-safe flex items-center justify-center gap-2"
       style={{ bottom: bottomOffset }}
     >
-      <motion.div
-        className={cn(
-          "rounded-2xl border border-border bg-white shadow-lg overflow-hidden",
-          (isOpen || searchMode || filterMode) && "border-primary",
-          (isSearchActive || isFilterActive) && "ring-2 ring-primary/20",
-          !searchMode && !filterMode && "cursor-pointer",
-        )}
-        animate={{
-          width: targetWidth,
-          height: targetHeight,
-        }}
-        transition={{
-          width: { duration: 0.2, ease: "easeOut" },
-          height: { duration: 0.2, ease: "easeOut" },
-        }}
-      >
-        {/* ─── ESTADO A: Menú colapsado ─── */}
-        <AnimatePresence>
-          {!isOpen && !searchMode && !filterMode && (
-            <motion.div
-              key="collapsed"
-              className="absolute inset-0 flex items-center"
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.1 }}
-              exit={{
-                opacity: 0,
-                scale: 0.9,
-                transition: { duration: 0.1, delay: 0.12 },
-              }}
-            >
-              {hasExtras ? (
-                <>
-                  {/* Botón menú */}
-                  <div
-                    className="flex-1 flex flex-col items-center justify-center gap-0.5 p-1.5 h-full"
-                    onClick={handleToggleMenu}
-                  >
-                    <CurrentIcon className="size-5 text-foreground" />
-                    <span className="text-[10px] text-center leading-tight">
-                      {currentItem.label}
-                    </span>
-                  </div>
-
-                  {/* Separadores y botones extra */}
-                  {showSearch && (
-                    <>
-                      <div className="w-px h-8 bg-border shrink-0" />
-                      <button
-                        onClick={handleOpenSearch}
-                        className="w-12 h-full flex items-center justify-center text-foreground hover:text-primary transition-colors shrink-0"
-                        aria-label="Buscar"
-                      >
-                        <Search className="size-5" />
-                      </button>
-                    </>
-                  )}
-                  {showFilter && (
-                    <>
-                      <div className="w-px h-8 bg-border shrink-0" />
-                      <button
-                        onClick={handleOpenFilter}
-                        className="w-12 h-full flex items-center justify-center text-foreground hover:text-primary transition-colors shrink-0"
-                        aria-label="Filtros"
-                      >
-                        <SlidersHorizontal className="size-5" />
-                      </button>
-                    </>
-                  )}
-                </>
-              ) : (
-                <div
-                  className="absolute inset-0 flex items-center justify-center"
-                  onClick={handleToggleMenu}
-                >
-                  <div className="flex flex-col items-center justify-center gap-0.5 p-1.5">
-                    <CurrentIcon className="size-5 text-foreground" />
-                    <span className="text-[10px] text-center leading-tight">
-                      {currentItem.label}
-                    </span>
-                  </div>
-                </div>
-              )}
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* ─── ESTADO B: Menú expandido ─── */}
-        <AnimatePresence>
-          {isOpen && (
-            <motion.div
-              key="expanded"
-              className="absolute inset-0"
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.3 }}
-              transition={{ duration: 0.15, delay: 0.1 }}
-            >
-              <div className="grid grid-cols-3 gap-1 p-2 w-full h-full">
-                {items.map((item) => {
-                  const Icon = item.icon;
-                  const isActive = item.value === value;
-                  const isLocked = lockedValues.includes(item.value);
-
-                  if (isLocked) {
-                    return (
-                      <button
-                        key={item.value}
-                        disabled
-                        className="flex flex-col items-center justify-center gap-1 rounded-2xl border border-border py-2 px-3 text-sm font-medium text-muted-foreground/50 cursor-not-allowed"
-                      >
-                        <Icon className="size-5" />
-                        <span className="text-[10px] text-center leading-tight">
-                          {item.label}
-                        </span>
-                      </button>
-                    );
-                  }
-
-                  const href = useCallback
-                    ? undefined
-                    : item.href || (item.value ? `/${item.value}` : "/");
-
-                  if (useCallback) {
-                    return (
-                      <button
-                        key={item.value}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleSelect(item);
-                        }}
-                        className={cn(
-                          "flex flex-col items-center justify-center gap-1 rounded-2xl border border-border py-2 px-3 text-sm font-medium transition-colors",
-                          isActive
-                            ? "bg-primary text-white border-primary shadow-sm ring-2 ring-primary/20"
-                            : "hover:bg-muted",
-                        )}
-                      >
-                        <Icon className="size-5" />
-                        <span className="text-[10px] text-center leading-tight">
-                          {item.label}
-                        </span>
-                      </button>
-                    );
-                  }
-
-                  return (
-                    <Link
-                      key={item.value}
-                      href={href!}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setIsOpen(false);
-                      }}
-                      className={cn(
-                        "flex flex-col items-center justify-center gap-1 rounded-2xl border border-border py-2 px-3 text-sm font-medium transition-colors",
-                        isActive
-                          ? "bg-primary text-white border-primary shadow-sm ring-2 ring-primary/20"
-                          : "hover:bg-muted",
-                      )}
-                    >
-                      <Icon className="size-5" />
-                      <span className="text-[10px] text-center leading-tight">
-                        {item.label}
-                      </span>
-                    </Link>
-                  );
-                })}
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* ─── ESTADO C: Modo búsqueda ─── */}
-        <AnimatePresence>
-          {searchMode && (
-            <motion.div
-              key="search"
-              className="absolute inset-0 flex items-center gap-2 px-3"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.1 }}
-            >
-              <Search className="size-4 text-text-muted shrink-0" />
-              <input
-                ref={searchInputRef}
-                type="text"
-                value={searchValue || ""}
-                onChange={(e) => onSearchChange?.(e.target.value)}
-                placeholder={searchPlaceholder}
-                className="flex-1 bg-transparent border-none outline-none text-sm text-foreground placeholder:text-text-muted"
-              />
-              <button
-                onClick={handleClearSearch}
-                className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-surface-light text-foreground transition-colors"
-                aria-label="Limpiar búsqueda"
+      <AnimatePresence mode="popLayout">
+        {/* ═══════════════════════════════════════════════════════════════════════
+             PILL 1: Sección (siempre visible)
+           ═══════════════════════════════════════════════════════════════════════ */}
+        {(showAll || activeMode === "section") && (
+          <motion.div
+            key="pill-section"
+            layout
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            transition={pillTransition}
+            className={cn(
+              "rounded-2xl border border-border bg-white shadow-lg overflow-hidden",
+              isOpen && "border-primary",
+            )}
+          >
+            {isOpen ? (
+              <div
+                className="h-full"
+                style={{ width: EXPANDED_WIDTH, height: expandedHeight }}
               >
-                <X className="size-4" />
-              </button>
-            </motion.div>
-          )}
-        </AnimatePresence>
+                {renderSectionGrid()}
+              </div>
+            ) : (
+              <div
+                className="flex flex-col items-center justify-center gap-0.5 px-3 py-1.5 cursor-pointer"
+                style={{ height: COLLAPSED_HEIGHT }}
+                onClick={handleToggleMenu}
+              >
+                <CurrentIcon className="size-5 text-foreground" />
+                <span className="text-[10px] text-center leading-tight whitespace-nowrap">
+                  {currentItem.label}
+                </span>
+              </div>
+            )}
+          </motion.div>
+        )}
 
-        {/* ─── ESTADO D: Modo filtros ─── */}
-        <AnimatePresence>
-          {filterMode && (
-            <motion.div
-              key="filter"
-              className="absolute inset-0 flex flex-col"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.1 }}
-            >
-              {/* Header del filtro con botón cerrar */}
-              <div className="flex items-center justify-between px-3 py-2 border-b border-border shrink-0">
-                <div className="flex items-center gap-2">
-                  <SlidersHorizontal className="size-4 text-text-muted" />
-                  <span className="text-xs font-bold text-foreground">Filtros</span>
-                </div>
+        {/* ═══════════════════════════════════════════════════════════════════════
+             PILL 2: Búsqueda (solo si está habilitada)
+           ═══════════════════════════════════════════════════════════════════════ */}
+        {showSearch && (showAll || activeMode === "search") && (
+          <motion.div
+            key="pill-search"
+            layout
+            initial={{ opacity: 0, scale: 0.9, width: 56, height: COLLAPSED_HEIGHT }}
+            animate={{
+              opacity: 1,
+              scale: 1,
+              width: searchMode ? EXPANDED_WIDTH : 56,
+              height: COLLAPSED_HEIGHT,
+            }}
+            exit={{ opacity: 0, scale: 0.9, width: 56, height: COLLAPSED_HEIGHT }}
+            transition={pillTransition}
+            className={cn(
+              "rounded-2xl border border-border bg-white shadow-lg overflow-hidden",
+              searchMode && "border-primary",
+              isSearchActive && !searchMode && "ring-2 ring-primary/20",
+            )}
+          >
+            {searchMode ? (
+              <div className="flex items-center gap-2 px-3 h-full w-full">
+                <Search className="size-4 text-text-muted shrink-0" />
+                <input
+                  ref={searchInputRef}
+                  type="text"
+                  value={searchValue || ""}
+                  onChange={(e) => onSearchChange?.(e.target.value)}
+                  placeholder={searchPlaceholder}
+                  className="flex-1 bg-transparent border-none outline-none text-sm text-foreground placeholder:text-text-muted"
+                />
                 <button
-                  onClick={handleCloseFilter}
-                  className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-surface-light text-foreground transition-colors"
-                  aria-label="Cerrar filtros"
+                  onClick={handleClearSearch}
+                  className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-surface-light text-foreground transition-colors shrink-0"
+                  aria-label="Limpiar búsqueda"
                 >
                   <X className="size-4" />
                 </button>
               </div>
-              {/* Contenido del filtro (scrollable) */}
-              <div className="flex-1 overflow-y-auto p-3">
-                {filterContent}
+            ) : (
+              <button
+                onClick={handleOpenSearch}
+                className="w-full h-full flex items-center justify-center text-foreground hover:text-primary transition-colors cursor-pointer"
+                style={{ height: COLLAPSED_HEIGHT }}
+                aria-label="Buscar"
+              >
+                <Search className="size-5" />
+              </button>
+            )}
+          </motion.div>
+        )}
+
+        {/* ═══════════════════════════════════════════════════════════════════════
+             PILL 3: Filtros (solo si está habilitado)
+           ═══════════════════════════════════════════════════════════════════════ */}
+        {showFilter && (showAll || activeMode === "filter") && (
+          <motion.div
+            key="pill-filter"
+            layout
+            initial={{ opacity: 0, scale: 0.9, width: 56, height: COLLAPSED_HEIGHT }}
+            animate={{
+              opacity: 1,
+              scale: 1,
+              width: filterMode ? EXPANDED_WIDTH : 56,
+              height: filterMode ? filterHeight : COLLAPSED_HEIGHT,
+            }}
+            exit={{ opacity: 0, scale: 0.9, width: 56, height: COLLAPSED_HEIGHT }}
+            transition={pillTransition}
+            className={cn(
+              "rounded-2xl border border-border bg-white shadow-lg overflow-hidden",
+              filterMode && "border-primary",
+              isFilterActive && !filterMode && "ring-2 ring-primary/20",
+            )}
+          >
+            {filterMode ? (
+              <div className="flex flex-col h-full w-full">
+                {/* Header del filtro con botón cerrar */}
+                <div className="flex items-center justify-between px-3 py-2 border-b border-border shrink-0">
+                  <div className="flex items-center gap-2">
+                    <SlidersHorizontal className="size-4 text-text-muted" />
+                    <span className="text-xs font-bold text-foreground">
+                      Filtros
+                    </span>
+                  </div>
+                  <button
+                    onClick={handleCloseFilter}
+                    className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-surface-light text-foreground transition-colors"
+                    aria-label="Cerrar filtros"
+                  >
+                    <X className="size-4" />
+                  </button>
+                </div>
+                {/* Contenido del filtro */}
+                <div className="flex-1 overflow-y-auto p-3">
+                  {filterContent}
+                </div>
               </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </motion.div>
+            ) : (
+              <button
+                onClick={handleOpenFilter}
+                className="w-full h-full flex items-center justify-center text-foreground hover:text-primary transition-colors cursor-pointer"
+                style={{ height: COLLAPSED_HEIGHT }}
+                aria-label="Filtros"
+              >
+                <SlidersHorizontal className="size-5" />
+              </button>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

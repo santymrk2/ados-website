@@ -12,45 +12,8 @@ concurrency:
 
 permissions:
   contents: read
-  packages: write
-
-env:
-  IMAGE_NAME: ghcr.io/santymrk2/ados-website
 
 jobs:
   quality-gate:
     name: Quality Gate
     uses: ./.github/workflows/_quality-gate.yml
-
-  deploy-production:
-    name: Deploy Production
-    needs: quality-gate
-    runs-on: ubuntu-latest
-    environment: production
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v5
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v4
-
-      - name: Log in to ghcr.io
-        uses: docker/login-action@v4
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build and push production image
-        uses: docker/build-push-action@v7
-        with:
-          context: .
-          file: ./Dockerfile
-          push: true
-          tags: ${{ env.IMAGE_NAME }}:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      - name: Trigger Dokploy production redeploy
-        run: curl --fail --silent --show-error -X POST "${{ secrets.DOKPLOY_PRODUCTION_WEBHOOK_URL }}"

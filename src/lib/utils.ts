@@ -1,5 +1,6 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
+import { imagesEnabled } from "./images-config"
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -57,6 +58,8 @@ export function parseLocalDate(dateStr: string | null | undefined): Date | null 
 
 export function getImg(photo: string | null | undefined): string {
   if (!photo) return "";
+  // When images are disabled, return empty to show initials fallback
+  if (!imagesEnabled) return "";
   if (photo.startsWith("data:") || photo.startsWith("http")) return photo;
   // Already proxied — don't double-prefix
   if (photo.startsWith("/api/images/")) return photo;

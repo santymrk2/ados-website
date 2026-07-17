@@ -4,6 +4,7 @@ import { participants } from "@/lib/schema";
 import { eq } from "drizzle-orm";
 import type { Participant } from "@/lib/types";
 import { handleApiError, requireAuth } from "@/lib/api-utils";
+import { imagesEnabled } from "@/lib/images-config";
 
 export const dynamic = 'force-dynamic';
 
@@ -35,13 +36,14 @@ export async function GET(
 
     const p = result[0] as Participant;
     
-    // IMPORTANTE: Aquí convertimos las fotos para que usen nuestro Proxy
-    // No devolvemos la URL de MinIO directamente para evitar errores de DNS/Protocolo en el navegador
-    if (p.foto && !p.foto.startsWith('data:') && !p.foto.startsWith('http')) {
-      p.foto = `/api/images/${p.foto}`;
-    }
-    if (p.fotoAltaCalidad && !p.fotoAltaCalidad.startsWith('data:') && !p.fotoAltaCalidad.startsWith('http')) {
-      p.fotoAltaCalidad = `/api/images/${p.fotoAltaCalidad}`;
+    // Resolve image URLs (only when images are enabled)
+    if (imagesEnabled) {
+      if (p.foto && !p.foto.startsWith('data:') && !p.foto.startsWith('http')) {
+        p.foto = `/api/images/${p.foto}`;
+      }
+      if (p.fotoAltaCalidad && !p.fotoAltaCalidad.startsWith('data:') && !p.fotoAltaCalidad.startsWith('http')) {
+        p.fotoAltaCalidad = `/api/images/${p.fotoAltaCalidad}`;
+      }
     }
 
     return NextResponse.json({ success: true, data: p }, { 

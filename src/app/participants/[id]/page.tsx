@@ -19,6 +19,7 @@ import { actPts } from "@/lib/calc";
 import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/button";
 import { formatDate, cn, getImg } from "@/lib/utils";
+import { imagesEnabled } from "@/lib/images-config";
 import { ImageExpandModal } from "@/components/ui/ImageExpandModal";
 import { getParticipant } from "@/lib/api-client";
 
@@ -122,6 +123,7 @@ export default function Page({
   }
 
   const handlePhotoClick = () => {
+    if (!imagesEnabled) return;
     const imageToShow = player.fotoAltaCalidad || player.foto;
     if (imageToShow) setExpandedImage(getImg(imageToShow));
   };
@@ -163,7 +165,7 @@ export default function Page({
               onClick={handlePhotoClick}
               className={cn(
                 "relative",
-                player.foto ? "cursor-pointer hover:scale-105 transition-transform" : ""
+                imagesEnabled && player.foto ? "cursor-pointer hover:scale-105 transition-transform" : ""
               )}
             >
               <div className="border-4 border-white/20 rounded-full p-1">
@@ -338,11 +340,13 @@ export default function Page({
         </div>
       </div>
 
-      <ImageExpandModal
-        image={expandedImage}
-        playerName={`${player.nombre} ${player.apellido}`}
-        onClose={() => setExpandedImage(null)}
-      />
+      {imagesEnabled && (
+        <ImageExpandModal
+          image={expandedImage}
+          playerName={`${player.nombre} ${player.apellido}`}
+          onClose={() => setExpandedImage(null)}
+        />
+      )}
     </div>
   );
 }

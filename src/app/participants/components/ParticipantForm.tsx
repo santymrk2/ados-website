@@ -12,6 +12,7 @@ import { getParticipant } from "@/lib/api-client";
 import { downloadBase64Image } from "@/lib/image-utils";
 import { DatePicker } from "@/components/ui/calendar";
 import { getErrorMessage, getImg } from "@/lib/utils";
+import { imagesEnabled } from "@/lib/images-config";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -149,67 +150,69 @@ export function ParticipantForm({ db, initial, onClose, onSave }: ParticipantFor
 
       <div className="p-4 flex flex-col gap-6 max-w-2xl mx-auto w-full">
         {/* Foto Section */}
-        <div className="bg-white rounded-3xl p-6 border border-surface-dark flex flex-col items-center shadow-sm">
-          <div 
-            onClick={() => !isSubmitting && fileRef.current?.click()}
-            className="relative group cursor-pointer"
-          >
-            <div className="w-32 h-32 rounded-full border-4 border-slate-100 overflow-hidden bg-slate-50 flex items-center justify-center shadow-inner">
-              {form.foto ? (
-                <img src={getImg(form.foto)} className="w-full h-full object-cover" alt="" />
-              ) : (
-                <User className="w-16 h-16 text-slate-300" />
+        {imagesEnabled && (
+          <div className="bg-white rounded-3xl p-6 border border-surface-dark flex flex-col items-center shadow-sm">
+            <div 
+              onClick={() => !isSubmitting && fileRef.current?.click()}
+              className="relative group cursor-pointer"
+            >
+              <div className="w-32 h-32 rounded-full border-4 border-slate-100 overflow-hidden bg-slate-50 flex items-center justify-center shadow-inner">
+                {form.foto ? (
+                  <img src={getImg(form.foto)} className="w-full h-full object-cover" alt="" />
+                ) : (
+                  <User className="w-16 h-16 text-slate-300" />
+                )}
+              </div>
+              <div className="absolute bottom-0 right-0 bg-primary text-white p-2 rounded-full shadow-lg border-4 border-white group-hover:scale-110 transition-transform">
+                <Camera className="w-5 h-5" />
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => fileRef.current?.click()}
+                disabled={isSubmitting}
+                className="rounded-full px-4"
+              >
+                Cambiar Foto
+              </Button>
+              {form.foto && (
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleDownload}
+                    disabled={isSubmitting}
+                    className="rounded-full px-4"
+                  >
+                    <Download className="w-4 h-4 mr-2" /> Descargar
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => {
+                      F("foto", "");
+                      F("fotoAltaCalidad", "");
+                    }}
+                    disabled={isSubmitting}
+                    className="rounded-full px-4"
+                  >
+                    <X className="w-4 h-4 mr-2" /> Eliminar
+                  </Button>
+                </>
               )}
             </div>
-            <div className="absolute bottom-0 right-0 bg-primary text-white p-2 rounded-full shadow-lg border-4 border-white group-hover:scale-110 transition-transform">
-              <Camera className="w-5 h-5" />
-            </div>
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => handlePhoto(e.target.files?.[0] as File)}
+            />
           </div>
-
-          <div className="flex gap-3 mt-6">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => fileRef.current?.click()}
-              disabled={isSubmitting}
-              className="rounded-full px-4"
-            >
-              Cambiar Foto
-            </Button>
-            {form.foto && (
-              <>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleDownload}
-                  disabled={isSubmitting}
-                  className="rounded-full px-4"
-                >
-                  <Download className="w-4 h-4 mr-2" /> Descargar
-                </Button>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={() => {
-                    F("foto", "");
-                    F("fotoAltaCalidad", "");
-                  }}
-                  disabled={isSubmitting}
-                  className="rounded-full px-4"
-                >
-                  <X className="w-4 h-4 mr-2" /> Eliminar
-                </Button>
-              </>
-            )}
-          </div>
-          <input
-            ref={fileRef}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={(e) => handlePhoto(e.target.files?.[0] as File)}
-          />
-        </div>
+        )}
 
         {/* Datos Personales */}
         <div className="bg-white rounded-3xl p-6 border border-surface-dark shadow-sm space-y-5">
@@ -270,7 +273,7 @@ export function ParticipantForm({ db, initial, onClose, onSave }: ParticipantFor
         <div className="h-20" /> {/* Espaciado final */}
       </div>
 
-      {tempImage && (
+      {imagesEnabled && tempImage && (
         <ImageCropModal
           image={tempImage}
           onClose={() => setTempImage(null)}

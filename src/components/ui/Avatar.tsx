@@ -3,6 +3,7 @@
 import React from "react";
 import * as AvatarPrimitive from "@radix-ui/react-avatar";
 import { cn, getImg } from "@/lib/utils";
+import { imagesEnabled } from "@/lib/images-config";
 
 interface AvatarProps {
   p: {
@@ -33,7 +34,7 @@ export function Avatar({ p, size = 36, className = "" }: AvatarProps) {
       className={cn("relative inline-block shrink-0", className)}
     >
       <AvatarPrimitive.Root className="relative flex h-full w-full shrink-0 overflow-hidden rounded-full border border-[#E5E7EB]">
-        {p.foto && (
+        {imagesEnabled && p.foto && getImg(p.foto) && (
           <AvatarPrimitive.Image
             src={getImg(p.foto)}
             alt={`${p.nombre} ${p.apellido}`}

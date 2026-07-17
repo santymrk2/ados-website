@@ -3,10 +3,15 @@ import { GetObjectCommand } from "@aws-sdk/client-s3";
 import { s3Client, minioConfig } from "@/services/minio";
 import { handleApiError, requireAuth } from "@/lib/api-utils";
 import { AppError, NotFoundError } from "@/lib/errors";
+import { imagesEnabled } from "@/lib/images-config";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest, context: { params: Promise<{ id: string }> }) {
+  if (!imagesEnabled) {
+    return NextResponse.json({ success: false, error: "Imágenes deshabilitadas" }, { status: 404 });
+  }
+
   const auth = requireAuth(request);
   if (!auth.success) {
     return auth.error;

@@ -9,6 +9,7 @@ import { eventBus } from "@/lib/eventBus";
 import { uploadBase64Image, minioConfig } from "@/services/minio";
 import { parseBody } from "@/lib/api-utils";
 import { deleteByIdSchema, participantSaveSchema } from "@/lib/validation";
+import { imagesEnabled } from "@/lib/images-config";
 
 const generateUniqueFilename = (prefix: string) => `${prefix}_${Date.now()}_${Math.random().toString(36).substring(7)}.jpg`;
 
@@ -33,12 +34,14 @@ export async function GET(request: NextRequest) {
 
       const p = result[0];
       
-      // Usar el proxy de Next.js en vez de signed URLs ( más compatible con Dokploy)
-      if (p.foto && !p.foto.startsWith('data:') && !p.foto.startsWith('http')) {
-        p.foto = `/api/images/${p.foto}`;
-      }
-      if (p.fotoAltaCalidad && !p.fotoAltaCalidad.startsWith('data:') && !p.fotoAltaCalidad.startsWith('http')) {
-        p.fotoAltaCalidad = `/api/images/${p.fotoAltaCalidad}`;
+      // Resolve image URLs (only when images are enabled)
+      if (imagesEnabled) {
+        if (p.foto && !p.foto.startsWith('data:') && !p.foto.startsWith('http')) {
+          p.foto = `/api/images/${p.foto}`;
+        }
+        if (p.fotoAltaCalidad && !p.fotoAltaCalidad.startsWith('data:') && !p.fotoAltaCalidad.startsWith('http')) {
+          p.fotoAltaCalidad = `/api/images/${p.fotoAltaCalidad}`;
+        }
       }
 
       return NextResponse.json({ success: true, data: p }, { 
@@ -64,7 +67,7 @@ export async function GET(request: NextRequest) {
       .from(participants);
 
     const formatted = result.map(p => {
-      if (p.foto && !p.foto.startsWith('data:') && !p.foto.startsWith('http')) {
+      if (imagesEnabled && p.foto && !p.foto.startsWith('data:') && !p.foto.startsWith('http')) {
         p.foto = `/api/images/${p.foto}`;
       }
       return p;
@@ -94,30 +97,37 @@ export async function POST(request: NextRequest) {
     }
 
     const { data, isNew, invitadorId } = parsed.data;
-    const needsImageUpload =
-      data.foto?.startsWith('data:image') ||
-      data.fotoAltaCalidad?.startsWith('data:image');
 
-    if (needsImageUpload && !minioConfig.isConfigured) {
-      return NextResponse.json({ success: false, error: "El almacenamiento de imágenes no está configurado" }, { status: 503 });
-    }
-    
-    // Handle image uploads
-    if (data.foto && data.foto.startsWith('data:image')) {
-      try {
-        data.foto = await uploadBase64Image(data.foto, generateUniqueFilename('thumb'));
-      } catch (uploadError) {
-        console.error('[MinIO] Image upload failed:', uploadError);
-        return NextResponse.json({ success: false, error: "Error al subir la imagen" }, { status: 500 });
+    // Handle image uploads (only when images are enabled)
+    if (imagesEnabled) {
+      const needsImageUpload =
+        data.foto?.startsWith('data:image') ||
+        data.fotoAltaCalidad?.startsWith('data:image');
+
+      if (needsImageUpload && !minioConfig.isConfigured) {
+        return NextResponse.json({ success: false, error: "El almacenamiento de imágenes no está configurado" }, { status: 503 });
       }
-    }
-    if (data.fotoAltaCalidad && data.fotoAltaCalidad.startsWith('data:image')) {
-      try {
-        data.fotoAltaCalidad = await uploadBase64Image(data.fotoAltaCalidad, generateUniqueFilename('full'));
-      } catch (uploadError) {
-        console.error('[MinIO] Image upload failed:', uploadError);
-        return NextResponse.json({ success: false, error: "Error al subir la imagen" }, { status: 500 });
+      
+      if (data.foto && data.foto.startsWith('data:image')) {
+        try {
+          data.foto = await uploadBase64Image(data.foto, generateUniqueFilename('thumb'));
+        } catch (uploadError) {
+          console.error('[MinIO] Image upload failed:', uploadError);
+          return NextResponse.json({ success: false, error: "Error al subir la imagen" }, { status: 500 });
+        }
       }
+      if (data.fotoAltaCalidad && data.fotoAltaCalidad.startsWith('data:image')) {
+        try {
+          data.fotoAltaCalidad = await uploadBase64Image(data.fotoAltaCalidad, generateUniqueFilename('full'));
+        } catch (uploadError) {
+          console.error('[MinIO] Image upload failed:', uploadError);
+          return NextResponse.json({ success: false, error: "Error al subir la imagen" }, { status: 500 });
+        }
+      }
+    } else {
+      // When images are disabled, strip any image data before saving
+      if (data.foto?.startsWith('data:image')) data.foto = null;
+      if (data.fotoAltaCalidad?.startsWith('data:image')) data.fotoAltaCalidad = null;
     }
     
     if (isNew) {

@@ -4,6 +4,8 @@ import { AuthGate } from "@/components/auth/AuthGate";
 import { Inter } from "next/font/google";
 import { cn } from "@/lib/utils";
 import { Toaster } from "@/components/ui/sonner";
+import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 const inter = Inter({subsets:['latin'],variable:'--font-sans'});
 
@@ -44,6 +46,8 @@ export default function RootLayout({
       <body>
         <AuthGate>{children}</AuthGate>
         <Toaster position="top-center" richColors />
+        <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );

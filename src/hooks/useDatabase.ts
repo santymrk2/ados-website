@@ -8,7 +8,6 @@ import {
   $rankings,
   $dbLoading,
   $dbError,
-  $dataVersion,
   refreshData
 } from '@/store/appStore';
 import {
@@ -48,14 +47,11 @@ const RETRYABLE_QUICK_UPDATE_TYPES = new Set([
 ]);
 
 export function useDatabase() {
-  // Always provide default values to prevent undefined errors
-  const participants = useStore($participants) ?? [];
-  const activities = useStore($activities) ?? [];
+  const participants = useStore($participants);
+  const activities = useStore($activities);
   const isLoading = useStore($dbLoading);
   const error = useStore($dbError);
-  const rankings = useStore($rankings) ?? [];
-  const dataVersion = useStore($dataVersion) ?? 0;
-
+  const rankings = useStore($rankings);
   // Función de refresh - llama al store que ya maneja SSE automáticamente
   const refresh = useCallback(async (forceLoader = false) => {
     await refreshData(forceLoader);
@@ -123,7 +119,7 @@ export function useDatabase() {
     rankings,
     nextPid: participants.length > 0 ? Math.max(0, ...participants.map((p) => p.id)) + 1 : 1,
     nextAid: activities.length > 0 ? Math.max(0, ...activities.map((a) => a.id)) + 1 : 1,
-  }), [participants, activities, rankings, dataVersion]);
+  }), [participants, activities, rankings]);
 
   return {
     db,

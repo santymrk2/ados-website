@@ -308,13 +308,13 @@ export function FloatingNav({
   }, []);
 
   const bottomOffset = `calc(24px + env(safe-area-inset-bottom, 0px) + ${searchMode || filterMode ? keyboardInset : 0}px)`;
-  const pillTransition = { duration: 0.25, ease: [0.16, 1, 0.3, 1] };
+  const pillTransition = { duration: 0.25, ease: [0.16, 1, 0.3, 1] as const };
 
   return (
     <div
       ref={containerRef}
       className="fixed left-1/2 z-[60] -translate-x-1/2 pb-safe flex items-center justify-center gap-2"
-      style={{ bottom: bottomOffset }}
+      style={{ bottom: bottomOffset, filter: 'drop-shadow(0 4px 24px rgba(0,0,0,0.18))' }}
     >
       <AnimatePresence mode="popLayout">
         {/* PILL 1: Sección Principal */}

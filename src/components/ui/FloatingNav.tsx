@@ -106,6 +106,7 @@ export function FloatingNav({
         !containerRef.current.contains(event.target as Node)
       ) {
         setSearchMode(false);
+        onSearchModeChange?.(false);
         setFilterMode(false);
         setIsExpandedMenuOpen(false);
       }
@@ -115,7 +116,7 @@ export function FloatingNav({
       return () =>
         document.removeEventListener("mousedown", handleClickOutside);
     }
-  }, [searchMode, filterMode, isExpandedMenuOpen]);
+  }, [searchMode, filterMode, isExpandedMenuOpen, onSearchModeChange]);
 
   // ── FIX: Sincronizar rueda al cambiar valor, cerrar menú expandido o VOLVER de búsqueda/filtros ──
   useEffect(() => {
@@ -210,6 +211,7 @@ export function FloatingNav({
     setFilterMode(false);
     setIsExpandedMenuOpen(false);
     setSearchMode(true);
+    onSearchModeChange?.(true);
   };
 
   const handleClearSearch = () => {
@@ -219,11 +221,13 @@ export function FloatingNav({
       return;
     }
     setSearchMode(false);
+    onSearchModeChange?.(false);
   };
 
   const handleOpenFilter = (e: React.MouseEvent) => {
     e.stopPropagation();
     setSearchMode(false);
+    onSearchModeChange?.(false);
     setIsExpandedMenuOpen(false);
     setFilterMode(true);
   };
@@ -314,7 +318,7 @@ export function FloatingNav({
     <div
       ref={containerRef}
       className="fixed left-1/2 z-[60] -translate-x-1/2 pb-safe flex items-center justify-center gap-2"
-      style={{ bottom: bottomOffset }}
+      style={{ bottom: bottomOffset, filter: 'drop-shadow(0 4px 24px rgba(0,0,0,0.18))' }}
     >
       <AnimatePresence mode="popLayout">
         {/* PILL 1: Sección Principal */}

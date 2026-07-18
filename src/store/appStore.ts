@@ -65,7 +65,7 @@ export const refreshData = async (forceLoader = false) => {
   }
 
   // Create the refresh promise and store it to prevent concurrent calls
-  refreshPromise = doRefresh(forceLoader)
+  refreshPromise = doRefresh()
     .finally(async () => {
       refreshPromise = null;
       initialLoadDone = true;
@@ -79,7 +79,7 @@ export const refreshData = async (forceLoader = false) => {
   return refreshPromise;
 };
 
-async function doRefresh(forceLoader: boolean): Promise<void> {
+async function doRefresh(): Promise<void> {
   let lastError: Error | null = null;
 
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
@@ -96,18 +96,6 @@ async function doRefresh(forceLoader: boolean): Promise<void> {
       const aData = a || [];
       const rJson = rReq.ok ? await rReq.json() : [];
       const rData = Array.isArray(rJson) ? rJson : (rJson.data || []);
-
-      // Compare with existing data to detect changes
-      const oldP = $participants.get();
-      const oldA = $activities.get();
-      const oldR = $rankings.get();
-
-      const pChanged = pData.length !== oldP.length ||
-        pData.some((p, i) => p.id !== oldP[i]?.id);
-      const aChanged = aData.length !== oldA.length ||
-        aData.some((a, i) => a.id !== oldA[i]?.id);
-      const rChanged = rData.length !== oldR.length ||
-        rData.some((r, i) => r.id !== oldR[i]?.id);
 
       // Force new array reference to ensure React re-renders
       const newParticipants = [...pData];

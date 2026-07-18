@@ -177,14 +177,9 @@ function ShellInner({
 
   // Limpia el loading cuando la navegación completa (cambia la URL)
   useEffect(() => {
-    if (sectionLoading) {
-      setSectionLoading(false);
-    }
-  }, [pathname]);
-
-  useEffect(() => {
     if (!pathnameSection || pathnameSection === currentSection) return;
 
+    setSectionLoading(false);
     setCurrentSection(pathnameSection);
     setSearchQuery("");
     setFilterContent(null);

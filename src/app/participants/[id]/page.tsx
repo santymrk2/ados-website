@@ -7,8 +7,6 @@ import { useStore } from "@nanostores/react";
 import { $role } from "@/store/appStore";
 import {
   ChevronLeft,
-  Star,
-  CheckCircle,
   Award,
   Trophy,
   Target,
@@ -74,31 +72,7 @@ export default function Page({
       .sort((a, b) => b.fecha.localeCompare(a.fecha));
   }, [playerId, db]);
 
-  const goalsBySport = useMemo(() => {
-    const result = { f: 0, h: 0, b: 0 };
-    if (!playerId || !db?.activities) return result;
-    db.activities.forEach((a) => {
-      (a.goles || []).forEach((g) => {
-        if (g.pid === playerId) {
-          result[g.tipo as keyof typeof result] = (result[g.tipo as keyof typeof result] || 0) + g.cant;
-        }
-      });
-    });
-    return result;
-  }, [playerId, db]);
 
-  const teamsPlayed = useMemo(() => {
-    if (!playerId || !db?.activities) return [];
-    return Array.from(
-      new Set(
-        db.activities.flatMap((a) =>
-          a.asistentes.includes(playerId) && a.equipos?.[playerId]
-            ? [a.equipos[playerId]]
-            : [],
-        ),
-      ),
-    );
-  }, [playerId, db]);
 
   if (dbLoading || !db) {
     return (
@@ -192,21 +166,7 @@ export default function Page({
                   </span>
                 )}
               </div>
-              <div className="flex gap-1.5 mt-3 flex-wrap">
-                {teamsPlayed.map((t) => (
-                  <span
-                    key={t}
-                    className="text-[10px] font-black px-2 py-0.5 rounded-md uppercase"
-                    style={{
-                      backgroundColor: TEAM_COLORS[t] + '30',
-                      color: 'white',
-                      border: `1px solid ${TEAM_COLORS[t]}50`
-                    }}
-                  >
-                    {t}
-                  </span>
-                ))}
-              </div>
+
             </div>
           </div>
         </div>
@@ -214,7 +174,7 @@ export default function Page({
 
       <div className="px-4 -mt-6 relative z-20 space-y-4">
         {/* Stats Principales */}
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-3 gap-3">
           <div className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100 flex flex-col items-center">
             <div className="bg-primary/10 p-2 rounded-2xl mb-2">
               <Target className="w-6 h-6 text-primary" />
@@ -237,26 +197,15 @@ export default function Page({
               ASISTENCIAS
             </div>
           </div>
-        </div>
-
-        {/* Goles Breakdown */}
-        <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100">
-          <div className="flex items-center justify-between mb-4">
-            <h4 className="font-black text-xs uppercase tracking-widest text-slate-400">Goles por deporte</h4>
-            <Trophy className="w-4 h-4 text-slate-300" />
-          </div>
-          <div className="grid grid-cols-3 gap-3">
-            <div className="text-center p-3 bg-slate-50 rounded-2xl border border-slate-100">
-              <div className="font-black text-2xl text-slate-900">{goalsBySport.f}</div>
-              <div className="text-[10px] font-bold text-slate-400">Fútbol</div>
+          <div className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100 flex flex-col items-center">
+            <div className="bg-amber-100 p-2 rounded-2xl mb-2">
+              <Trophy className="w-6 h-6 text-amber-600" />
             </div>
-            <div className="text-center p-3 bg-slate-50 rounded-2xl border border-slate-100">
-              <div className="font-black text-2xl text-slate-900">{goalsBySport.h}</div>
-              <div className="text-[10px] font-bold text-slate-400">Handball</div>
+            <div className="text-3xl font-black text-slate-900 tabular-nums">
+              {stats.gf}
             </div>
-            <div className="text-center p-3 bg-slate-50 rounded-2xl border border-slate-100">
-              <div className="font-black text-2xl text-slate-900">{goalsBySport.b}</div>
-              <div className="text-[10px] font-bold text-slate-400">Básquet</div>
+            <div className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">
+              GOLES FÚTBOL
             </div>
           </div>
         </div>
@@ -314,30 +263,6 @@ export default function Page({
           )}
         </div>
 
-        {/* Badges / Achievements Placeholder */}
-        <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100">
-          <h4 className="font-black text-xs uppercase tracking-widest text-slate-400 mb-4">Atributos</h4>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="flex items-center gap-3">
-              <div className={cn("p-2 rounded-xl", stats.acts > 5 ? "bg-primary/10 text-primary" : "bg-slate-100 text-slate-300")}>
-                <Star className="w-5 h-5" />
-              </div>
-              <div className="flex flex-col">
-                <span className="text-xs font-black text-slate-700">Fidelidad</span>
-                <span className="text-[10px] font-medium text-slate-400">{stats.acts > 5 ? "Frecuente" : "Iniciado"}</span>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <div className={cn("p-2 rounded-xl", goalsBySport.f + goalsBySport.h + goalsBySport.b > 5 ? "bg-primary/10 text-primary" : "bg-slate-100 text-slate-300")}>
-                <CheckCircle className="w-5 h-5" />
-              </div>
-              <div className="flex flex-col">
-                <span className="text-xs font-black text-slate-700">Goleador</span>
-                <span className="text-[10px] font-medium text-slate-400">{goalsBySport.f + goalsBySport.h + goalsBySport.b > 5 ? "Efectivo" : "En progreso"}</span>
-              </div>
-            </div>
-          </div>
-        </div>
       </div>
 
       {imagesEnabled && (

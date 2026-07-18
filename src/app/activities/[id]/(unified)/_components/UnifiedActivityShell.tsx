@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useUnifiedActivity } from "@/lib/activity-context";
 import { ACTIVITY_SECTIONS, getSectionDef, type SectionId } from "@/lib/activity-sections";
@@ -164,15 +164,20 @@ function ShellInner({
 
   const [sectionLoading, setSectionLoading] = useState(false);
 
-  // Sincroniza estado interno con la URL durante el render (evita cascadas de efecto)
-  if (pathnameSection && pathnameSection !== currentSection) {
-    setSectionLoading(false);
-    setCurrentSection(pathnameSection);
-    setSearchQuery("");
-    setFilterContent(null);
-    setFiltersActive(false);
-    setEditingSection(null);
-  }
+  // Sincroniza estado interno con la URL cuando cambia la navegación
+  // Usamos queueMicrotask para evitar setState sincrónicos en el effect
+  useEffect(() => {
+    if (!pathnameSection || pathnameSection === currentSection) return;
+
+    queueMicrotask(() => {
+      setSectionLoading(false);
+      setCurrentSection(pathnameSection);
+      setSearchQuery("");
+      setFilterContent(null);
+      setFiltersActive(false);
+      setEditingSection(null);
+    });
+  }, [pathnameSection, currentSection, setCurrentSection, setSearchQuery, setFilterContent, setFiltersActive, setEditingSection]);
 
   const handleSectionChange = useCallback(
     (newValue: string) => {

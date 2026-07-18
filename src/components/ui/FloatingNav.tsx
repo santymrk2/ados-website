@@ -106,6 +106,7 @@ export function FloatingNav({
         !containerRef.current.contains(event.target as Node)
       ) {
         setSearchMode(false);
+        onSearchModeChange?.(false);
         setFilterMode(false);
         setIsExpandedMenuOpen(false);
       }
@@ -210,6 +211,7 @@ export function FloatingNav({
     setFilterMode(false);
     setIsExpandedMenuOpen(false);
     setSearchMode(true);
+    onSearchModeChange?.(true);
   };
 
   const handleClearSearch = () => {
@@ -219,11 +221,13 @@ export function FloatingNav({
       return;
     }
     setSearchMode(false);
+    onSearchModeChange?.(false);
   };
 
   const handleOpenFilter = (e: React.MouseEvent) => {
     e.stopPropagation();
     setSearchMode(false);
+    onSearchModeChange?.(false);
     setIsExpandedMenuOpen(false);
     setFilterMode(true);
   };

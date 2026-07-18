@@ -18,20 +18,33 @@ interface FloatingNavProps {
   items: NavItem[];
   lockedValues?: string[];
   onValueChange?: (value: string) => void;
-  /** Si se provee, habilita el modo búsqueda */
   searchValue?: string;
   onSearchChange?: (value: string) => void;
   searchPlaceholder?: string;
-  /** Si se provee, habilita el modo filtros con contenido personalizado */
   filterContent?: React.ReactNode;
   hasActiveSearch?: boolean;
   hasActiveFilters?: boolean;
   onSearchModeChange?: (open: boolean) => void;
 }
 
-const EXPANDED_WIDTH = "min(320px, calc(100vw - 24px))";
+const EXPANDED_WIDTH = "min(340px, calc(100vw - 24px))";
 const COLLAPSED_HEIGHT = 56;
 const FILTER_HEIGHT = 200;
+
+// Configuración de la barra deslizable
+const NAV_WIDTH = 220;
+const INNER_NAV_WIDTH = 218;
+const ITEM_WIDTH = 64;
+
+const SPACER_LEFT = (INNER_NAV_WIDTH - ITEM_WIDTH) / 2;
+const SPACER_RIGHT = SPACER_LEFT + 40;
+
+// --- FUNCIÓN DE VIBRACIÓN ---
+const triggerHapticFeedback = () => {
+  if (typeof navigator !== "undefined" && navigator.vibrate) {
+    navigator.vibrate(15);
+  }
+};
 
 export function FloatingNav({
   value,
@@ -46,184 +59,198 @@ export function FloatingNav({
   hasActiveFilters,
   onSearchModeChange,
 }: FloatingNavProps) {
-  const [isOpen, setIsOpen] = useState(false);
   const [searchMode, setSearchMode] = useState(false);
   const [filterMode, setFilterMode] = useState(false);
+  const [isExpandedMenuOpen, setIsExpandedMenuOpen] = useState(false);
   const [keyboardInset, setKeyboardInset] = useState(0);
+
+  const [activeIndex, setActiveIndex] = useState(() =>
+    Math.max(
+      0,
+      items.findIndex((i) => i.value === value),
+    ),
+  );
+
   const containerRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const wheelRef = useRef<HTMLDivElement>(null);
+
+  const longPressTimer = useRef<NodeJS.Timeout | null>(null);
+  const longPressTriggered = useRef(false);
 
   const showSearch = searchValue !== undefined && onSearchChange !== undefined;
   const showFilter = filterContent !== undefined;
   const isSearchActive = hasActiveSearch ?? Boolean(searchValue?.trim());
   const isFilterActive = Boolean(hasActiveFilters);
 
-  const rows = Math.ceil(items.length / 3);
-  const expandedHeight = rows * 72 + 16;
   const filterHeight = Math.min(Math.max(120, FILTER_HEIGHT), 320);
-
-  const currentItem = items.find((item) => item.value === value) || items[0];
-  const CurrentIcon = currentItem.icon;
-
+  const rows = Math.ceil(items.length / 3);
+  const gridHeight = rows * 72 + 16;
   const useCallback = !!onValueChange;
 
-  // ── ¿Qué modo está activo? ──────────────────────────────────────────────────
-  const activeMode: "section" | "search" | "filter" | null = isOpen
-    ? "section"
+  const activeMode: "search" | "filter" | "grid" | null = isExpandedMenuOpen
+    ? "grid"
     : searchMode
       ? "search"
       : filterMode
         ? "filter"
         : null;
+
   const showAll = activeMode === null;
 
-  // Click outside para cerrar cualquier modo
+  // Click outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (
         containerRef.current &&
         !containerRef.current.contains(event.target as Node)
       ) {
-        setIsOpen(false);
         setSearchMode(false);
         setFilterMode(false);
+        setIsExpandedMenuOpen(false);
       }
     }
-
-    if (isOpen || searchMode || filterMode) {
+    if (searchMode || filterMode || isExpandedMenuOpen) {
       document.addEventListener("mousedown", handleClickOutside);
       return () =>
         document.removeEventListener("mousedown", handleClickOutside);
     }
-  }, [isOpen, searchMode, filterMode]);
+  }, [searchMode, filterMode, isExpandedMenuOpen]);
 
-  const handleSelect = (item: NavItem) => {
-    if (lockedValues.includes(item.value)) return;
+  // ── FIX: Sincronizar rueda al cambiar valor, cerrar menú expandido o VOLVER de búsqueda/filtros ──
+  useEffect(() => {
+    // Añadimos 'showAll' a la comprobación para asegurarnos de que la rueda está en pantalla
+    if (showAll && !isExpandedMenuOpen && wheelRef.current) {
+      const index = items.findIndex((i) => i.value === value);
+      const targetIndex = index >= 0 ? index : 0;
+      setActiveIndex(targetIndex);
+
+      wheelRef.current.scrollTo({
+        left: targetIndex * ITEM_WIDTH,
+        behavior: "instant" as ScrollBehavior,
+      });
+
+      const timeout = setTimeout(() => {
+        if (wheelRef.current) {
+          wheelRef.current.scrollTo({
+            left: targetIndex * ITEM_WIDTH,
+            behavior: "instant" as ScrollBehavior,
+          });
+        }
+      }, 300);
+
+      return () => clearTimeout(timeout);
+    }
+  }, [value, items, isExpandedMenuOpen, showAll]); // <-- El fix está aquí: se añadió 'showAll' a las dependencias.
+
+  // Lógica de Scroll y Vibración
+  const handleWheelScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    cancelLongPress();
+    const scrollLeft = e.currentTarget.scrollLeft;
+    const index = Math.round(scrollLeft / ITEM_WIDTH);
+
+    if (index !== activeIndex && index >= 0 && index < items.length) {
+      setActiveIndex(index);
+      triggerHapticFeedback();
+    }
+  };
+
+  const handleItemClick = (
+    e: React.MouseEvent,
+    index: number,
+    item: NavItem,
+  ) => {
+    if (longPressTriggered.current) {
+      e.preventDefault();
+      longPressTriggered.current = false;
+      return;
+    }
+
+    if (lockedValues.includes(item.value)) {
+      e.preventDefault();
+      return;
+    }
+
+    triggerHapticFeedback();
+
+    if (wheelRef.current) {
+      wheelRef.current.scrollTo({
+        left: index * ITEM_WIDTH,
+        behavior: "smooth",
+      });
+    }
+    setActiveIndex(index);
 
     if (useCallback && onValueChange) {
       onValueChange(item.value);
     }
-    setIsOpen(false);
+    setIsExpandedMenuOpen(false);
   };
 
-  const handleToggleMenu = () => {
-    if (searchMode || filterMode) return;
-    setIsOpen((prev) => !prev);
+  // Lógica de Pulsación Larga
+  const startLongPress = (index: number) => {
+    if (index !== activeIndex) return;
+    longPressTriggered.current = false;
+    longPressTimer.current = setTimeout(() => {
+      longPressTriggered.current = true;
+      triggerHapticFeedback();
+      setIsExpandedMenuOpen(true);
+    }, 400);
+  };
+
+  const cancelLongPress = () => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
   };
 
   const handleOpenSearch = (e: React.MouseEvent) => {
     e.stopPropagation();
-    setIsOpen(false);
     setFilterMode(false);
+    setIsExpandedMenuOpen(false);
     setSearchMode(true);
   };
 
   const handleClearSearch = () => {
-    // Si hay texto, solo lo limpia y mantiene el foco
     if (searchValue?.trim()) {
       if (onSearchChange) onSearchChange("");
       searchInputRef.current?.focus({ preventScroll: true });
       return;
     }
-    // Si ya está vacío, cierra el modo búsqueda
     setSearchMode(false);
   };
 
   const handleOpenFilter = (e: React.MouseEvent) => {
     e.stopPropagation();
-    setIsOpen(false);
     setSearchMode(false);
+    setIsExpandedMenuOpen(false);
     setFilterMode(true);
   };
 
-  const handleCloseFilter = () => {
-    setFilterMode(false);
-  };
-
-  // Keyboard inset (para el teclado virtual en mobile)
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    const viewport = window.visualViewport;
-
-    const updateKeyboardInset = () => {
-      if (!viewport) {
-        setKeyboardInset(0);
-        return;
-      }
-
-      const inset = Math.max(
-        0,
-        window.innerHeight - viewport.height - viewport.offsetTop,
-      );
-      setKeyboardInset(inset);
-    };
-
-    updateKeyboardInset();
-
-    if (!viewport) return;
-
-    viewport.addEventListener("resize", updateKeyboardInset);
-    viewport.addEventListener("scroll", updateKeyboardInset);
-
-    return () => {
-      viewport.removeEventListener("resize", updateKeyboardInset);
-      viewport.removeEventListener("scroll", updateKeyboardInset);
-    };
-  }, []);
-
-  useEffect(() => {
-    if (searchMode || filterMode) {
-      searchInputRef.current?.focus({ preventScroll: true });
-    }
-  }, [searchMode, filterMode]);
-
-  useEffect(() => {
-    onSearchModeChange?.(searchMode);
-  }, [onSearchModeChange, searchMode]);
-
-  const bottomOffset = `calc(24px + env(safe-area-inset-bottom, 0px) + ${searchMode || filterMode ? keyboardInset : 0}px)`;
-
-  // ── Render: grilla de secciones (expandido) ─────────────────────────────────
+  // Render: Grilla Expandida
   const renderSectionGrid = () => (
-    <div className="grid grid-cols-3 gap-1 p-2 w-full h-full">
+    <div className="grid grid-cols-3 gap-1 p-2 w-full h-full bg-background">
       {items.map((item) => {
         const Icon = item.icon;
         const isActive = item.value === value;
         const isLocked = lockedValues.includes(item.value);
+        const href = useCallback ? undefined : item.href || `/${item.value}`;
+        const commonClasses = cn(
+          "flex flex-col items-center justify-center gap-1 rounded-2xl border border-border py-2 px-3 text-sm font-medium transition-colors",
+          isActive
+            ? "bg-primary text-white border-primary shadow-sm ring-2 ring-primary/20"
+            : "hover:bg-muted",
+        );
 
         if (isLocked) {
           return (
             <button
               key={item.value}
               disabled
-              className="flex flex-col items-center justify-center gap-1 rounded-2xl border border-border py-2 px-3 text-sm font-medium text-muted-foreground/50 cursor-not-allowed"
-            >
-              <Icon className="size-5" />
-              <span className="text-[10px] text-center leading-tight">
-                {item.label}
-              </span>
-            </button>
-          );
-        }
-
-        const href = useCallback
-          ? undefined
-          : item.href || (item.value ? `/${item.value}` : "/");
-
-        if (useCallback) {
-          return (
-            <button
-              key={item.value}
-              onClick={(e) => {
-                e.stopPropagation();
-                handleSelect(item);
-              }}
               className={cn(
-                "flex flex-col items-center justify-center gap-1 rounded-2xl border border-border py-2 px-3 text-sm font-medium transition-colors",
-                isActive
-                  ? "bg-primary text-white border-primary shadow-sm ring-2 ring-primary/20"
-                  : "hover:bg-muted",
+                commonClasses,
+                "text-muted-foreground/50 cursor-not-allowed",
               )}
             >
               <Icon className="size-5" />
@@ -234,20 +261,23 @@ export function FloatingNav({
           );
         }
 
-        return (
+        return useCallback ? (
+          <button
+            key={item.value}
+            onClick={(e) => handleItemClick(e, items.indexOf(item), item)}
+            className={commonClasses}
+          >
+            <Icon className="size-5" />
+            <span className="text-[10px] text-center leading-tight">
+              {item.label}
+            </span>
+          </button>
+        ) : (
           <Link
             key={item.value}
             href={href!}
-            onClick={(e) => {
-              e.stopPropagation();
-              setIsOpen(false);
-            }}
-            className={cn(
-              "flex flex-col items-center justify-center gap-1 rounded-2xl border border-border py-2 px-3 text-sm font-medium transition-colors",
-              isActive
-                ? "bg-primary text-white border-primary shadow-sm ring-2 ring-primary/20"
-                : "hover:bg-muted",
-            )}
+            onClick={(e) => handleItemClick(e, items.indexOf(item), item)}
+            className={commonClasses}
           >
             <Icon className="size-5" />
             <span className="text-[10px] text-center leading-tight">
@@ -259,8 +289,26 @@ export function FloatingNav({
     </div>
   );
 
-  // ── Pill animation config ──────────────────────────────────────────────────
-  const pillTransition = { duration: 0.2, ease: "easeOut" as const };
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const viewport = window.visualViewport;
+    const updateKeyboardInset = () => {
+      if (!viewport) return setKeyboardInset(0);
+      setKeyboardInset(
+        Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop),
+      );
+    };
+    updateKeyboardInset();
+    viewport?.addEventListener("resize", updateKeyboardInset);
+    viewport?.addEventListener("scroll", updateKeyboardInset);
+    return () => {
+      viewport?.removeEventListener("resize", updateKeyboardInset);
+      viewport?.removeEventListener("scroll", updateKeyboardInset);
+    };
+  }, []);
+
+  const bottomOffset = `calc(24px + env(safe-area-inset-bottom, 0px) + ${searchMode || filterMode ? keyboardInset : 0}px)`;
+  const pillTransition = { duration: 0.25, ease: [0.16, 1, 0.3, 1] };
 
   return (
     <div
@@ -269,62 +317,163 @@ export function FloatingNav({
       style={{ bottom: bottomOffset }}
     >
       <AnimatePresence mode="popLayout">
-        {/* ═══════════════════════════════════════════════════════════════════════
-             PILL 1: Sección (siempre visible)
-           ═══════════════════════════════════════════════════════════════════════ */}
-        {(showAll || activeMode === "section") && (
+        {/* PILL 1: Sección Principal */}
+        {(showAll || activeMode === "grid") && (
           <motion.div
             key="pill-section"
             layout
             initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
+            animate={{
+              opacity: 1,
+              scale: 1,
+              width: isExpandedMenuOpen ? EXPANDED_WIDTH : NAV_WIDTH,
+              height: isExpandedMenuOpen ? gridHeight : COLLAPSED_HEIGHT,
+            }}
             exit={{ opacity: 0, scale: 0.9 }}
             transition={pillTransition}
             className={cn(
-              "rounded-2xl border border-border bg-white shadow-lg overflow-hidden",
-              isOpen && "border-primary",
+              "rounded-2xl border border-border bg-white shadow-lg overflow-hidden relative",
+              isExpandedMenuOpen && "border-primary ring-2 ring-primary/20",
             )}
           >
-            {isOpen ? (
-              <div
-                className="h-full"
-                style={{ width: EXPANDED_WIDTH, height: expandedHeight }}
-              >
+            {isExpandedMenuOpen ? (
+              <div className="w-full h-full fade-in-0 animate-in duration-300">
                 {renderSectionGrid()}
               </div>
             ) : (
-              <div
-                className="flex flex-col items-center justify-center gap-0.5 px-3 py-1.5 cursor-pointer"
-                style={{ height: COLLAPSED_HEIGHT }}
-                onClick={handleToggleMenu}
-              >
-                <CurrentIcon className="size-5 text-foreground" />
-                <span className="text-[10px] text-center leading-tight whitespace-nowrap">
-                  {currentItem.label}
-                </span>
+              <div className="relative w-full h-full flex items-center bg-background">
+                <style
+                  dangerouslySetInnerHTML={{
+                    __html: `
+                  .no-scrollbar::-webkit-scrollbar { display: none; }
+                  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+                `,
+                  }}
+                />
+
+                <div
+                  className="absolute top-[6px] bottom-[6px] bg-muted/60 rounded-xl pointer-events-none z-0 transition-all duration-300"
+                  style={{
+                    width: ITEM_WIDTH - 8,
+                    left: "50%",
+                    transform: "translateX(-50%)",
+                  }}
+                />
+
+                <div
+                  ref={wheelRef}
+                  onScroll={handleWheelScroll}
+                  className="w-full h-full overflow-x-auto flex flex-row items-center snap-x snap-mandatory no-scrollbar z-10 touch-pan-x"
+                >
+                  <div
+                    className="pointer-events-none shrink-0"
+                    style={{ width: SPACER_LEFT, height: 1 }}
+                  />
+
+                  {items.map((item, i) => {
+                    const distance = Math.abs(i - activeIndex);
+                    const isSelected = i === activeIndex;
+                    const isItemLocked = lockedValues.includes(item.value);
+                    const ItemIcon = item.icon;
+                    const href = useCallback
+                      ? undefined
+                      : item.href || `/${item.value}`;
+
+                    let scaleClass = "scale-90 opacity-40";
+                    if (distance === 0)
+                      scaleClass = "scale-105 opacity-100 font-medium";
+                    else if (distance === 1) scaleClass = "scale-95 opacity-70";
+
+                    const innerContent = (
+                      <>
+                        <ItemIcon
+                          className={cn(
+                            "size-[18px] transition-all duration-200",
+                            isSelected ? "text-primary" : "text-foreground",
+                            scaleClass,
+                          )}
+                        />
+                        <span
+                          className={cn(
+                            "text-[10px] text-center leading-tight transition-all duration-200 truncate w-full px-1",
+                            isSelected ? "text-foreground" : "text-foreground",
+                            isItemLocked && "line-through opacity-30",
+                            scaleClass,
+                          )}
+                        >
+                          {item.label}
+                        </span>
+                      </>
+                    );
+
+                    const commonProps = {
+                      onPointerDown: () => startLongPress(i),
+                      onPointerUp: cancelLongPress,
+                      onPointerLeave: cancelLongPress,
+                      onPointerCancel: cancelLongPress,
+                      onClick: (e: React.MouseEvent) =>
+                        handleItemClick(e, i, item),
+                      className:
+                        "flex flex-col items-center justify-center gap-0.5 shrink-0 snap-center select-none transition-colors",
+                      style: {
+                        flex: `0 0 ${ITEM_WIDTH}px`,
+                        width: ITEM_WIDTH,
+                        height: COLLAPSED_HEIGHT,
+                      },
+                    };
+
+                    if (useCallback)
+                      return (
+                        <button key={item.value} {...commonProps}>
+                          {innerContent}
+                        </button>
+                      );
+                    return (
+                      <Link key={item.value} href={href!} {...commonProps}>
+                        {innerContent}
+                      </Link>
+                    );
+                  })}
+
+                  <div
+                    className="pointer-events-none shrink-0"
+                    style={{ width: SPACER_RIGHT, height: 1 }}
+                  />
+                </div>
+
+                <div className="absolute top-0 bottom-0 left-0 w-6 bg-gradient-to-r from-white dark:from-background to-transparent pointer-events-none z-20" />
+                <div className="absolute top-0 bottom-0 right-0 w-6 bg-gradient-to-l from-white dark:from-background to-transparent pointer-events-none z-20" />
               </div>
             )}
           </motion.div>
         )}
 
-        {/* ═══════════════════════════════════════════════════════════════════════
-             PILL 2: Búsqueda (solo si está habilitada)
-           ═══════════════════════════════════════════════════════════════════════ */}
+        {/* PILL 2: Búsqueda */}
         {showSearch && (showAll || activeMode === "search") && (
           <motion.div
             key="pill-search"
             layout
-            initial={{ opacity: 0, scale: 0.9, width: 56, height: COLLAPSED_HEIGHT }}
+            initial={{
+              opacity: 0,
+              scale: 0.9,
+              width: 56,
+              height: COLLAPSED_HEIGHT,
+            }}
             animate={{
               opacity: 1,
               scale: 1,
               width: searchMode ? EXPANDED_WIDTH : 56,
               height: COLLAPSED_HEIGHT,
             }}
-            exit={{ opacity: 0, scale: 0.9, width: 56, height: COLLAPSED_HEIGHT }}
+            exit={{
+              opacity: 0,
+              scale: 0.9,
+              width: 56,
+              height: COLLAPSED_HEIGHT,
+            }}
             transition={pillTransition}
             className={cn(
-              "rounded-2xl border border-border bg-white shadow-lg overflow-hidden",
+              "rounded-2xl border border-border bg-white shadow-lg overflow-hidden shrink-0",
               searchMode && "border-primary",
               isSearchActive && !searchMode && "ring-2 ring-primary/20",
             )}
@@ -343,7 +492,6 @@ export function FloatingNav({
                 <button
                   onClick={handleClearSearch}
                   className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-surface-light text-foreground transition-colors shrink-0"
-                  aria-label="Limpiar búsqueda"
                 >
                   <X className="size-4" />
                 </button>
@@ -353,7 +501,6 @@ export function FloatingNav({
                 onClick={handleOpenSearch}
                 className="w-full h-full flex items-center justify-center text-foreground hover:text-primary transition-colors cursor-pointer"
                 style={{ height: COLLAPSED_HEIGHT }}
-                aria-label="Buscar"
               >
                 <Search className="size-5" />
               </button>
@@ -361,31 +508,38 @@ export function FloatingNav({
           </motion.div>
         )}
 
-        {/* ═══════════════════════════════════════════════════════════════════════
-             PILL 3: Filtros (solo si está habilitado)
-           ═══════════════════════════════════════════════════════════════════════ */}
+        {/* PILL 3: Filtros */}
         {showFilter && (showAll || activeMode === "filter") && (
           <motion.div
             key="pill-filter"
             layout
-            initial={{ opacity: 0, scale: 0.9, width: 56, height: COLLAPSED_HEIGHT }}
+            initial={{
+              opacity: 0,
+              scale: 0.9,
+              width: 56,
+              height: COLLAPSED_HEIGHT,
+            }}
             animate={{
               opacity: 1,
               scale: 1,
               width: filterMode ? EXPANDED_WIDTH : 56,
               height: filterMode ? filterHeight : COLLAPSED_HEIGHT,
             }}
-            exit={{ opacity: 0, scale: 0.9, width: 56, height: COLLAPSED_HEIGHT }}
+            exit={{
+              opacity: 0,
+              scale: 0.9,
+              width: 56,
+              height: COLLAPSED_HEIGHT,
+            }}
             transition={pillTransition}
             className={cn(
-              "rounded-2xl border border-border bg-white shadow-lg overflow-hidden",
+              "rounded-2xl border border-border bg-white shadow-lg overflow-hidden shrink-0",
               filterMode && "border-primary",
               isFilterActive && !filterMode && "ring-2 ring-primary/20",
             )}
           >
             {filterMode ? (
               <div className="flex flex-col h-full w-full">
-                {/* Header del filtro con botón cerrar */}
                 <div className="flex items-center justify-between px-3 py-2 border-b border-border shrink-0">
                   <div className="flex items-center gap-2">
                     <SlidersHorizontal className="size-4 text-text-muted" />
@@ -394,14 +548,12 @@ export function FloatingNav({
                     </span>
                   </div>
                   <button
-                    onClick={handleCloseFilter}
+                    onClick={() => setFilterMode(false)}
                     className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-surface-light text-foreground transition-colors"
-                    aria-label="Cerrar filtros"
                   >
                     <X className="size-4" />
                   </button>
                 </div>
-                {/* Contenido del filtro */}
                 <div className="flex-1 overflow-y-auto p-3">
                   {filterContent}
                 </div>
@@ -411,7 +563,6 @@ export function FloatingNav({
                 onClick={handleOpenFilter}
                 className="w-full h-full flex items-center justify-center text-foreground hover:text-primary transition-colors cursor-pointer"
                 style={{ height: COLLAPSED_HEIGHT }}
-                aria-label="Filtros"
               >
                 <SlidersHorizontal className="size-5" />
               </button>

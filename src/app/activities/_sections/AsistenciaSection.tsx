@@ -4,7 +4,7 @@ import { useState, useMemo } from "react";
 import { useUnifiedActivity } from "@/lib/activity-context";
 import { useApp } from "@/hooks/useApp";
 import { toast } from "@/hooks/use-toast";
-import { getEdad, newPart } from "@/lib/constants";
+import { getEdad, newPart, TEAMS } from "@/lib/constants";
 import { actPts } from "@/lib/calc";
 import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/button";
@@ -308,6 +308,7 @@ export function AsistenciaSection() {
   );
 
   const canEdit = isAdmin && !locked;
+  const activeTeams = TEAMS.slice(0, act.cantEquipos || 0);
 
   const stats = useMemo(() => {
     if (!act) {
@@ -554,7 +555,7 @@ export function AsistenciaSection() {
                               <div className="font-bold text-sm">
                                 {p.nombre} {p.apellido}
                               </div>
-                              <div className="text-xs text-accent/70">
+                              <div className="text-xs text-dark/60">
                                 {p.edad} años · {playerPts[p.id] || 0} pts
                               </div>
                             </div>
@@ -625,14 +626,6 @@ export function AsistenciaSection() {
               </div>
             )}
 
-          {selectedPlayer && (
-            <PlayerPointsModal
-              player={selectedPlayer}
-              act={act}
-              participants={db.participants}
-              onClose={() => setSelectedPlayer(null)}
-            />
-          )}
         </>
       )}
 
@@ -698,7 +691,10 @@ export function AsistenciaSection() {
                         <Clock className="w-3.5 h-3.5" />
                       </button>
                     </div>
-                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                    <div
+                      className="flex items-center gap-3 min-w-0 flex-1 cursor-pointer"
+                      onClick={() => setSelectedPlayer(p)}
+                    >
                       <Avatar p={p} size={30} />
                       <div className="flex-1 min-w-0">
                         <div
@@ -745,6 +741,20 @@ export function AsistenciaSection() {
             })}
           </div>
         </>
+      )}
+
+      {selectedPlayer && (
+        <PlayerPointsModal
+          player={selectedPlayer}
+          act={act}
+          participants={db.participants}
+          onClose={() => setSelectedPlayer(null)}
+          canEdit={canEdit}
+          locked={locked}
+          fromEditMode={editing}
+          performQuickUpdate={performQuickUpdate}
+          activeTeams={activeTeams}
+        />
       )}
     </div>
   );

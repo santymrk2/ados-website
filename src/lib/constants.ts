@@ -237,6 +237,7 @@ export function newPart() {
     apellido: "",
     sexo: "M",
     fechaNacimiento: null,
+    telefono: null,
     foto: null,
     fotoAltaCalidad: null,
     invitadoPor: null,

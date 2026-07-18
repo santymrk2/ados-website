@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useUnifiedActivity } from "@/lib/activity-context";
 import { ACTIVITY_SECTIONS, getSectionDef, type SectionId } from "@/lib/activity-sections";
@@ -160,6 +160,27 @@ function ShellInner({
     setFiltersActive,
     setEditingSection,
   } = useUnifiedActivity();
+  const router = useRouter();
+
+  const [sectionLoading, setSectionLoading] = useState(false);
+
+  const handleSectionChange = useCallback(
+    (newValue: string) => {
+      setSectionLoading(true);
+      const section = ACTIVITY_SECTIONS.find((s) => s.id === newValue);
+      if (section) {
+        router.push(`/activities/${resolvedId}/${section.id}`);
+      }
+    },
+    [resolvedId, router],
+  );
+
+  // Limpia el loading cuando la navegación completa (cambia la URL)
+  useEffect(() => {
+    if (sectionLoading) {
+      setSectionLoading(false);
+    }
+  }, [pathname]);
 
   useEffect(() => {
     if (!pathnameSection || pathnameSection === currentSection) return;
@@ -198,11 +219,20 @@ function ShellInner({
         </div>
       </div>
 
-      <div className="bg-primary px-4 pt-4 flex-1 pb-32">{children}</div>
+      <div className="bg-primary px-4 pt-4 flex-1 pb-32">
+        {sectionLoading ? (
+          <div className="flex items-center justify-center h-full">
+            <Loader2 className="size-8 animate-spin text-white" />
+          </div>
+        ) : (
+          children
+        )}
+      </div>
 
       <FloatingNav
         value={activeSection}
         items={tabs}
+        onValueChange={handleSectionChange}
         searchPlaceholder="Buscar por nombre..."
         searchValue={hasSearch ? searchQuery : undefined}
         onSearchChange={hasSearch ? setSearchQuery : undefined}

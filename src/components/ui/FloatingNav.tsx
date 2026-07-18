@@ -308,7 +308,7 @@ export function FloatingNav({
   }, []);
 
   const bottomOffset = `calc(24px + env(safe-area-inset-bottom, 0px) + ${searchMode || filterMode ? keyboardInset : 0}px)`;
-  const pillTransition = { duration: 0.25, ease: [0.16, 1, 0.3, 1] };
+  const pillTransition = { duration: 0.25, ease: [0.16, 1, 0.3, 1] as const };
 
   return (
     <div

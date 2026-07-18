@@ -47,12 +47,11 @@ const RETRYABLE_QUICK_UPDATE_TYPES = new Set([
 ]);
 
 export function useDatabase() {
-  // Always provide default values to prevent undefined errors
-  const participants = useStore($participants) ?? [];
-  const activities = useStore($activities) ?? [];
+  const participants = useStore($participants);
+  const activities = useStore($activities);
   const isLoading = useStore($dbLoading);
   const error = useStore($dbError);
-  const rankings = useStore($rankings) ?? [];
+  const rankings = useStore($rankings);
   // Función de refresh - llama al store que ya maneja SSE automáticamente
   const refresh = useCallback(async (forceLoader = false) => {
     await refreshData(forceLoader);

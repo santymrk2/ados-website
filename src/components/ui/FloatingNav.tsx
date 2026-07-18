@@ -116,7 +116,7 @@ export function FloatingNav({
       return () =>
         document.removeEventListener("mousedown", handleClickOutside);
     }
-  }, [searchMode, filterMode, isExpandedMenuOpen]);
+  }, [searchMode, filterMode, isExpandedMenuOpen, onSearchModeChange]);
 
   // ── FIX: Sincronizar rueda al cambiar valor, cerrar menú expandido o VOLVER de búsqueda/filtros ──
   useEffect(() => {

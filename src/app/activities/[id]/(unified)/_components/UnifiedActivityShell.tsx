@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useUnifiedActivity } from "@/lib/activity-context";
 import { ACTIVITY_SECTIONS, getSectionDef, type SectionId } from "@/lib/activity-sections";
@@ -164,6 +164,16 @@ function ShellInner({
 
   const [sectionLoading, setSectionLoading] = useState(false);
 
+  // Sincroniza estado interno con la URL durante el render (evita cascadas de efecto)
+  if (pathnameSection && pathnameSection !== currentSection) {
+    setSectionLoading(false);
+    setCurrentSection(pathnameSection);
+    setSearchQuery("");
+    setFilterContent(null);
+    setFiltersActive(false);
+    setEditingSection(null);
+  }
+
   const handleSectionChange = useCallback(
     (newValue: string) => {
       setSectionLoading(true);
@@ -174,18 +184,6 @@ function ShellInner({
     },
     [resolvedId, router],
   );
-
-  // Limpia el loading cuando la navegación completa (cambia la URL)
-  useEffect(() => {
-    if (!pathnameSection || pathnameSection === currentSection) return;
-
-    setSectionLoading(false);
-    setCurrentSection(pathnameSection);
-    setSearchQuery("");
-    setFilterContent(null);
-    setFiltersActive(false);
-    setEditingSection(null);
-  }, [pathnameSection, currentSection, setCurrentSection, setSearchQuery, setFilterContent, setFiltersActive, setEditingSection]);
 
   const activeSection = pathnameSection ?? currentSection;
   const sectionDef = getSectionDef(activeSection);

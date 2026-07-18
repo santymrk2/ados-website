@@ -187,7 +187,7 @@ function ShellInner({
         router.push(`/activities/${resolvedId}/${section.id}`);
       }
     },
-    [resolvedId, router],
+    [resolvedId, router, setSectionLoading],
   );
 
   const activeSection = pathnameSection ?? currentSection;

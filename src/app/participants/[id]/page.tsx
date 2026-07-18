@@ -11,6 +11,7 @@ import {
   Trophy,
   Target,
   Clock,
+  Phone,
 } from "lucide-react";
 import { TEAM_COLORS, getEdad } from "@/lib/constants";
 import { actPts } from "@/lib/calc";
@@ -166,6 +167,14 @@ export default function Page({
                   </span>
                 )}
               </div>
+              {player.telefono && (
+                <div className="flex items-center gap-1.5 mt-2">
+                  <Phone className="w-3.5 h-3.5 text-white/60" />
+                  <span className="text-white/80 text-sm font-medium">
+                    {player.telefono}
+                  </span>
+                </div>
+              )}
 
             </div>
           </div>

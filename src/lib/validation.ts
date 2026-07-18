@@ -29,6 +29,7 @@ export const participantSchema = z.object({
   apellido: stringSchema.min(1),
   fechaNacimiento: z.string().optional().nullable(),
   sexo: z.enum(["M", "F"]),
+  telefono: z.string().optional().nullable(),
   foto: imageReferenceSchema,
   fotoAltaCalidad: imageReferenceSchema,
   invitadoPor: z.number().int().positive().optional().nullable(),

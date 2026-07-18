@@ -158,7 +158,6 @@ export function ParticipantForm({ db, initial, onClose, onSave }: ParticipantFor
             >
               <div className="w-32 h-32 rounded-full border-4 border-slate-100 overflow-hidden bg-slate-50 flex items-center justify-center shadow-inner">
                 {form.foto ? (
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={getImg(form.foto)} className="w-full h-full object-cover" alt="" />
                 ) : (
                   <User className="w-16 h-16 text-slate-300" />

@@ -163,6 +163,7 @@ export function AuthGate({ children, showNav = true }: AuthGateProps) {
           {showNav && (
             <AppHeader
               title={getPageTitle(pathname || "/")}
+              showSettings={false}
               onMenuClick={() => setIsDrawerOpen(true)}
             />
           )}

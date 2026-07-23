@@ -6,18 +6,14 @@ import { useRouter } from "next/navigation";
 import { useApp } from "@/hooks/useApp";
 import { $role } from "@/store/appStore";
 import {
-  Trophy,
-  Volleyball,
-  Calendar,
   ChevronDown,
   ChevronUp,
   ChevronRight,
   Award,
   ClipboardList,
-  Users,
   X,
 } from "lucide-react";
-import { Section, Empty } from "@/components/ui/Common";
+import { Empty } from "@/components/ui/Common";
 import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -296,14 +292,14 @@ export default function Page() {
           </div>
 
           <div
-            className="flex justify-between items-center mb-4 cursor-pointer select-none"
+            className="flex items-center gap-2 mb-4 cursor-pointer select-none"
             onClick={() => setShowTopGoleadores((prev) => !prev)}
           >
-            <Section icon={Volleyball} title="Goleadores" />
+            <div className="font-bold text-base">Goleadores</div>
             {showTopGoleadores ? (
-              <ChevronUp className="w-5 h-5 text-text-muted" />
+              <ChevronUp className="w-4 h-4 text-text-muted" />
             ) : (
-              <ChevronDown className="w-5 h-5 text-text-muted" />
+              <ChevronDown className="w-4 h-4 text-text-muted" />
             )}
           </div>
 
@@ -355,14 +351,14 @@ export default function Page() {
           )}
 
           <div
-            className="flex justify-between items-center mb-4 cursor-pointer select-none"
+            className="flex items-center gap-2 mb-4 cursor-pointer select-none"
             onClick={() => setShowRanking((prev) => !prev)}
           >
-            <Section icon={Trophy} title="Ranking Individual" />
+            <div className="font-bold text-base">Ranking Individual</div>
             {showRanking ? (
-              <ChevronUp className="w-5 h-5 text-text-muted" />
+              <ChevronUp className="w-4 h-4 text-text-muted" />
             ) : (
-              <ChevronDown className="w-5 h-5 text-text-muted" />
+              <ChevronDown className="w-4 h-4 text-text-muted" />
             )}
           </div>
 
@@ -418,14 +414,14 @@ export default function Page() {
           )}
 
           <div
-            className="flex justify-between items-center mb-4 cursor-pointer select-none"
+            className="flex items-center gap-2 mb-4 cursor-pointer select-none"
             onClick={() => setShowInvitaciones((prev) => !prev)}
           >
-            <Section icon={Users} title="Invitaciones" />
+            <div className="font-bold text-base">Invitaciones</div>
             {showInvitaciones ? (
-              <ChevronUp className="w-5 h-5 text-text-muted" />
+              <ChevronUp className="w-4 h-4 text-text-muted" />
             ) : (
-              <ChevronDown className="w-5 h-5 text-text-muted" />
+              <ChevronDown className="w-4 h-4 text-text-muted" />
             )}
           </div>
 
@@ -475,7 +471,7 @@ export default function Page() {
 
           {lastActs.length > 0 && (
             <>
-              <Section icon={Calendar} title="Últimas Actividades" />
+              <div className="font-bold text-base mb-3">Últimas Actividades</div>
               <div className="flex flex-col gap-2 mb-4">
                 {lastActs.map((a) => (
                   <div

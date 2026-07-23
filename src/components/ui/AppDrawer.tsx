@@ -88,6 +88,7 @@ export function AppDrawer({ open, onOpenChange }: AppDrawerProps) {
       >
         <Drawer.Overlay className="fixed inset-0 bg-black/40 z-40" />
         <Drawer.Content className="fixed top-0 left-0 bottom-0 z-50 w-[280px] bg-white shadow-xl pt-safe">
+          <Drawer.Title className="sr-only">Menú de navegación</Drawer.Title>
           <div className="flex flex-col h-full">
             {/* User Profile */}
             <div className="p-5 border-b border-surface-dark">

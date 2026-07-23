@@ -6,22 +6,19 @@ import { useRouter } from "next/navigation";
 import { useApp } from "@/hooks/useApp";
 import { $role } from "@/store/appStore";
 import {
-  ChevronDown,
-  ChevronUp,
   ChevronRight,
   Award,
   ClipboardList,
-  X,
 } from "lucide-react";
 import { Empty } from "@/components/ui/Common";
 import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { RankBadge, PodiumBadge } from "@/components/ui/Badges";
+import { DetailSheet } from "@/components/ui/DetailSheet";
 import { cn, formatDate } from "@/lib/utils";
 import type { ParticipantBasic, Activity, Invitacion } from "@/lib/types";
 import { PlayerHistoryModal } from "@/app/_components/PlayerHistoryModal";
-
 
 interface RankingWithStats extends ParticipantBasic {
   total: number;
@@ -49,11 +46,11 @@ const PODIUM_COLORS = [
 ];
 
 const RANKING_METRICS = [
-  { key: "total", label: "Puntos", Icon: Award, cols: 2 },
-  { key: "acts", label: "Asist.", Icon: ClipboardList, cols: 1 },
+  { key: "total", label: "Puntos", Icon: Award },
+  { key: "acts", label: "Asist.", Icon: ClipboardList },
 ] as const;
 
-type RankingMetricKey = (typeof RANKING_METRICS)[number]['key'];
+type RankingMetricKey = (typeof RANKING_METRICS)[number]["key"];
 
 function RankRow({
   p,
@@ -73,7 +70,8 @@ function RankRow({
   const className = cn(
     "bg-white rounded-xl p-3 flex items-center gap-3 border relative overflow-hidden",
     pos <= 3 ? "border-primary/30" : "border-surface-dark",
-    isClickable && "w-full text-left cursor-pointer transition-all hover:border-primary/40 active:scale-[0.99]",
+    isClickable &&
+      "w-full text-left cursor-pointer transition-all hover:border-primary/40 active:scale-[0.99]",
   );
 
   const content = (
@@ -92,15 +90,9 @@ function RankRow({
         </div>
         <div className="text-xs mt-1 flex gap-2 flex-wrap">
           <span className="text-text-muted">{p.acts} act.</span>
-          {p.gf > 0 && (
-            <span className="text-text-muted font-bold">{p.gf}</span>
-          )}
-          {p.gh > 0 && (
-            <span className="text-text-muted font-bold">{p.gh}</span>
-          )}
-          {p.gb > 0 && (
-            <span className="text-text-muted font-bold">{p.gb}</span>
-          )}
+          {p.gf > 0 && <span className="text-text-muted font-bold">{p.gf}</span>}
+          {p.gh > 0 && <span className="text-text-muted font-bold">{p.gh}</span>}
+          {p.gb > 0 && <span className="text-text-muted font-bold">{p.gb}</span>}
         </div>
       </div>
       <div className="font-black text-2xl z-10">{metricValue}</div>
@@ -115,23 +107,25 @@ function RankRow({
     );
   }
 
-  return (
-    <div className={className}>{content}</div>
-  );
+  return <div className={className}>{content}</div>;
 }
 
 export default function Page() {
-  const { db, isLoading, showSettings, setShowSettings, logout } = useApp();
+  const { db, isLoading } = useApp();
   const { participants, activities, rankings } = db;
   const role = useStore($role);
   const router = useRouter();
 
-  const [showRanking, setShowRanking] = useState(false);
-  const [showTopGoleadores, setShowTopGoleadores] = useState(false);
-  const [showInvitaciones, setShowInvitaciones] = useState(false);
-  const [rankingMetric, setRankingMetric] = useState<RankingMetricKey>('total');
-  const [selectedInviter, setSelectedInviter] = useState<InvitacionRanking | null>(null);
-  const [selectedRankingPlayer, setSelectedRankingPlayer] = useState<RankingWithStats | null>(null);
+  // Sheet states
+  const [goleadoresOpen, setGoleadoresOpen] = useState(false);
+  const [rankingOpen, setRankingOpen] = useState(false);
+  const [invitacionesOpen, setInvitacionesOpen] = useState(false);
+
+  const [rankingMetric, setRankingMetric] = useState<RankingMetricKey>("total");
+  const [selectedInviter, setSelectedInviter] =
+    useState<InvitacionRanking | null>(null);
+  const [selectedRankingPlayer, setSelectedRankingPlayer] =
+    useState<RankingWithStats | null>(null);
 
   const handleActivityClick = (activityId: number) => {
     router.push(`/activities/${activityId}`);
@@ -169,13 +163,19 @@ export default function Page() {
     const totalPlayers = (participants || []).length;
 
     const top3Scorers = calculatedRankings
-      .map((p) => ({ ...p, goals: (p.gf || 0) + (p.gh || 0) + (p.gb || 0) }))
+      .map((p) => ({
+        ...p,
+        goals: (p.gf || 0) + (p.gh || 0) + (p.gb || 0),
+      }))
       .filter((p) => p.goals > 0)
       .sort((a, b) => b.goals - a.goals)
       .slice(0, 3);
 
     const allScorers = calculatedRankings
-      .map((p) => ({ ...p, goals: (p.gf || 0) + (p.gh || 0) + (p.gb || 0) }))
+      .map((p) => ({
+        ...p,
+        goals: (p.gf || 0) + (p.gh || 0) + (p.gb || 0),
+      }))
       .filter((p) => p.goals > 0)
       .sort((a, b) => b.goals - a.goals);
 
@@ -188,10 +188,6 @@ export default function Page() {
       totalPlayers,
       top3Scorers,
       allScorers,
-      totalPartidos: (activities || []).reduce(
-        (acc, a) => acc + (a.partidos || []).length,
-        0,
-      ),
     };
   }, [calculatedRankings, participants, activities]);
 
@@ -206,7 +202,10 @@ export default function Page() {
   );
 
   const invitacionRanking = useMemo(() => {
-    const counts: Record<number, { total: number; invitaciones: { inv: Invitacion; activity: Activity }[] }> = {};
+    const counts: Record<
+      number,
+      { total: number; invitaciones: { inv: Invitacion; activity: Activity }[] }
+    > = {};
 
     (activities || []).forEach((act) => {
       (act.invitaciones || []).forEach((inv) => {
@@ -230,277 +229,318 @@ export default function Page() {
       .sort((a, b) => b.invitedCount - a.invitedCount);
   }, [participants, activities]);
 
-  const getInvitadosDetails = (invitaciones: { inv: Invitacion; activity: Activity }[]) => {
+  const getInvitadosDetails = (
+    invitaciones: { inv: Invitacion; activity: Activity }[],
+  ) => {
     return invitaciones
       .map((item) => {
-        const invited = (participants || []).find((p) => p.id === item.inv.invitadoId);
+        const invited = (participants || []).find(
+          (p) => p.id === item.inv.invitadoId,
+        );
         if (!invited) return null;
-        return {
-          invited,
-          activity: item.activity,
-        };
+        return { invited, activity: item.activity };
       })
       .filter((item): item is NonNullable<typeof item> => item !== null);
   };
 
   if (isLoading) {
     return (
-      <>
-        <div className="p-4 space-y-4">
-          <div className="grid grid-cols-3 gap-3">
-            {[1, 2, 3].map((i) => (
-              <Skeleton key={i} className="h-20 rounded-xl" />
-            ))}
-          </div>
-          <Skeleton className="h-12 rounded-xl" />
-          <Skeleton className="h-12 rounded-xl" />
-          <Skeleton className="h-12 rounded-xl" />
+      <div className="p-4 space-y-4">
+        <div className="grid grid-cols-3 gap-3">
+          {[1, 2, 3].map((i) => (
+            <Skeleton key={i} className="h-20 rounded-xl" />
+          ))}
         </div>
-      </>
+        <Skeleton className="h-12 rounded-xl" />
+        <Skeleton className="h-12 rounded-xl" />
+        <Skeleton className="h-12 rounded-xl" />
+      </div>
     );
   }
 
   return (
     <>
-      <div>
-        <div className="p-4">
-          <div className="grid grid-cols-3 gap-3 mb-4">
-            <div className="bg-primary rounded-xl p-3 text-center">
-              <div className="text-2xl font-black text-accent">
-                {activities.length}
-              </div>
-              <div className="text-xs font-bold opacity-60 text-accent">
-                Actividades
-              </div>
+      <div className="p-4">
+        {/* Stats Cards */}
+        <div className="grid grid-cols-3 gap-3 mb-6">
+          <div className="bg-primary rounded-xl p-3 text-center">
+            <div className="text-2xl font-black text-accent">
+              {activities.length}
             </div>
-            <div className="bg-primary rounded-xl p-3 text-center">
-              <div className="text-2xl font-black text-accent">
-                {stats.totalPlayers}
-              </div>
-              <div className="text-xs font-bold opacity-60 text-accent">
-                Jugadores
-              </div>
-            </div>
-            <div className="bg-primary rounded-xl p-3 text-center">
-              <div className="text-2xl font-black text-accent">
-                {stats.totalGoles}
-              </div>
-              <div className="text-xs font-bold opacity-60 text-accent">
-                Total Goles
-              </div>
+            <div className="text-xs font-bold opacity-60 text-accent">
+              Actividades
             </div>
           </div>
-
-          <div
-            className="flex items-center gap-2 mb-4 cursor-pointer select-none"
-            onClick={() => setShowTopGoleadores((prev) => !prev)}
-          >
-            <div className="font-bold text-base">Goleadores</div>
-            {showTopGoleadores ? (
-              <ChevronUp className="w-4 h-4 text-text-muted" />
-            ) : (
-              <ChevronDown className="w-4 h-4 text-text-muted" />
-            )}
-          </div>
-
-          {showTopGoleadores && (
-            <div className="bg-white rounded-xl p-4 border border-surface-dark mb-4">
-              <div className="flex flex-col gap-2">
-                {stats.top3Scorers.length === 0 ? (
-                  <div className="text-center py-4 text-xs text-text-muted italic">
-                    Aún no hay goles registrados
-                  </div>
-                ) : (
-                  <>
-                    {stats.top3Scorers.map((p, i) => (
-                      <div
-                        key={p.id}
-                        className="flex items-center gap-3 p-2 bg-surface-dark rounded-xl"
-                      >
-                        <PodiumBadge
-                          pos={i + 1}
-                          className="w-6 h-6 bg-white border-0 shadow-sm text-primary font-bold"
-                        />
-                        <Avatar p={p} size={28} />
-                        <div className="flex-1 min-w-0">
-                          <div className="font-bold text-xs truncate">
-                            {p.nombre} {p.apellido}
-                          </div>
-                        </div>
-                        <div className="font-black text-primary bg-white px-2 py-1 rounded-lg text-xs shadow-sm">
-                          {p.goals}{" "}
-                          <span className="text-[10px] opacity-50 font-bold">
-                            goles
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-                    {stats.allScorers.length > 3 && (
-                      <button
-                        type="button"
-                        onClick={() => router.push("/participants")}
-                        className="flex items-center justify-end gap-1 text-xs font-bold text-primary mt-1"
-                      >
-                        Ver ranking completo <ChevronRight className="w-3.5 h-3.5" />
-                      </button>
-                    )}
-                  </>
-                )}
-              </div>
+          <div className="bg-primary rounded-xl p-3 text-center">
+            <div className="text-2xl font-black text-accent">
+              {stats.totalPlayers}
             </div>
-          )}
-
-          <div
-            className="flex items-center gap-2 mb-4 cursor-pointer select-none"
-            onClick={() => setShowRanking((prev) => !prev)}
-          >
-            <div className="font-bold text-base">Ranking Individual</div>
-            {showRanking ? (
-              <ChevronUp className="w-4 h-4 text-text-muted" />
-            ) : (
-              <ChevronDown className="w-4 h-4 text-text-muted" />
-            )}
+            <div className="text-xs font-bold opacity-60 text-accent">
+              Jugadores
+            </div>
           </div>
-
-          {showRanking && (
-            <>
-              <div className="grid grid-cols-2 gap-2 mb-4">
-                {RANKING_METRICS.map((metric) => {
-                  const Icon = metric.Icon;
-                  return (
-                    <button
-                      key={metric.key}
-                      onClick={() => setRankingMetric(metric.key)}
-                      className={cn(
-                        "flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg text-xs font-bold transition-all",
-                        rankingMetric === metric.key
-                          ? "bg-primary text-white shadow-md"
-                          : "bg-surface-dark text-text-muted hover:bg-surface-dark/80",
-                      )}
-                    >
-                      <Icon className="w-4 h-4" />
-                      <span>{metric.label}</span>
-                    </button>
-                  );
-                })}
-              </div>
-
-              {calculatedRankings.length === 0 ? (
-                <Empty text="Aún no hay participantes" />
-              ) : (
-                <div className="flex flex-col gap-2 mb-4">
-                  {calculatedRankings.slice(0, 5).map((p, i) => (
-                    <RankRow
-                      key={p.id}
-                      p={p}
-                      pos={i + 1}
-                      metric={rankingMetric}
-                      isClickable={rankingMetric === "total"}
-                      onClick={rankingMetric === "total" ? () => setSelectedRankingPlayer(p) : undefined}
-                    />
-                  ))}
-                  {calculatedRankings.length > 5 && (
-                    <button
-                      type="button"
-                      onClick={() => router.push("/participants")}
-                      className="flex items-center justify-end gap-1 text-xs font-bold text-primary mt-1"
-                    >
-                      Ver ranking completo <ChevronRight className="w-3.5 h-3.5" />
-                    </button>
-                  )}
-                </div>
-              )}
-            </>
-          )}
-
-          <div
-            className="flex items-center gap-2 mb-4 cursor-pointer select-none"
-            onClick={() => setShowInvitaciones((prev) => !prev)}
-          >
-            <div className="font-bold text-base">Invitaciones</div>
-            {showInvitaciones ? (
-              <ChevronUp className="w-4 h-4 text-text-muted" />
-            ) : (
-              <ChevronDown className="w-4 h-4 text-text-muted" />
-            )}
+          <div className="bg-primary rounded-xl p-3 text-center">
+            <div className="text-2xl font-black text-accent">
+              {stats.totalGoles}
+            </div>
+            <div className="text-xs font-bold opacity-60 text-accent">
+              Total Goles
+            </div>
           </div>
-
-          {showInvitaciones && (
-            <>
-              {invitacionRanking.length === 0 ? (
-                <Empty text="No hay invitaciones registradas" />
-              ) : (
-                <div className="flex flex-col gap-2 mb-4">
-                  {invitacionRanking.slice(0, 3).map((p, i) => (
-                    <div
-                      key={p.id}
-                      onClick={() => setSelectedInviter(p)}
-                      className={cn(
-                        "bg-white rounded-xl p-3 flex items-center gap-3 border cursor-pointer hover:bg-surface-dark transition-colors",
-                        i <= 2 ? "border-primary/30" : "border-surface-dark",
-                      )}
-                    >
-                      <RankBadge pos={i + 1} />
-                      <Avatar p={p} size={36} />
-                      <div className="flex-1 z-10 min-w-0">
-                        <div className="font-bold truncate">
-                          {p.nombre} {p.apellido}
-                        </div>
-                      </div>
-                      <div className="font-black text-2xl z-10">
-                        {p.invitedCount}
-                        <span className="text-xs font-bold text-text-muted ml-1">
-                          inv.
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                  {invitacionRanking.length > 3 && (
-                    <button
-                      type="button"
-                      onClick={() => setShowInvitaciones(true)}
-                      className="flex items-center justify-end gap-1 text-xs font-bold text-primary mt-1"
-                    >
-                      Ver ranking completo <ChevronRight className="w-3.5 h-3.5" />
-                    </button>
-                  )}
-                </div>
-              )}
-            </>
-          )}
-
-          {lastActs.length > 0 && (
-            <>
-              <div className="font-bold text-base mb-3">Últimas Actividades</div>
-              <div className="flex flex-col gap-2 mb-4">
-                {lastActs.map((a) => (
-                  <div
-                    key={a.id}
-                    onClick={() => handleActivityClick(a.id)}
-                    className={cn(
-                      "bg-white rounded-xl p-4 border border-surface-dark flex justify-between",
-                      "cursor-pointer",
-                    )}
-                  >
-                    <div>
-                      <div className="font-bold">
-                        {a.titulo || formatDate(a.fecha)}
-                      </div>
-                      <div className="text-sm text-text-muted mt-1">
-                        {formatDate(a.fecha)} · {a.asistentes.length} presentes
-                      </div>
-                    </div>
-                    <div className="text-sm text-primary font-bold">
-                      {a.juegos.length} juegos
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
         </div>
+
+        {/* ─── GOLEADORES ─── */}
+        <div
+          className="flex items-center gap-2 mb-3 cursor-pointer select-none"
+          onClick={() => setGoleadoresOpen(true)}
+        >
+          <div className="font-bold text-base">Goleadores</div>
+          <ChevronRight className="w-4 h-4 text-text-muted" />
+        </div>
+        {stats.top3Scorers.length === 0 ? (
+          <div className="text-center py-4 text-xs text-text-muted italic mb-4">
+            Aún no hay goles registrados
+          </div>
+        ) : (
+          <div className="flex flex-col gap-2 mb-6">
+            {stats.top3Scorers.map((p, i) => (
+              <div
+                key={p.id}
+                className="flex items-center gap-3 p-2 bg-surface-dark rounded-xl"
+              >
+                <PodiumBadge
+                  pos={i + 1}
+                  className="w-6 h-6 bg-white border-0 shadow-sm text-primary font-bold"
+                />
+                <Avatar p={p} size={28} />
+                <div className="flex-1 min-w-0">
+                  <div className="font-bold text-xs truncate">
+                    {p.nombre} {p.apellido}
+                  </div>
+                </div>
+                <div className="font-black text-primary bg-white px-2 py-1 rounded-lg text-xs shadow-sm">
+                  {p.goals}{" "}
+                  <span className="text-[10px] opacity-50 font-bold">goles</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* ─── RANKING ─── */}
+        <div
+          className="flex items-center gap-2 mb-3 cursor-pointer select-none"
+          onClick={() => setRankingOpen(true)}
+        >
+          <div className="font-bold text-base">Ranking Individual</div>
+          <ChevronRight className="w-4 h-4 text-text-muted" />
+        </div>
+        {calculatedRankings.length === 0 ? (
+          <div className="text-center py-4 text-xs text-text-muted italic mb-4">
+            Aún no hay participantes
+          </div>
+        ) : (
+          <div className="flex flex-col gap-2 mb-6">
+            {calculatedRankings.slice(0, 3).map((p, i) => (
+              <RankRow key={p.id} p={p} pos={i + 1} metric="total" />
+            ))}
+          </div>
+        )}
+
+        {/* ─── INVITACIONES ─── */}
+        <div
+          className="flex items-center gap-2 mb-3 cursor-pointer select-none"
+          onClick={() => setInvitacionesOpen(true)}
+        >
+          <div className="font-bold text-base">Invitaciones</div>
+          <ChevronRight className="w-4 h-4 text-text-muted" />
+        </div>
+        {invitacionRanking.length === 0 ? (
+          <div className="text-center py-4 text-xs text-text-muted italic mb-4">
+            No hay invitaciones registradas
+          </div>
+        ) : (
+          <div className="flex flex-col gap-2 mb-6">
+            {invitacionRanking.slice(0, 3).map((p, i) => (
+              <div
+                key={p.id}
+                className="flex items-center gap-3 p-2 bg-surface-dark rounded-xl"
+              >
+                <RankBadge pos={i + 1} />
+                <Avatar p={p} size={28} />
+                <div className="flex-1 min-w-0">
+                  <div className="font-bold text-xs truncate">
+                    {p.nombre} {p.apellido}
+                  </div>
+                </div>
+                <div className="font-black text-primary text-sm">
+                  {p.invitedCount}{" "}
+                  <span className="text-[10px] opacity-50 font-bold">inv.</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* ─── ÚLTIMAS ACTIVIDADES ─── */}
+        {lastActs.length > 0 && (
+          <>
+            <div className="font-bold text-base mb-3">Últimas Actividades</div>
+            <div className="flex flex-col gap-2 mb-4">
+              {lastActs.map((a) => (
+                <div
+                  key={a.id}
+                  onClick={() => handleActivityClick(a.id)}
+                  className="bg-white rounded-xl p-4 border border-surface-dark flex justify-between cursor-pointer"
+                >
+                  <div>
+                    <div className="font-bold">
+                      {a.titulo || formatDate(a.fecha)}
+                    </div>
+                    <div className="text-sm text-text-muted mt-1">
+                      {formatDate(a.fecha)} · {a.asistentes.length} presentes
+                    </div>
+                  </div>
+                  <div className="text-sm text-primary font-bold">
+                    {a.juegos.length} juegos
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
       </div>
 
+      {/* ─── SHEET: GOLEADORES ─── */}
+      <DetailSheet
+        open={goleadoresOpen}
+        onOpenChange={setGoleadoresOpen}
+        title="Goleadores"
+      >
+        {stats.allScorers.length === 0 ? (
+          <Empty text="Aún no hay goles registrados" />
+        ) : (
+          <div className="flex flex-col gap-2">
+            {stats.allScorers.map((p, i) => (
+              <div
+                key={p.id}
+                className="flex items-center gap-3 p-3 bg-surface-dark rounded-xl"
+              >
+                <PodiumBadge
+                  pos={i + 1}
+                  className="w-6 h-6 bg-white border-0 shadow-sm text-primary font-bold"
+                />
+                <Avatar p={p} size={32} />
+                <div className="flex-1 min-w-0">
+                  <div className="font-bold text-sm truncate">
+                    {p.nombre} {p.apellido}
+                  </div>
+                </div>
+                <div className="font-black text-primary bg-white px-2 py-1 rounded-lg text-xs shadow-sm">
+                  {p.goals}{" "}
+                  <span className="text-[10px] opacity-50 font-bold">goles</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </DetailSheet>
+
+      {/* ─── SHEET: RANKING ─── */}
+      <DetailSheet
+        open={rankingOpen}
+        onOpenChange={setRankingOpen}
+        title="Ranking Individual"
+      >
+        {/* Metric selector */}
+        <div className="grid grid-cols-2 gap-2 mb-4">
+          {RANKING_METRICS.map((metric) => {
+            const Icon = metric.Icon;
+            return (
+              <button
+                key={metric.key}
+                onClick={() => setRankingMetric(metric.key)}
+                className={cn(
+                  "flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg text-xs font-bold transition-all",
+                  rankingMetric === metric.key
+                    ? "bg-primary text-white shadow-md"
+                    : "bg-surface-dark text-text-muted hover:bg-surface-dark/80",
+                )}
+              >
+                <Icon className="w-4 h-4" />
+                <span>{metric.label}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        {calculatedRankings.length === 0 ? (
+          <Empty text="Aún no hay participantes" />
+        ) : (
+          <div className="flex flex-col gap-2">
+            {calculatedRankings.map((p, i) => (
+              <RankRow
+                key={p.id}
+                p={p}
+                pos={i + 1}
+                metric={rankingMetric}
+                isClickable={rankingMetric === "total"}
+                onClick={
+                  rankingMetric === "total"
+                    ? () => {
+                        setRankingOpen(false);
+                        setSelectedRankingPlayer(p);
+                      }
+                    : undefined
+                }
+              />
+            ))}
+          </div>
+        )}
+      </DetailSheet>
+
+      {/* ─── SHEET: INVITACIONES ─── */}
+      <DetailSheet
+        open={invitacionesOpen}
+        onOpenChange={setInvitacionesOpen}
+        title="Invitaciones"
+      >
+        {invitacionRanking.length === 0 ? (
+          <Empty text="No hay invitaciones registradas" />
+        ) : (
+          <div className="flex flex-col gap-2">
+            {invitacionRanking.map((p, i) => (
+              <div
+                key={p.id}
+                onClick={() => {
+                  setInvitacionesOpen(false);
+                  setSelectedInviter(p);
+                }}
+                className={cn(
+                  "bg-white rounded-xl p-3 flex items-center gap-3 border cursor-pointer transition-colors",
+                  i <= 2 ? "border-primary/30" : "border-surface-dark",
+                )}
+              >
+                <RankBadge pos={i + 1} />
+                <Avatar p={p} size={36} />
+                <div className="flex-1 z-10 min-w-0">
+                  <div className="font-bold truncate">
+                    {p.nombre} {p.apellido}
+                  </div>
+                </div>
+                <div className="font-black text-2xl z-10">
+                  {p.invitedCount}
+                  <span className="text-xs font-bold text-text-muted ml-1">
+                    inv.
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </DetailSheet>
+
+      {/* ─── MODALS ─── */}
       {selectedRankingPlayer && (
         <PlayerHistoryModal
           player={selectedRankingPlayer}
@@ -511,49 +551,38 @@ export default function Page() {
       )}
 
       {selectedInviter && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full max-h-[80vh] overflow-hidden flex flex-col">
-            <div className="p-4 border-b flex items-center justify-between">
-              <div>
-                <div className="font-bold">
-                  {selectedInviter.nombre} {selectedInviter.apellido}
-                </div>
-                <div className="text-sm text-text-muted">
-                  {selectedInviter.invitedCount} invitados
-                </div>
-              </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setSelectedInviter(null)}
-              >
-                <X className="w-5 h-5" />
-              </Button>
-            </div>
-            <div className="p-4 overflow-y-auto flex-1">
-              <div className="flex flex-col gap-2">
-                {getInvitadosDetails(selectedInviter.invitaciones).map((detail, i) => (
-                  <div
-                    key={i}
-                    className="flex items-center gap-3 p-2 bg-surface-dark rounded-xl"
-                  >
-                    <Avatar p={detail.invited} size={28} />
-                    <div className="flex-1 min-w-0">
-                      <div className="font-bold text-sm truncate">
-                        {detail.invited.nombre} {detail.invited.apellido}
-                      </div>
-                      {detail.activity && (
-                        <div className="text-xs text-text-muted truncate">
-                          {detail.activity.titulo || formatDate(detail.activity.fecha)}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+        <DetailSheet
+          open={!!selectedInviter}
+          onOpenChange={(open) => !open && setSelectedInviter(null)}
+          title={`${selectedInviter.nombre} ${selectedInviter.apellido}`}
+        >
+          <div className="text-sm text-text-muted mb-4">
+            {selectedInviter.invitedCount} invitados
           </div>
-        </div>
+          <div className="flex flex-col gap-2">
+            {getInvitadosDetails(selectedInviter.invitaciones).map(
+              (detail, i) => (
+                <div
+                  key={i}
+                  className="flex items-center gap-3 p-2 bg-surface-dark rounded-xl"
+                >
+                  <Avatar p={detail.invited} size={28} />
+                  <div className="flex-1 min-w-0">
+                    <div className="font-bold text-sm truncate">
+                      {detail.invited.nombre} {detail.invited.apellido}
+                    </div>
+                    {detail.activity && (
+                      <div className="text-xs text-text-muted truncate">
+                        {detail.activity.titulo ||
+                          formatDate(detail.activity.fecha)}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ),
+            )}
+          </div>
+        </DetailSheet>
       )}
     </>
   );

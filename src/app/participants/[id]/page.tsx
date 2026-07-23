@@ -23,7 +23,7 @@ import { formatDate, cn, getImg } from "@/lib/utils";
 import { imagesEnabled } from "@/lib/images-config";
 import { ImageExpandModal } from "@/components/ui/ImageExpandModal";
 import { getParticipant } from "@/lib/api-client";
-import { AppHeader } from "@/components/ui/AppHeader";
+
 
 export const dynamic = "force-dynamic";
 
@@ -125,7 +125,6 @@ export default function Page({
   if (dbLoading || !db) {
     return (
       <div className="min-h-screen bg-primary">
-        <AppHeader title="Perfil de Jugador" showBack showSettings={false} />
         <div className="px-4 pt-8 space-y-4">
           <div className="flex items-center gap-5">
             <Skeleton className="w-20 h-20 rounded-full bg-white/10" />
@@ -173,13 +172,6 @@ export default function Page({
         <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl pointer-events-none" />
         
         <div className="relative z-10 p-4">
-          <AppHeader
-            title="Perfil de Jugador"
-            showBack
-            showSettings={false}
-            onBack={() => router.push("/participants")}
-          />
-
           <div className="flex items-center gap-5 mb-4">
             <div
               onClick={handlePhotoClick}

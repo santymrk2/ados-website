@@ -51,6 +51,13 @@ function getPageTitle(pathname: string): string {
   return "Activados";
 }
 
+function isDetailPage(pathname: string): boolean {
+  return (
+    (pathname.startsWith("/activities/") && pathname !== "/activities") ||
+    (pathname.startsWith("/participants/") && pathname !== "/participants")
+  );
+}
+
 interface AuthGateProps {
   children: React.ReactNode;
   showNav?: boolean;
@@ -164,6 +171,7 @@ export function AuthGate({ children, showNav = true }: AuthGateProps) {
             <AppHeader
               title={getPageTitle(pathname || "/")}
               showSettings={false}
+              showBack={isDetailPage(pathname || "/")}
               onMenuClick={() => setIsDrawerOpen(true)}
             />
           )}

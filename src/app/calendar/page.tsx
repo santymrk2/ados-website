@@ -4,29 +4,19 @@ import { useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import { useApp } from "@/hooks/useApp";
 import { Avatar } from "@/components/ui/Avatar";
+import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { AppHeader } from "@/components/ui/AppHeader";
 import type { ParticipantBasic } from "@/lib/types";
 
 const MONTHS = [
-  "Enero",
-  "Febrero",
-  "Marzo",
-  "Abril",
-  "Mayo",
-  "Junio",
-  "Julio",
-  "Agosto",
-  "Septiembre",
-  "Octubre",
-  "Noviembre",
-  "Diciembre",
+  "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+  "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre",
 ];
 
 const DAYS = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
-
-
 
 function getAge(fechaNacimiento: string | null | undefined) {
   if (!fechaNacimiento) return null;
@@ -136,8 +126,21 @@ function PlayerDetailModal({
   );
 }
 
+function CalendarSkeleton() {
+  return (
+    <div className="p-4 space-y-3">
+      <Skeleton className="h-10 w-full rounded-xl" />
+      <div className="grid grid-cols-7 gap-1">
+        {Array.from({ length: 35 }).map((_, i) => (
+          <Skeleton key={i} className="h-16 rounded-lg" />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function Page() {
-  const { db } = useApp();
+  const { db, isLoading } = useApp();
   const { participants } = db;
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedPlayer, setSelectedPlayer] = useState<ParticipantBasic | null>(null);
@@ -185,24 +188,18 @@ export default function Page() {
   const nextMonth = () =>
     setCurrentDate(new Date(currentYear, currentMonth + 1, 1));
 
+  if (isLoading) {
+    return (
+      <>
+        <AppHeader title="Calendario" showSettings={false} onMenuClick={() => {}} />
+        <CalendarSkeleton />
+      </>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <div className="bg-primary pt-safe">
-        <div className="text-white p-4">
-          <div className="flex justify-between items-start">
-            <div>
-              <div
-                className="text-2xl font-black tracking-tight"
-                style={{ fontFamily: "ClashGrotesk, sans-serif" }}
-              >
-                ACTIVADOS
-              </div>
-              <h1 className="text-lg font-bold mt-1 opacity-80">Calendario</h1>
-            </div>
-          </div>
-        </div>
-        <div className="mt-4"></div>
-      </div>
+      <AppHeader title="Calendario" showSettings={false} />
 
       <div className="flex items-center justify-between p-4 bg-white border-b border-surface-dark">
         <button
@@ -292,7 +289,7 @@ export default function Page() {
       {birthdaysToday.length > 0 && (
         <div className="p-4 bg-primary/10 border-t border-primary/20">
           <div className="font-bold text-sm text-primary mb-2">
-            🎂 Cumpleaños hoy
+            Cumpleaños hoy
           </div>
           <div className="flex gap-3 overflow-x-auto pb-2">
             {birthdaysToday.map((p) => (

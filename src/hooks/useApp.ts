@@ -6,7 +6,6 @@ import { useAuth } from './useAuth';
 import { useDatabase } from './useDatabase';
 import {
   $showSettings,
-  $showNotifications,
   $dbError,
   $dbConnected,
   $dbChecked,
@@ -14,7 +13,6 @@ import {
 
 export function useApp() {
   const showSettings = useStore($showSettings);
-  const showNotifications = useStore($showNotifications);
   const dbError = useStore($dbError);
   const dbConnected = useStore($dbConnected);
   const dbChecked = useStore($dbChecked);
@@ -27,10 +25,6 @@ export function useApp() {
   // useCallback prevents recreating these functions on every render
   const setShowSettings = useCallback((val: boolean) => {
     $showSettings.set(val);
-  }, []);
-
-  const setShowNotifications = useCallback((val: boolean) => {
-    $showNotifications.set(val);
   }, []);
 
   const logout = useCallback(() => {
@@ -49,8 +43,6 @@ export function useApp() {
     isViewer,
     showSettings,
     setShowSettings,
-    showNotifications,
-    setShowNotifications,
     saveActivity,
     deleteActivity,
     quickUpdate,

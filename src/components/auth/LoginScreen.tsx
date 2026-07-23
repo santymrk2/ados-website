@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type Dispatch, type FormEvent, type SetStateAction } from "react";
-import { Lock, Eye, EyeOff } from "lucide-react";
+import { Lock, Eye, EyeOff, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
@@ -19,9 +19,11 @@ export function LoginScreen({ onLogin, error, showPass, setShowPass }: LoginScre
   const [password, setPassword] = useState("");
   const [role, setRole] = useState("viewer");
   const [showAdminToggle, setShowAdminToggle] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setIsSubmitting(true);
     onLogin(password, role);
   };
 
@@ -33,15 +35,20 @@ export function LoginScreen({ onLogin, error, showPass, setShowPass }: LoginScre
         <button
           type="button"
           aria-label="Mostrar selector de rol"
-          className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-6 cursor-pointer select-none transition-transform active:scale-95 border-0"
-          onDoubleClick={() => setShowAdminToggle(!showAdminToggle)}
-          title="Doble click"
+          className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-2 cursor-pointer select-none transition-transform active:scale-95 border-0"
         >
           <Lock className="w-8 h-8 text-primary pointer-events-none" />
         </button>
+        <button
+          type="button"
+          onClick={() => setShowAdminToggle(!showAdminToggle)}
+          className="text-xs text-primary/70 hover:text-primary transition-colors mx-auto block mb-6 underline underline-offset-2 cursor-pointer bg-transparent border-0 p-0"
+        >
+          {showAdminToggle ? "Ocultar selector de rol" : "¿Sos admin? Cambiar rol"}
+        </button>
         <h2 className="text-2xl font-black text-center mb-2">Acceso</h2>
         
-        {showAdminToggle ? (
+        {showAdminToggle && (
           <div className="flex items-center justify-center gap-3 mb-6 animate-in fade-in zoom-in duration-300">
             <Label htmlFor="admin-mode" className={cn("text-sm font-bold cursor-pointer transition-colors", role === "viewer" ? "text-primary" : "text-text-muted")}>Viewer</Label>
             <Switch
@@ -51,7 +58,9 @@ export function LoginScreen({ onLogin, error, showPass, setShowPass }: LoginScre
             />
             <Label htmlFor="admin-mode" className={cn("text-sm font-bold cursor-pointer transition-colors", role === "admin" ? "text-primary" : "text-text-muted")}>Admin</Label>
           </div>
-        ) : (
+        )}
+
+        {!showAdminToggle && (
           <p className="text-text-muted text-sm text-center mb-6">
             Ingresá la contraseña para continuar
           </p>
@@ -67,6 +76,7 @@ export function LoginScreen({ onLogin, error, showPass, setShowPass }: LoginScre
               onChange={(e) => {
                 setPassword(e.target.value);
               }}
+              autoFocus
               className={cn(error && "border-red-500")}
             />
             <Button
@@ -91,12 +101,15 @@ export function LoginScreen({ onLogin, error, showPass, setShowPass }: LoginScre
             </p>
           )}
 
-          <Button type="submit" className="w-full" size="lg">
-            Ingresar como {roleText}
+          <Button type="submit" className="w-full" size="lg" disabled={isSubmitting}>
+            {isSubmitting ? (
+              <Loader2 className="w-5 h-5 animate-spin" />
+            ) : (
+              `Ingresar como ${roleText}`
+            )}
           </Button>
         </form>
 
-        {/* Helper text for passwords */}
         {showAdminToggle && (
           <p className="text-xs text-text-muted text-center mt-4">
             {role === "admin"

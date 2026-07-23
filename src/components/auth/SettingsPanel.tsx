@@ -9,6 +9,7 @@ import {
   X,
   ChevronDown,
   ChevronUp,
+  Info,
 } from "lucide-react";
 import {
   TEAMS,
@@ -28,6 +29,11 @@ import {
   isWebPushConfigured,
 } from "@/services/web-push-client";
 import { toast } from "@/hooks/use-toast";
+
+const PRESET_COLORS = [
+  "#EF4444", "#F97316", "#EAB308", "#22C55E", "#06B6D4", "#3B82F6",
+  "#8B5CF6", "#EC4899", "#6B7280", "#14B8A6", "#F59E0B", "#10B981",
+];
 
 function hexToRgb(hex: string) {
   const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
@@ -100,10 +106,8 @@ export function SettingsPanel({
   const [saved, setSaved] = useState(false);
   const isAdmin = role === "admin";
 
-  // Default all accordions closed
   const [openSections, setOpenSections] = useState<string[]>([]);
 
-  // Push notification states
   const [pushAvailable, setPushAvailable] = useState(false);
   const [pushConfigured, setPushConfigured] = useState(false);
   const [isSubscribed, setIsSubscribed] = useState(false);
@@ -234,7 +238,6 @@ export function SettingsPanel({
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto space-y-3">
-          {/* Colors Section - Only for admin */}
           {isAdmin && (
             <AccordionSection
               title="Colores de Equipos"
@@ -258,26 +261,31 @@ export function SettingsPanel({
                       <label className="text-xs text-text-muted font-bold block mb-1">
                         Color {team}
                       </label>
-                      <div className="flex gap-2 items-center">
-                        <input
-                          type="color"
-                          value={colors[team] || "#cccccc"}
-                          onChange={(e) =>
-                            handleColorChange(team, e.target.value)
-                          }
-                          className="w-7 h-7 rounded cursor-pointer border-none shrink-0 p-0"
-                          readOnly
-                          onClick={(e) =>
-                            (e.target as HTMLInputElement).showPicker?.()
-                          }
-                        />
+                      <div className="flex flex-col gap-2">
+                        <div className="grid grid-cols-6 gap-1.5">
+                          {PRESET_COLORS.map((preset) => (
+                            <button
+                              key={preset}
+                              type="button"
+                              onClick={() => handleColorChange(team, preset)}
+                              className={cn(
+                                "w-7 h-7 rounded-full cursor-pointer border-2 transition-all hover:scale-110",
+                                (colors[team] || "#cccccc").toUpperCase() === preset.toUpperCase()
+                                  ? "ring-2 ring-primary ring-offset-1 border-primary"
+                                  : "border-transparent"
+                              )}
+                              style={{ backgroundColor: preset }}
+                              aria-label={`Seleccionar ${preset}`}
+                            />
+                          ))}
+                        </div>
                         <Input
                           type="text"
                           value={colors[team] || "#cccccc"}
                           onChange={(e) =>
                             handleColorChange(team, e.target.value)
                           }
-                          className="flex-1 font-mono uppercase text-xs h-8"
+                          className="font-mono uppercase text-xs h-8"
                         />
                       </div>
                     </div>
@@ -299,7 +307,6 @@ export function SettingsPanel({
             </AccordionSection>
           )}
 
-          {/* Push Notifications Section */}
           {pushAvailable && (
             <AccordionSection
               title="Notificaciones Push"
@@ -358,9 +365,26 @@ export function SettingsPanel({
               )}
             </AccordionSection>
           )}
+
+          <AccordionSection
+            title="Acerca de"
+            icon={Info}
+            isOpen={openSections.includes("about")}
+            onToggle={() => toggleSection("about")}
+          >
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-text-muted">Versión</span>
+                <span className="font-medium text-dark">1.0.0</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-text-muted">Desarrollado por</span>
+                <span className="font-medium text-dark">ADOS Team</span>
+              </div>
+            </div>
+          </AccordionSection>
         </div>
 
-        {/* Logout Section - Fixed at bottom */}
         <div className="shrink-0 border-t border-surface-dark pt-4 mt-2">
           <Button
             onClick={onLogout}

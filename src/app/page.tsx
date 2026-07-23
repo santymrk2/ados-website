@@ -5,14 +5,13 @@ import { useStore } from "@nanostores/react";
 import { useRouter } from "next/navigation";
 import { useApp } from "@/hooks/useApp";
 import { $role } from "@/store/appStore";
-import { SettingsPanel } from "@/components/auth/SettingsPanel";
 import {
-  Settings,
   Trophy,
   Volleyball,
   Calendar,
   ChevronDown,
   ChevronUp,
+  ChevronRight,
   Award,
   ClipboardList,
   Users,
@@ -21,12 +20,13 @@ import {
 import { Section, Empty } from "@/components/ui/Common";
 import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { RankBadge, PodiumBadge } from "@/components/ui/Badges";
 import { cn, formatDate } from "@/lib/utils";
 import type { ParticipantBasic, Activity, Invitacion } from "@/lib/types";
 import { PlayerHistoryModal } from "@/app/_components/PlayerHistoryModal";
+import { AppHeader } from "@/components/ui/AppHeader";
 
-// Tipo para ranking calculado con stats
 interface RankingWithStats extends ParticipantBasic {
   total: number;
   gf: number;
@@ -36,7 +36,6 @@ interface RankingWithStats extends ParticipantBasic {
   goals?: number;
 }
 
-// Tipo para ranking de invitaciones
 interface InvitacionWithActivity {
   inv: Invitacion;
   activity: Activity;
@@ -69,7 +68,6 @@ function RankRow({
 }: {
   p: RankingWithStats;
   pos: number;
-  activities: Activity[];
   metric: RankingMetricKey;
   isClickable?: boolean;
   onClick?: () => void;
@@ -127,7 +125,7 @@ function RankRow({
 }
 
 export default function Page() {
-  const { db, showSettings, setShowSettings, logout } = useApp();
+  const { db, isLoading, showSettings, setShowSettings, logout } = useApp();
   const { participants, activities, rankings } = db;
   const role = useStore($role);
   const router = useRouter();
@@ -135,9 +133,7 @@ export default function Page() {
   const [showRanking, setShowRanking] = useState(false);
   const [showTopGoleadores, setShowTopGoleadores] = useState(false);
   const [showInvitaciones, setShowInvitaciones] = useState(false);
-  const [topGoleadoresGender, setTopGoleadoresGender] = useState<'M' | 'F' | null>('M');
   const [rankingMetric, setRankingMetric] = useState<RankingMetricKey>('total');
-  const [selectedActivityIds, setSelectedActivityIds] = useState<number[]>([]);
   const [selectedInviter, setSelectedInviter] = useState<InvitacionRanking | null>(null);
   const [selectedRankingPlayer, setSelectedRankingPlayer] = useState<RankingWithStats | null>(null);
 
@@ -176,51 +172,16 @@ export default function Page() {
 
     const totalPlayers = (participants || []).length;
 
-    const masGoles = {
-      f: (activities || []).reduce(
-        (acc, a) =>
-          acc +
-          (a.goles || [])
-            .filter((g) => g.tipo === "f")
-            .reduce((s, g) => s + g.cant, 0),
-        0,
-      ),
-      h: (activities || []).reduce(
-        (acc, a) =>
-          acc +
-          (a.goles || [])
-            .filter((g) => g.tipo === "h")
-            .reduce((s, g) => s + g.cant, 0),
-        0,
-      ),
-      b: (activities || []).reduce(
-        (acc, a) =>
-          acc +
-          (a.goles || [])
-            .filter((g) => g.tipo === "b")
-            .reduce((s, g) => s + g.cant, 0),
-        0,
-      ),
-    };
-
-    const top5ScorersM = calculatedRankings
-      .filter((p) => p.sexo === "M")
+    const top3Scorers = calculatedRankings
       .map((p) => ({ ...p, goals: (p.gf || 0) + (p.gh || 0) + (p.gb || 0) }))
       .filter((p) => p.goals > 0)
       .sort((a, b) => b.goals - a.goals)
-      .slice(0, 5);
+      .slice(0, 3);
 
-    const top5ScorersF = calculatedRankings
-      .filter((p) => p.sexo === "F")
+    const allScorers = calculatedRankings
       .map((p) => ({ ...p, goals: (p.gf || 0) + (p.gh || 0) + (p.gb || 0) }))
       .filter((p) => p.goals > 0)
-      .sort((a, b) => b.goals - a.goals)
-      .slice(0, 5);
-
-    const maleCount = (participants || []).filter((p) => p.sexo === "M").length;
-    const femaleCount = (participants || []).filter(
-      (p) => p.sexo === "F",
-    ).length;
+      .sort((a, b) => b.goals - a.goals);
 
     return {
       jugadoresActivos,
@@ -229,15 +190,12 @@ export default function Page() {
         : 0,
       totalGoles,
       totalPlayers,
-      masGoles,
+      top3Scorers,
+      allScorers,
       totalPartidos: (activities || []).reduce(
         (acc, a) => acc + (a.partidos || []).length,
         0,
       ),
-      top5ScorersM,
-      top5ScorersF,
-      maleCount,
-      femaleCount,
     };
   }, [calculatedRankings, participants, activities]);
 
@@ -251,26 +209,10 @@ export default function Page() {
     [activities],
   );
 
-  const topScorers = useMemo(() => {
-    if (topGoleadoresGender === "M") return stats.top5ScorersM;
-    if (topGoleadoresGender === "F") return stats.top5ScorersF;
-    // Ambos: merge y top 5
-    return [...stats.top5ScorersM, ...stats.top5ScorersF]
-      .sort((a, b) => b.goals - a.goals)
-      .slice(0, 5);
-  }, [topGoleadoresGender, stats.top5ScorersM, stats.top5ScorersF]);
-
-  // Por defecto, si no hay actividades seleccionadas, mostrar todas
-  const activeActivityIds = selectedActivityIds.length > 0
-    ? selectedActivityIds
-    : (activities || []).map((a) => a.id);
-
-  // Calcular ranking de invitaciones basado en actividades seleccionadas
   const invitacionRanking = useMemo(() => {
     const counts: Record<number, { total: number; invitaciones: { inv: Invitacion; activity: Activity }[] }> = {};
 
     (activities || []).forEach((act) => {
-      if (!activeActivityIds.includes(act.id)) return;
       (act.invitaciones || []).forEach((inv) => {
         if (inv.invitador) {
           if (!counts[inv.invitador]) {
@@ -290,9 +232,8 @@ export default function Page() {
       }))
       .filter((p) => p.invitedCount > 0)
       .sort((a, b) => b.invitedCount - a.invitedCount);
-  }, [participants, activities, activeActivityIds]);
+  }, [participants, activities]);
 
-  // Obtener los invitados de una persona específica
   const getInvitadosDetails = (invitaciones: { inv: Invitacion; activity: Activity }[]) => {
     return invitaciones
       .map((item) => {
@@ -306,36 +247,32 @@ export default function Page() {
       .filter((item): item is NonNullable<typeof item> => item !== null);
   };
 
+  if (isLoading) {
+    return (
+      <>
+        <AppHeader title="Dashboard" showSettings={false} onMenuClick={() => {}} />
+        <div className="p-4 space-y-4">
+          <div className="grid grid-cols-3 gap-3">
+            {[1, 2, 3].map((i) => (
+              <Skeleton key={i} className="h-20 rounded-xl" />
+            ))}
+          </div>
+          <Skeleton className="h-12 rounded-xl" />
+          <Skeleton className="h-12 rounded-xl" />
+          <Skeleton className="h-12 rounded-xl" />
+        </div>
+      </>
+    );
+  }
+
   return (
     <>
       <div>
-        <div className="bg-primary pt-safe">
-          <div className="text-white p-4">
-            <div className="flex justify-between items-start">
-              <div>
-                <div
-                  className="text-2xl font-black tracking-tight"
-                  style={{ fontFamily: "ClashGrotesk, sans-serif" }}
-                >
-                  ACTIVADOS
-                </div>
-                <h1 className="text-lg font-bold mt-1 opacity-80">Dashboard</h1>
-              </div>
-              <div className="flex gap-2">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setShowSettings(true)}
-                  className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center hover:bg-white/30 transition-colors"
-                >
-                  <Settings className="w-5 h-5" />
-                </Button>
-              </div>
-            </div>
-          </div>
+        <AppHeader title="Dashboard" showSettings />
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 px-4 pb-4">
-            <div className="bg-white/10 rounded-xl p-3 text-center border border-white/20">
+        <div className="p-4">
+          <div className="grid grid-cols-3 gap-3 mb-4">
+            <div className="bg-primary rounded-xl p-3 text-center">
               <div className="text-2xl font-black text-accent">
                 {activities.length}
               </div>
@@ -343,39 +280,29 @@ export default function Page() {
                 Actividades
               </div>
             </div>
-            <div className="bg-white/10 rounded-xl p-3 text-center border border-white/20">
+            <div className="bg-primary rounded-xl p-3 text-center">
               <div className="text-2xl font-black text-accent">
                 {stats.totalPlayers}
               </div>
               <div className="text-xs font-bold opacity-60 text-accent">
-                Total Jugadores
+                Jugadores
               </div>
             </div>
-            <div className="bg-white/10 rounded-xl p-3 text-center border border-white/20">
+            <div className="bg-primary rounded-xl p-3 text-center">
               <div className="text-2xl font-black text-accent">
-                {stats.maleCount}
+                {stats.totalGoles}
               </div>
               <div className="text-xs font-bold opacity-60 text-accent">
-                Varones
-              </div>
-            </div>
-            <div className="bg-white/10 rounded-xl p-3 text-center border border-white/20">
-              <div className="text-2xl font-black text-accent">
-                {stats.femaleCount}
-              </div>
-              <div className="text-xs font-bold opacity-60 text-accent">
-                Mujeres
+                Total Goles
               </div>
             </div>
           </div>
-        </div>
 
-        <div className="p-4">
           <div
             className="flex justify-between items-center mb-4 cursor-pointer select-none"
             onClick={() => setShowTopGoleadores((prev) => !prev)}
           >
-            <Section icon={Volleyball} title="Goleadores Fútbol" />
+            <Section icon={Volleyball} title="Goleadores" />
             {showTopGoleadores ? (
               <ChevronUp className="w-5 h-5 text-text-muted" />
             ) : (
@@ -385,58 +312,46 @@ export default function Page() {
 
           {showTopGoleadores && (
             <div className="bg-white rounded-xl p-4 border border-surface-dark mb-4">
-              <div className="flex gap-2 mb-4">
-                {[
-                  { val: null, label: "Ambos" },
-                  { val: "M", label: "Varón" },
-                  { val: "F", label: "Mujer" },
-                ].map((t) => (
-                  <Button
-                    key={t.label}
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setTopGoleadoresGender(t.val as 'M' | 'F' | null)}
-                    className={cn(
-                      "flex-1 border-2 transition-all",
-                      topGoleadoresGender === t.val
-                        ? "bg-primary text-white font-black border-primary"
-                        : "text-text-muted border-surface-dark",
-                    )}
-                  >
-                    {t.label}
-                  </Button>
-                ))}
-              </div>
-
               <div className="flex flex-col gap-2">
-                {topScorers.length === 0 ? (
+                {stats.top3Scorers.length === 0 ? (
                   <div className="text-center py-4 text-xs text-text-muted italic">
                     Aún no hay goles registrados
                   </div>
                 ) : (
-                  topScorers.map((p, i) => (
-                    <div
-                      key={p.id}
-                      className="flex items-center gap-3 p-2 bg-surface-dark rounded-xl"
-                    >
-                      <PodiumBadge
-                        pos={i + 1}
-                        className="w-6 h-6 bg-white border-0 shadow-sm text-primary font-bold"
-                      />
-                      <Avatar p={p} size={28} />
-                      <div className="flex-1 min-w-0">
-                        <div className="font-bold text-xs truncate">
-                          {p.nombre} {p.apellido}
+                  <>
+                    {stats.top3Scorers.map((p, i) => (
+                      <div
+                        key={p.id}
+                        className="flex items-center gap-3 p-2 bg-surface-dark rounded-xl"
+                      >
+                        <PodiumBadge
+                          pos={i + 1}
+                          className="w-6 h-6 bg-white border-0 shadow-sm text-primary font-bold"
+                        />
+                        <Avatar p={p} size={28} />
+                        <div className="flex-1 min-w-0">
+                          <div className="font-bold text-xs truncate">
+                            {p.nombre} {p.apellido}
+                          </div>
+                        </div>
+                        <div className="font-black text-primary bg-white px-2 py-1 rounded-lg text-xs shadow-sm">
+                          {p.goals}{" "}
+                          <span className="text-[10px] opacity-50 font-bold">
+                            goles
+                          </span>
                         </div>
                       </div>
-                      <div className="font-black text-primary bg-white px-2 py-1 rounded-lg text-xs shadow-sm">
-                        {p.goals}{" "}
-                        <span className="text-[10px] opacity-50 font-bold">
-                          goles
-                        </span>
-                      </div>
-                    </div>
-                  ))
+                    ))}
+                    {stats.allScorers.length > 3 && (
+                      <button
+                        type="button"
+                        onClick={() => router.push("/participants")}
+                        className="flex items-center justify-end gap-1 text-xs font-bold text-primary mt-1"
+                      >
+                        Ver ranking completo <ChevronRight className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </>
                 )}
               </div>
             </div>
@@ -481,23 +396,30 @@ export default function Page() {
                 <Empty text="Aún no hay participantes" />
               ) : (
                 <div className="flex flex-col gap-2 mb-4">
-                  {calculatedRankings.slice(0, 10).map((p, i) => (
+                  {calculatedRankings.slice(0, 5).map((p, i) => (
                     <RankRow
                       key={p.id}
                       p={p}
                       pos={i + 1}
-                      activities={activities}
                       metric={rankingMetric}
                       isClickable={rankingMetric === "total"}
                       onClick={rankingMetric === "total" ? () => setSelectedRankingPlayer(p) : undefined}
                     />
                   ))}
+                  {calculatedRankings.length > 5 && (
+                    <button
+                      type="button"
+                      onClick={() => router.push("/participants")}
+                      className="flex items-center justify-end gap-1 text-xs font-bold text-primary mt-1"
+                    >
+                      Ver ranking completo <ChevronRight className="w-3.5 h-3.5" />
+                    </button>
+                  )}
                 </div>
               )}
             </>
           )}
 
-          {/* Sección Invitaciones */}
           <div
             className="flex justify-between items-center mb-4 cursor-pointer select-none"
             onClick={() => setShowInvitaciones((prev) => !prev)}
@@ -512,46 +434,11 @@ export default function Page() {
 
           {showInvitaciones && (
             <>
-              {/* Checklist de actividades */}
-              <div className="bg-white rounded-xl p-4 border border-surface-dark mb-4">
-                <div className="text-xs font-bold text-text-muted mb-2">
-                  Filtrar por actividades:
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {(activities || []).map((act) => (
-                    <button
-                      key={act.id}
-                      onClick={() => {
-                        setSelectedActivityIds((prev) =>
-                          prev.includes(act.id)
-                            ? prev.filter((id) => id !== act.id)
-                            : [...prev, act.id],
-                        );
-                      }}
-                      className={cn(
-                        "px-2 py-1 rounded-lg text-xs font-bold transition-all",
-                        selectedActivityIds.length === 0 || selectedActivityIds.includes(act.id)
-                          ? "bg-primary text-white"
-                          : "bg-surface-dark text-text-muted",
-                      )}
-                    >
-                      {act.titulo || formatDate(act.fecha)}
-                    </button>
-                  ))}
-                </div>
-                {selectedActivityIds.length === 0 && (
-                  <div className="text-xs text-text-muted mt-2 italic">
-                    (Mostrando todas las actividades)
-                  </div>
-                )}
-              </div>
-
-              {/* Ranking de invitaciones */}
               {invitacionRanking.length === 0 ? (
                 <Empty text="No hay invitaciones registradas" />
               ) : (
                 <div className="flex flex-col gap-2 mb-4">
-                  {invitacionRanking.slice(0, 10).map((p, i) => (
+                  {invitacionRanking.slice(0, 3).map((p, i) => (
                     <div
                       key={p.id}
                       onClick={() => setSelectedInviter(p)}
@@ -575,6 +462,15 @@ export default function Page() {
                       </div>
                     </div>
                   ))}
+                  {invitacionRanking.length > 3 && (
+                    <button
+                      type="button"
+                      onClick={() => setShowInvitaciones(true)}
+                      className="flex items-center justify-end gap-1 text-xs font-bold text-primary mt-1"
+                    >
+                      Ver ranking completo <ChevronRight className="w-3.5 h-3.5" />
+                    </button>
+                  )}
                 </div>
               )}
             </>
@@ -611,12 +507,6 @@ export default function Page() {
           )}
         </div>
       </div>
-      <SettingsPanel
-        isOpen={showSettings}
-        onClose={() => setShowSettings(false)}
-        onLogout={logout}
-        role={role}
-      />
 
       {selectedRankingPlayer && (
         <PlayerHistoryModal
@@ -627,7 +517,6 @@ export default function Page() {
         />
       )}
 
-      {/* Modal de invitados */}
       {selectedInviter && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl max-w-md w-full max-h-[80vh] overflow-hidden flex flex-col">

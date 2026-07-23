@@ -34,7 +34,7 @@ const FILTER_HEIGHT = 200;
 // Configuración de la barra deslizable
 const NAV_WIDTH = 220;
 const INNER_NAV_WIDTH = 218;
-const ITEM_WIDTH = 64;
+const ITEM_WIDTH = 72;
 
 const SPACER_LEFT = (INNER_NAV_WIDTH - ITEM_WIDTH) / 2;
 const SPACER_RIGHT = SPACER_LEFT + 40;
@@ -42,7 +42,7 @@ const SPACER_RIGHT = SPACER_LEFT + 40;
 // --- FUNCIÓN DE VIBRACIÓN ---
 const triggerHapticFeedback = () => {
   if (typeof navigator !== "undefined" && navigator.vibrate) {
-    navigator.vibrate(15);
+    navigator.vibrate([30, 50, 30]);
   }
 };
 
@@ -407,6 +407,9 @@ export function FloatingNav({
                         >
                           {item.label}
                         </span>
+                        {isSelected && (
+                          <span className="w-1 h-1 rounded-full bg-primary mt-0.5" />
+                        )}
                       </>
                     );
 
@@ -417,6 +420,7 @@ export function FloatingNav({
                       onPointerCancel: cancelLongPress,
                       onClick: (e: React.MouseEvent) =>
                         handleItemClick(e, i, item),
+                      "aria-label": `${item.label}. Mantén presionado para ver más opciones`,
                       className:
                         "flex flex-col items-center justify-center gap-0.5 shrink-0 snap-center select-none transition-colors",
                       style: {
@@ -445,8 +449,8 @@ export function FloatingNav({
                   />
                 </div>
 
-                <div className="absolute top-0 bottom-0 left-0 w-6 bg-gradient-to-r from-white dark:from-background to-transparent pointer-events-none z-20" />
-                <div className="absolute top-0 bottom-0 right-0 w-6 bg-gradient-to-l from-white dark:from-background to-transparent pointer-events-none z-20" />
+                <div className="absolute top-0 bottom-0 left-0 w-6 bg-gradient-to-r from-white to-transparent pointer-events-none z-20" />
+                <div className="absolute top-0 bottom-0 right-0 w-6 bg-gradient-to-l from-white to-transparent pointer-events-none z-20" />
               </div>
             )}
           </motion.div>

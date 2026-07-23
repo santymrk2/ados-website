@@ -5,7 +5,8 @@ import { useApp } from "@/hooks/useApp";
 import { useDatabaseInitialization } from "@/hooks/useDatabaseInitialization";
 import { LoginScreen } from "./LoginScreen";
 import { Loader } from "./Loader";
-import { BottomNav } from "@/components/ui/BottomNav";
+import { AppDrawer } from "@/components/ui/AppDrawer";
+import { AppHeader } from "@/components/ui/AppHeader";
 import { WifiOff, RefreshCw } from "lucide-react";
 import { checkDbConnection } from "@/store/appStore";
 import { Button } from "@/components/ui/button";
@@ -40,6 +41,16 @@ function DbErrorScreen({ error, onRetry }: DbErrorScreenProps) {
   );
 }
 
+function getPageTitle(pathname: string): string {
+  if (pathname === "/") return "Dashboard";
+  if (pathname === "/calendar") return "Eventos";
+  if (pathname === "/activities") return "Actividades";
+  if (pathname === "/participants") return "Jugadores";
+  if (pathname.startsWith("/activities/")) return "Actividad";
+  if (pathname.startsWith("/participants/")) return "Jugador";
+  return "Activados";
+}
+
 interface AuthGateProps {
   children: React.ReactNode;
   showNav?: boolean;
@@ -66,6 +77,7 @@ export function AuthGate({ children, showNav = true }: AuthGateProps) {
   const [loginError, setLoginError] = useState<string | false>(false);
   const [showPass, setShowPass] = useState(false);
   const [isRetrying, setIsRetrying] = useState(false);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
   const handleLogin = async (password: string, role: string = "admin") => {
     const result = await login(password, role);
@@ -137,14 +149,25 @@ export function AuthGate({ children, showNav = true }: AuthGateProps) {
     <>
       <ConfirmDialogWrapper />
       <PWAInstall />
-      <div
-        className={cn(
-          "min-h-screen text-dark font-clash pt-0",
-          isActivityDetailPage ? "bg-primary pb-0" : (showNav ? "bg-background pb-24" : "bg-primary pb-0")
+      <div className="min-h-screen text-dark font-clash">
+        {showNav && (
+          <AppDrawer open={isDrawerOpen} onOpenChange={setIsDrawerOpen} />
         )}
-      >
-        {children}
-        {showNav && <BottomNav />}
+        <div
+          className={cn(
+            "min-h-screen transition-transform duration-300 ease-out",
+            isDrawerOpen && "translate-x-[280px]",
+            isActivityDetailPage ? "bg-primary" : "bg-background"
+          )}
+        >
+          {showNav && (
+            <AppHeader
+              title={getPageTitle(pathname || "/")}
+              onMenuClick={() => setIsDrawerOpen(true)}
+            />
+          )}
+          {children}
+        </div>
       </div>
     </>
   );

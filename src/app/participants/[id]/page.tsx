@@ -3,8 +3,6 @@
 import { useMemo, useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
 import { useApp } from "@/hooks/useApp";
-import { useStore } from "@nanostores/react";
-import { $role } from "@/store/appStore";
 import {
   ChevronLeft,
   Award,
@@ -12,15 +10,20 @@ import {
   Target,
   Clock,
   Phone,
+  Zap,
+  Shield,
+  Flame,
 } from "lucide-react";
 import { TEAM_COLORS, getEdad } from "@/lib/constants";
 import { actPts } from "@/lib/calc";
 import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { formatDate, cn, getImg } from "@/lib/utils";
 import { imagesEnabled } from "@/lib/images-config";
 import { ImageExpandModal } from "@/components/ui/ImageExpandModal";
 import { getParticipant } from "@/lib/api-client";
+import { AppHeader } from "@/components/ui/AppHeader";
 
 export const dynamic = "force-dynamic";
 
@@ -32,8 +35,6 @@ export default function Page({
   const router = useRouter();
   const { id } = use(params);
   const { db, isLoading: dbLoading } = useApp();
-  const role = useStore($role);
-  const isAdmin = role === "admin";
 
   // eslint-disable-next-line react-hooks/preserve-manual-memoization
   const initialParticipant = useMemo(() => {
@@ -73,12 +74,73 @@ export default function Page({
       .sort((a, b) => b.fecha.localeCompare(a.fecha));
   }, [playerId, db]);
 
+  const attributeConfigs = useMemo(
+    () => [
+      {
+        label: "Activo",
+        icon: Zap,
+        threshold: (s: typeof stats) => s.acts >= 5,
+        activeBg: "bg-emerald-50",
+        activeText: "text-emerald-700",
+        activeBorder: "border-emerald-200",
+      },
+      {
+        label: "Goleador",
+        icon: Target,
+        threshold: (s: typeof stats) => s.gf >= 10,
+        activeBg: "bg-blue-50",
+        activeText: "text-blue-700",
+        activeBorder: "border-blue-200",
+      },
+      {
+        label: "Fiel",
+        icon: Shield,
+        threshold: (s: typeof stats) => s.acts >= 10,
+        activeBg: "bg-purple-50",
+        activeText: "text-purple-700",
+        activeBorder: "border-purple-200",
+      },
+      {
+        label: "Imparable",
+        icon: Flame,
+        threshold: (s: typeof stats) => s.total >= 100,
+        activeBg: "bg-orange-50",
+        activeText: "text-orange-700",
+        activeBorder: "border-orange-200",
+      },
+      {
+        label: "Veterano",
+        icon: Award,
+        threshold: (s: typeof stats) => s.acts >= 20,
+        activeBg: "bg-amber-50",
+        activeText: "text-amber-700",
+        activeBorder: "border-amber-200",
+      },
+    ],
+    []
+  );
+
 
 
   if (dbLoading || !db) {
     return (
-      <div className="min-h-screen bg-primary flex items-center justify-center">
-        <div className="animate-pulse text-white font-black">Cargando...</div>
+      <div className="min-h-screen bg-primary">
+        <AppHeader title="Perfil de Jugador" showBack showSettings={false} />
+        <div className="px-4 pt-8 space-y-4">
+          <div className="flex items-center gap-5">
+            <Skeleton className="w-20 h-20 rounded-full bg-white/10" />
+            <div className="flex-1 space-y-2">
+              <Skeleton className="h-8 w-40 bg-white/10" />
+              <Skeleton className="h-5 w-24 bg-white/10" />
+            </div>
+          </div>
+          <div className="grid grid-cols-3 gap-3 mt-6">
+            <Skeleton className="h-28 rounded-3xl bg-white/10" />
+            <Skeleton className="h-28 rounded-3xl bg-white/10" />
+            <Skeleton className="h-28 rounded-3xl bg-white/10" />
+          </div>
+          <Skeleton className="h-48 rounded-3xl bg-white/10" />
+        </div>
       </div>
     );
   }
@@ -104,43 +166,26 @@ export default function Page({
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col pb-20">
+    <div className="min-h-screen bg-slate-50 flex flex-col">
       {/* Header & Hero */}
       <div className="bg-primary pt-safe shadow-2xl relative overflow-hidden">
         {/* Decoración de fondo */}
         <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl pointer-events-none" />
         
         <div className="relative z-10 p-4">
-          <div className="flex items-center gap-3 mb-6">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => router.push("/participants")}
-              className="text-white hover:bg-white/20 rounded-full"
-            >
-              <ChevronLeft className="w-6 h-6" />
-            </Button>
-            <div className="flex-1">
-              <div className="font-black text-white/70 uppercase tracking-widest text-[10px]">Perfil de Jugador</div>
-            </div>
-            {isAdmin && (
-              <Button 
-                onClick={() => router.push(`/participants/${player.id}/edit`)} 
-                variant="secondary" 
-                size="sm"
-                className="rounded-full px-5 font-black h-8"
-              >
-                Editar
-              </Button>
-            )}
-          </div>
+          <AppHeader
+            title="Perfil de Jugador"
+            showBack
+            showSettings={false}
+            onBack={() => router.push("/participants")}
+          />
 
           <div className="flex items-center gap-5 mb-4">
             <div
               onClick={handlePhotoClick}
               className={cn(
                 "relative",
-                imagesEnabled && player.foto ? "cursor-pointer hover:scale-105 transition-transform" : ""
+                imagesEnabled && player.foto && "cursor-pointer hover:scale-105 transition-transform"
               )}
             >
               <div className="border-4 border-white/20 rounded-full p-1">
@@ -270,6 +315,34 @@ export default function Page({
               )}
             </div>
           )}
+        </div>
+
+        {/* Atributos */}
+        <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100">
+          <div className="flex items-center justify-between mb-4">
+            <h4 className="font-black text-xs uppercase tracking-widest text-slate-400">Atributos</h4>
+            <Award className="w-4 h-4 text-slate-300" />
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {attributeConfigs.map((attr) => {
+              const Icon = attr.icon;
+              const unlocked = attr.threshold(stats);
+              return (
+                <span
+                  key={attr.label}
+                  className={cn(
+                    "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border transition-colors",
+                    unlocked
+                      ? `${attr.activeBg} ${attr.activeText} ${attr.activeBorder}`
+                      : "bg-slate-50 text-slate-300 border-slate-100"
+                  )}
+                >
+                  <Icon className="w-3.5 h-3.5" />
+                  {attr.label}
+                </span>
+              );
+            })}
+          </div>
         </div>
 
       </div>

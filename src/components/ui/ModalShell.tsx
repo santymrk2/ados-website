@@ -7,6 +7,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { cn } from "@/lib/utils";
 
 interface ModalShellProps {
@@ -43,12 +44,16 @@ export function ModalShell({
         showCloseButton={showCloseButton}
         className={cn(sizeClasses[size], className)}
       >
-        {(title || description) && (
-          <DialogHeader>
-            {title && <DialogTitle>{title}</DialogTitle>}
-            {description && <DialogDescription>{description}</DialogDescription>}
-          </DialogHeader>
-        )}
+        <DialogHeader>
+          {title ? (
+            <DialogTitle>{title}</DialogTitle>
+          ) : (
+            <VisuallyHidden>
+              <DialogTitle>Modal</DialogTitle>
+            </VisuallyHidden>
+          )}
+          {description && <DialogDescription>{description}</DialogDescription>}
+        </DialogHeader>
         {children}
       </DialogContent>
     </Dialog>

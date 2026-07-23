@@ -20,7 +20,7 @@ import {
 import { cn } from "@/lib/utils";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
+import { DetailSheet } from "../ui/DetailSheet";
 import {
   subscribeToPush,
   unsubscribeFromPush,
@@ -70,11 +70,11 @@ function AccordionSection({
   children: React.ReactNode;
 }) {
   return (
-    <div className="border border-border rounded-xl overflow-hidden">
+    <div className="border border-surface-dark rounded-xl overflow-hidden">
       <button
         type="button"
         onClick={onToggle}
-        className="w-full flex items-center justify-between p-4 bg-muted/50 hover:bg-muted transition-colors"
+        className="w-full flex items-center justify-between p-4 hover:bg-surface-dark/30 transition-colors"
       >
         <div className="flex items-center gap-2 font-bold text-dark">
           <Icon className="w-4 h-4 text-primary" />
@@ -86,7 +86,7 @@ function AccordionSection({
           <ChevronDown className="w-5 h-5 text-text-muted" />
         )}
       </button>
-      {isOpen && <div className="p-4 border-t border-border">{children}</div>}
+      {isOpen && <div className="p-4 border-t border-surface-dark">{children}</div>}
     </div>
   );
 }
@@ -228,178 +228,173 @@ export function SettingsPanel({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-md max-h-[80vh] overflow-hidden flex flex-col z-[110]">
-        <DialogHeader className="shrink-0">
-          <DialogTitle className="flex items-center gap-2">
-            <Palette className="w-5 h-5 text-primary" />
-            Configuración
-          </DialogTitle>
-        </DialogHeader>
-
-        <div className="flex-1 overflow-y-auto space-y-3">
-          {isAdmin && (
-            <AccordionSection
-              title="Colores de Equipos"
-              icon={Palette}
-              isOpen={openSections.includes("colors")}
-              onToggle={() => toggleSection("colors")}
-            >
-              <div className="space-y-3">
-                {TEAMS.map((team) => (
-                  <div key={team} className="flex items-center gap-3">
-                    <div
-                      className="w-10 h-10 rounded-lg flex items-center justify-center font-black text-sm shrink-0"
-                      style={{
-                        backgroundColor: colors[team] || "#cccccc",
-                        color: getContrastColor(colors[team] || "#cccccc"),
-                      }}
-                    >
-                      {team}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <label className="text-xs text-text-muted font-bold block mb-1">
-                        Color {team}
-                      </label>
-                      <div className="flex flex-col gap-2">
-                        <div className="grid grid-cols-6 gap-1.5">
-                          {PRESET_COLORS.map((preset) => (
-                            <button
-                              key={preset}
-                              type="button"
-                              onClick={() => handleColorChange(team, preset)}
-                              className={cn(
-                                "w-7 h-7 rounded-full cursor-pointer border-2 transition-all hover:scale-110",
-                                (colors[team] || "#cccccc").toUpperCase() === preset.toUpperCase()
-                                  ? "ring-2 ring-primary ring-offset-1 border-primary"
-                                  : "border-transparent"
-                              )}
-                              style={{ backgroundColor: preset }}
-                              aria-label={`Seleccionar ${preset}`}
-                            />
-                          ))}
-                        </div>
-                        <Input
-                          type="text"
-                          value={colors[team] || "#cccccc"}
-                          onChange={(e) =>
-                            handleColorChange(team, e.target.value)
-                          }
-                          className="font-mono uppercase text-xs h-8"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <Button
-                onClick={handleSave}
-                size="lg"
-                className={cn(
-                  "w-full gap-2 mt-4",
-                  saved && "bg-green-500 hover:bg-green-600 text-white",
-                )}
-              >
-                <Save className="w-4 h-4" />
-                {saved ? "¡Guardado!" : "Guardar Colores"}
-              </Button>
-            </AccordionSection>
-          )}
-
-          {pushAvailable && (
-            <AccordionSection
-              title="Notificaciones Push"
-              icon={Bell}
-              isOpen={openSections.includes("push")}
-              onToggle={() => toggleSection("push")}
-            >
-              {!pushConfigured ? (
-                <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
-                  <p className="text-sm text-yellow-800">
-                    Las notificaciones push no están configuradas en el
-                    servidor.
-                  </p>
-                </div>
-              ) : (
-                <div className="bg-muted rounded-xl p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium">
-                        {isSubscribed ? "Suscrito" : "No suscrito"}
-                      </p>
-                      <p className="text-xs text-text-muted">
-                        {isSubscribed
-                          ? "Recibirás notificaciones"
-                          : "Activa para recibir notificaciones"}
-                      </p>
-                    </div>
-                    <Button
-                      onClick={handlePushSubscription}
-                      disabled={isSubscribing}
-                      size="sm"
-                      variant={isSubscribed ? "outline" : "default"}
-                      className={cn(
-                        isSubscribed &&
-                          "border-red-200 text-red-600 hover:bg-red-50",
-                        subscriptionSaved &&
-                          "bg-green-500 hover:bg-green-600 text-white",
-                      )}
-                    >
-                      {isSubscribing ? (
-                        "..."
-                      ) : isSubscribed ? (
-                        <>
-                          <X className="w-3 h-3 mr-1" />
-                          Desuscribirse
-                        </>
-                      ) : (
-                        <>
-                          <Bell className="w-3 h-3 mr-1" />
-                          Activar
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </AccordionSection>
-          )}
-
+    <DetailSheet
+      open={isOpen}
+      onOpenChange={(open) => !open && onClose()}
+      title="Configuración"
+    >
+      <div className="space-y-3">
+        {isAdmin && (
           <AccordionSection
-            title="Acerca de"
-            icon={Info}
-            isOpen={openSections.includes("about")}
-            onToggle={() => toggleSection("about")}
+            title="Colores de Equipos"
+            icon={Palette}
+            isOpen={openSections.includes("colors")}
+            onToggle={() => toggleSection("colors")}
           >
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span className="text-text-muted">Versión</span>
-                <span className="font-medium text-dark">1.0.0</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-text-muted">Desarrollado por</span>
-                <span className="font-medium text-dark">ADOS Team</span>
-              </div>
+            <div className="space-y-3">
+              {TEAMS.map((team) => (
+                <div key={team} className="flex items-center gap-3">
+                  <div
+                    className="w-10 h-10 rounded-lg flex items-center justify-center font-black text-sm shrink-0"
+                    style={{
+                      backgroundColor: colors[team] || "#cccccc",
+                      color: getContrastColor(colors[team] || "#cccccc"),
+                    }}
+                  >
+                    {team}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <label className="text-xs text-text-muted font-bold block mb-1">
+                      Color {team}
+                    </label>
+                    <div className="flex flex-col gap-2">
+                      <div className="grid grid-cols-6 gap-1.5">
+                        {PRESET_COLORS.map((preset) => (
+                          <button
+                            key={preset}
+                            type="button"
+                            onClick={() => handleColorChange(team, preset)}
+                            className={cn(
+                              "w-7 h-7 rounded-full cursor-pointer border-2 transition-all hover:scale-110",
+                              (colors[team] || "#cccccc").toUpperCase() ===
+                                preset.toUpperCase()
+                                ? "ring-2 ring-primary ring-offset-1 border-primary"
+                                : "border-transparent",
+                            )}
+                            style={{ backgroundColor: preset }}
+                            aria-label={`Seleccionar ${preset}`}
+                          />
+                        ))}
+                      </div>
+                      <Input
+                        type="text"
+                        value={colors[team] || "#cccccc"}
+                        onChange={(e) =>
+                          handleColorChange(team, e.target.value)
+                        }
+                        className="font-mono uppercase text-xs h-8"
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
-          </AccordionSection>
-        </div>
 
-        <div className="shrink-0 border-t border-surface-dark pt-4 mt-2">
-          <Button
-            onClick={onLogout}
-            variant="destructive"
-            className="w-full gap-3"
-            size="lg"
+            <Button
+              onClick={handleSave}
+              size="lg"
+              className={cn(
+                "w-full gap-2 mt-4",
+                saved && "bg-green-500 hover:bg-green-600 text-white",
+              )}
+            >
+              <Save className="w-4 h-4" />
+              {saved ? "¡Guardado!" : "Guardar Colores"}
+            </Button>
+          </AccordionSection>
+        )}
+
+        {pushAvailable && (
+          <AccordionSection
+            title="Notificaciones Push"
+            icon={Bell}
+            isOpen={openSections.includes("push")}
+            onToggle={() => toggleSection("push")}
           >
-            <LogOut className="w-5 h-5" />
-            Cerrar Sesión
-          </Button>
-          <div className="text-center text-xs text-text-muted mt-3">
-            Sesión activa por 24 horas
+            {!pushConfigured ? (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
+                <p className="text-sm text-yellow-800">
+                  Las notificaciones push no están configuradas en el servidor.
+                </p>
+              </div>
+            ) : (
+              <div className="bg-surface-dark rounded-xl p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium">
+                      {isSubscribed ? "Suscrito" : "No suscrito"}
+                    </p>
+                    <p className="text-xs text-text-muted">
+                      {isSubscribed
+                        ? "Recibirás notificaciones"
+                        : "Activa para recibir notificaciones"}
+                    </p>
+                  </div>
+                  <Button
+                    onClick={handlePushSubscription}
+                    disabled={isSubscribing}
+                    size="sm"
+                    variant={isSubscribed ? "outline" : "default"}
+                    className={cn(
+                      isSubscribed &&
+                        "border-red-200 text-red-600 hover:bg-red-50",
+                      subscriptionSaved &&
+                        "bg-green-500 hover:bg-green-600 text-white",
+                    )}
+                  >
+                    {isSubscribing ? (
+                      "..."
+                    ) : isSubscribed ? (
+                      <>
+                        <X className="w-3 h-3 mr-1" />
+                        Desuscribirse
+                      </>
+                    ) : (
+                      <>
+                        <Bell className="w-3 h-3 mr-1" />
+                        Activar
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+            )}
+          </AccordionSection>
+        )}
+
+        <AccordionSection
+          title="Acerca de"
+          icon={Info}
+          isOpen={openSections.includes("about")}
+          onToggle={() => toggleSection("about")}
+        >
+          <div className="space-y-2 text-sm">
+            <div className="flex justify-between">
+              <span className="text-text-muted">Versión</span>
+              <span className="font-medium text-dark">1.0.0</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-text-muted">Desarrollado por</span>
+              <span className="font-medium text-dark">ADOS Team</span>
+            </div>
           </div>
+        </AccordionSection>
+      </div>
+
+      <div className="border-t border-surface-dark pt-4 mt-4">
+        <Button
+          onClick={onLogout}
+          variant="destructive"
+          className="w-full gap-3"
+          size="lg"
+        >
+          <LogOut className="w-5 h-5" />
+          Cerrar Sesión
+        </Button>
+        <div className="text-center text-xs text-text-muted mt-3">
+          Sesión activa por 24 horas
         </div>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </DetailSheet>
   );
 }

@@ -3,25 +3,14 @@
 import { useState, useMemo } from "react";
 import { useStore } from "@nanostores/react";
 import { useRouter } from "next/navigation";
-import { Plus, Pencil, Trash2, Search } from "lucide-react";
+import { Plus, Search } from "lucide-react";
 import { Empty } from "@/components/ui/Common";
 import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-
 import { useApp } from "@/hooks/useApp";
 import { $role } from "@/store/appStore";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import type { ParticipantBasic } from "@/lib/types";
 
 interface ParticipantWithStats extends ParticipantBasic {
@@ -34,14 +23,8 @@ interface ParticipantWithStats extends ParticipantBasic {
 
 function PlayerCard({
   p,
-  isAdmin,
-  onEdit,
-  onDelete,
 }: {
   p: ParticipantWithStats;
-  isAdmin: boolean;
-  onEdit: (e: React.MouseEvent) => void;
-  onDelete: (e: React.MouseEvent) => void;
 }) {
   return (
     <div className="bg-white rounded-xl p-3 border border-surface-dark flex items-center gap-3">
@@ -51,26 +34,6 @@ function PlayerCard({
           {p.nombre} {p.apellido}
         </div>
       </div>
-      {isAdmin && (
-        <div className="flex gap-1.5 flex-shrink-0">
-          <Button
-            onClick={onEdit}
-            variant="outline"
-            size="icon"
-            className="text-primary h-8 w-8"
-          >
-            <Pencil className="w-3.5 h-3.5" />
-          </Button>
-          <Button
-            onClick={onDelete}
-            variant="destructive"
-            size="icon"
-            className="h-8 w-8"
-          >
-            <Trash2 className="w-3.5 h-3.5" />
-          </Button>
-        </div>
-      )}
     </div>
   );
 }
@@ -88,13 +51,10 @@ function PlayersSkeleton() {
 
 export default function Page() {
   const router = useRouter();
-  const { db, isLoading, deleteParticipant } = useApp();
+  const { db, isLoading } = useApp();
   const { participants } = db;
 
   const [search, setSearch] = useState("");
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [jugadorAEliminar, setJugadorAEliminar] = useState<ParticipantBasic | null>(null);
-  const [confirmName, setConfirmName] = useState("");
 
   const role = useStore($role);
   const isAdmin = role === "admin";
@@ -113,23 +73,6 @@ export default function Page() {
       );
   }, [participants, search]);
 
-  const del = (id: number) => {
-    const jugador = (participants || []).find((p) => p.id === id);
-    if (!jugador) return;
-    setJugadorAEliminar(jugador);
-    setConfirmName("");
-    setDeleteDialogOpen(true);
-  };
-
-  const handleConfirmDelete = async () => {
-    if (confirmName.trim() === "Confirmar" && jugadorAEliminar) {
-      await deleteParticipant(jugadorAEliminar.id);
-      setDeleteDialogOpen(false);
-      setJugadorAEliminar(null);
-      setConfirmName("");
-    }
-  };
-
   if (isLoading) {
     return (
       <>
@@ -145,17 +88,6 @@ export default function Page() {
       </div>
 
       <div className="p-4">
-        {isAdmin && (
-          <Button
-            onClick={() => router.push("/participants/new")}
-            className="w-full mb-3"
-            size="lg"
-          >
-            <Plus className="w-5 h-5" />
-            Agregar Jugador
-          </Button>
-        )}
-
         <div className="relative mb-4">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted pointer-events-none" />
           <Input
@@ -191,15 +123,6 @@ export default function Page() {
               >
                 <PlayerCard
                   p={p as ParticipantWithStats}
-                  isAdmin={isAdmin}
-                  onEdit={(e) => {
-                    e?.stopPropagation();
-                    router.push(`/participants/${p.id}/edit`);
-                  }}
-                  onDelete={(e) => {
-                    e?.stopPropagation();
-                    del(p.id);
-                  }}
                 />
               </div>
             ))}
@@ -207,39 +130,17 @@ export default function Page() {
         )}
       </div>
 
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>¿Eliminar jugador?</AlertDialogTitle>
-            <AlertDialogDescription>
-              ¿Estás seguro que querés eliminar a{" "}
-              <span className="font-semibold text-foreground">
-                {jugadorAEliminar
-                  ? `${jugadorAEliminar.nombre} ${jugadorAEliminar.apellido}`
-                  : ""}
-              </span>
-              ?
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <Input
-            type="text"
-            value={confirmName}
-            onChange={(e) => setConfirmName(e.target.value)}
-            placeholder="Escribí Confirmar"
-            className="mt-2"
-          />
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleConfirmDelete}
-              disabled={confirmName.trim() !== "Confirmar"}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Eliminar
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {isAdmin && (
+        <div className="fixed bottom-20 right-4 z-40">
+          <Button
+            onClick={() => router.push("/participants/new")}
+            size="lg"
+            className="rounded-full shadow-lg h-14 w-14 p-0"
+          >
+            <span className="text-xl font-bold">+</span>
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

@@ -3,15 +3,29 @@
 import { useMemo, useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
 import { useApp } from "@/hooks/useApp";
-import { Phone } from "lucide-react";
+import { useStore } from "@nanostores/react";
+import { $role } from "@/store/appStore";
+import { Phone, Pencil, Trash2 } from "lucide-react";
 import { TEAM_COLORS, getEdad } from "@/lib/constants";
 import { actPts } from "@/lib/calc";
 import { Avatar } from "@/components/ui/Avatar";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Input } from "@/components/ui/input";
 import { formatDate, cn, getImg } from "@/lib/utils";
 import { imagesEnabled } from "@/lib/images-config";
 import { ImageExpandModal } from "@/components/ui/ImageExpandModal";
 import { getParticipant } from "@/lib/api-client";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export const dynamic = "force-dynamic";
 
@@ -22,7 +36,9 @@ export default function Page({
 }) {
   const router = useRouter();
   const { id } = use(params);
-  const { db, isLoading: dbLoading } = useApp();
+  const { db, isLoading: dbLoading, deleteParticipant } = useApp();
+  const role = useStore($role);
+  const isAdmin = role === "admin";
 
   // eslint-disable-next-line react-hooks/preserve-manual-memoization
   const initialParticipant = useMemo(() => {
@@ -33,6 +49,8 @@ export default function Page({
   const [expandedImage, setExpandedImage] = useState<string | null>(null);
   const [player, setPlayer] = useState(initialParticipant);
   const [isLoadingFull, setIsLoadingFull] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [confirmName, setConfirmName] = useState("");
 
   const playerId = player?.id;
 
@@ -102,6 +120,14 @@ export default function Page({
     if (imageToShow) setExpandedImage(getImg(imageToShow));
   };
 
+  const handleDelete = async () => {
+    if (confirmName.trim() === "Confirmar" && player) {
+      await deleteParticipant(player.id);
+      setDeleteDialogOpen(false);
+      router.push("/participants");
+    }
+  };
+
   return (
     <div className="p-4 space-y-4">
       {/* Player Info */}
@@ -148,6 +174,29 @@ export default function Page({
             </div>
           )}
         </div>
+        {isAdmin && (
+          <div className="flex gap-2 flex-shrink-0">
+            <Button
+              onClick={() => router.push(`/participants/${player.id}/edit`)}
+              variant="outline"
+              size="icon"
+              className="h-10 w-10"
+            >
+              <Pencil className="w-4 h-4" />
+            </Button>
+            <Button
+              onClick={() => {
+                setConfirmName("");
+                setDeleteDialogOpen(true);
+              }}
+              variant="destructive"
+              size="icon"
+              className="h-10 w-10"
+            >
+              <Trash2 className="w-4 h-4" />
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Stats */}
@@ -227,6 +276,38 @@ export default function Page({
           onClose={() => setExpandedImage(null)}
         />
       )}
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar jugador?</AlertDialogTitle>
+            <AlertDialogDescription>
+              ¿Estás seguro que querés eliminar a{" "}
+              <span className="font-semibold text-foreground">
+                {player.nombre} {player.apellido}
+              </span>
+              ?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <Input
+            type="text"
+            value={confirmName}
+            onChange={(e) => setConfirmName(e.target.value)}
+            placeholder="Escribí Confirmar"
+            className="mt-2"
+          />
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={confirmName.trim() !== "Confirmar"}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -8,7 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { AppHeader } from "@/components/ui/AppHeader";
+
 import type { ParticipantBasic } from "@/lib/types";
 
 const MONTHS = [
@@ -191,7 +191,6 @@ export default function Page() {
   if (isLoading) {
     return (
       <>
-        <AppHeader title="Calendario" showSettings={false} onMenuClick={() => {}} />
         <CalendarSkeleton />
       </>
     );
@@ -199,8 +198,6 @@ export default function Page() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <AppHeader title="Calendario" showSettings={false} />
-
       <div className="flex items-center justify-between p-4 bg-white border-b border-surface-dark">
         <button
           onClick={prevMonth}

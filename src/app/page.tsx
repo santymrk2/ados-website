@@ -25,7 +25,7 @@ import { RankBadge, PodiumBadge } from "@/components/ui/Badges";
 import { cn, formatDate } from "@/lib/utils";
 import type { ParticipantBasic, Activity, Invitacion } from "@/lib/types";
 import { PlayerHistoryModal } from "@/app/_components/PlayerHistoryModal";
-import { AppHeader } from "@/components/ui/AppHeader";
+
 
 interface RankingWithStats extends ParticipantBasic {
   total: number;
@@ -250,7 +250,6 @@ export default function Page() {
   if (isLoading) {
     return (
       <>
-        <AppHeader title="Dashboard" showSettings={false} onMenuClick={() => {}} />
         <div className="p-4 space-y-4">
           <div className="grid grid-cols-3 gap-3">
             {[1, 2, 3].map((i) => (
@@ -268,8 +267,6 @@ export default function Page() {
   return (
     <>
       <div>
-        <AppHeader title="Dashboard" showSettings />
-
         <div className="p-4">
           <div className="grid grid-cols-3 gap-3 mb-4">
             <div className="bg-primary rounded-xl p-3 text-center">

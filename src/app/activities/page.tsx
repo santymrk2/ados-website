@@ -8,7 +8,7 @@ import { Empty } from "@/components/ui/Common";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { AppHeader } from "@/components/ui/AppHeader";
+
 import { NewActivityModal } from "./_components/NewActivityModal";
 import { formatDate, cn } from "@/lib/utils";
 import { $role } from "@/store/appStore";
@@ -106,7 +106,6 @@ export default function ActivitiesPage() {
   if (isLoading) {
     return (
       <>
-        <AppHeader title="Actividades" showSettings={false} onMenuClick={() => {}} />
         <ActivitiesSkeleton />
       </>
     );
@@ -114,10 +113,9 @@ export default function ActivitiesPage() {
 
   return (
     <div>
-      <AppHeader
-        title="Actividades"
-        sub={`${db.activities.length} registradas`}
-      />
+      <div className="px-4 pt-2 pb-1 text-xs font-bold text-text-muted">
+        {db.activities.length} registradas
+      </div>
 
       <div className="p-4">
         <div className="relative mb-4">

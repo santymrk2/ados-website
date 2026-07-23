@@ -9,7 +9,7 @@ import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { AppHeader } from "@/components/ui/AppHeader";
+
 import { useApp } from "@/hooks/useApp";
 import { $role } from "@/store/appStore";
 import {
@@ -133,7 +133,6 @@ export default function Page() {
   if (isLoading) {
     return (
       <>
-        <AppHeader title="Jugadores" showSettings={false} onMenuClick={() => {}} />
         <PlayersSkeleton />
       </>
     );
@@ -141,10 +140,9 @@ export default function Page() {
 
   return (
     <div>
-      <AppHeader
-        title="Jugadores"
-        sub={`${(participants || []).length} registrados`}
-      />
+      <div className="px-4 pt-2 pb-1 text-xs font-bold text-text-muted">
+        {(participants || []).length} registrados
+      </div>
 
       <div className="p-4">
         {isAdmin && (

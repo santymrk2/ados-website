@@ -18,6 +18,7 @@ export const participants = pgTable("participants", {
   sexo: text("sexo").notNull().default("M"),
   foto: text("foto"),
   fotoAltaCalidad: text("foto_alta_calidad"),
+  telefono: text("telefono"),
   invitadoPor: integer("invitado_por").references((): AnyPgColumn => participants.id, {
     onDelete: "set null",
   }),

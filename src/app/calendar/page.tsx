@@ -1,32 +1,20 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight, X } from "lucide-react";
+import { X } from "lucide-react";
 import { useApp } from "@/hooks/useApp";
 import { Avatar } from "@/components/ui/Avatar";
+import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+
 import type { ParticipantBasic } from "@/lib/types";
 
 const MONTHS = [
-  "Enero",
-  "Febrero",
-  "Marzo",
-  "Abril",
-  "Mayo",
-  "Junio",
-  "Julio",
-  "Agosto",
-  "Septiembre",
-  "Octubre",
-  "Noviembre",
-  "Diciembre",
+  "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+  "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre",
 ];
-
-const DAYS = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
-
-
 
 function getAge(fechaNacimiento: string | null | undefined) {
   if (!fechaNacimiento) return null;
@@ -39,6 +27,16 @@ function getAge(fechaNacimiento: string | null | undefined) {
     age--;
   }
   return age;
+}
+
+function daysUntilBirthday(fechaNacimiento: string): number {
+  const today = new Date();
+  const [year, month, day] = fechaNacimiento.split("-").map(Number);
+  const thisYear = new Date(today.getFullYear(), month - 1, day);
+  if (thisYear < today) {
+    thisYear.setFullYear(today.getFullYear() + 1);
+  }
+  return Math.ceil((thisYear.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
 }
 
 function PlayerDetailModal({
@@ -136,11 +134,31 @@ function PlayerDetailModal({
   );
 }
 
+function CalendarSkeleton() {
+  return (
+    <div className="p-4 space-y-3">
+      <Skeleton className="h-8 w-full rounded-xl" />
+      <div className="flex gap-2">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <Skeleton key={i} className="h-8 w-14 rounded-full" />
+        ))}
+      </div>
+      <div className="space-y-2 mt-4">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <Skeleton key={i} className="h-16 rounded-xl" />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function Page() {
-  const { db } = useApp();
+  const { db, isLoading } = useApp();
   const { participants } = db;
-  const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedPlayer, setSelectedPlayer] = useState<ParticipantBasic | null>(null);
+
+  const currentMonth = new Date().getMonth();
+  const [selectedMonth, setSelectedMonth] = useState(currentMonth);
 
   const birthdaysByMonth = useMemo(() => {
     const byMonth = Array.from({ length: 12 }, () => [] as ParticipantBasic[]);
@@ -160,188 +178,101 @@ export default function Page() {
     return byMonth;
   }, [participants]);
 
-  const currentMonth = currentDate.getMonth();
-  const currentYear = currentDate.getFullYear();
+  const today = new Date();
+  const todayDay = today.getDate();
 
-  const getDaysInMonth = (year: number, month: number) =>
-    new Date(year, month + 1, 0).getDate();
-  const getFirstDayOfMonth = (year: number, month: number) =>
-    new Date(year, month, 1).getDay();
+  const birthdaysToday = useMemo(() => {
+    return birthdaysByMonth[today.getMonth()].filter((p) => {
+      const day = parseInt(p.fechaNacimiento!.split("-")[2]);
+      return day === todayDay;
+    });
+  }, [birthdaysByMonth, todayDay]);
 
-  const daysInMonth = getDaysInMonth(currentYear, currentMonth);
-  const firstDay = getFirstDayOfMonth(currentYear, currentMonth);
-
-  const days: (number | null)[] = [];
-  for (let i = 0; i < firstDay; i++) days.push(null);
-  for (let i = 1; i <= daysInMonth; i++) days.push(i);
-
-  const birthdaysToday = birthdaysByMonth[currentMonth].filter((p) => {
-    const day = parseInt(p.fechaNacimiento!.split("-")[2]);
-    return day === new Date().getDate();
-  });
-
-  const prevMonth = () =>
-    setCurrentDate(new Date(currentYear, currentMonth - 1, 1));
-  const nextMonth = () =>
-    setCurrentDate(new Date(currentYear, currentMonth + 1, 1));
+  if (isLoading) {
+    return <CalendarSkeleton />;
+  }
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <div className="bg-primary pt-safe">
-        <div className="text-white p-4">
-          <div className="flex justify-between items-start">
-            <div>
-              <div
-                className="text-2xl font-black tracking-tight"
-                style={{ fontFamily: "ClashGrotesk, sans-serif" }}
-              >
-                ACTIVADOS
-              </div>
-              <h1 className="text-lg font-bold mt-1 opacity-80">Calendario</h1>
-            </div>
-          </div>
-        </div>
-        <div className="mt-4"></div>
-      </div>
-
-      <div className="flex items-center justify-between p-4 bg-white border-b border-surface-dark">
-        <button
-          onClick={prevMonth}
-          className="p-2 hover:bg-surface-dark rounded-lg"
-        >
-          <ChevronLeft className="w-5 h-5" />
-        </button>
-        <h2 className="font-black text-lg">
-          {MONTHS[currentMonth]} {currentYear}
-        </h2>
-        <button
-          onClick={nextMonth}
-          className="p-2 hover:bg-surface-dark rounded-lg"
-        >
-          <ChevronRight className="w-5 h-5" />
-        </button>
-      </div>
-
-      <div className="grid grid-cols-7 gap-1 p-2 bg-white">
-        {DAYS.map((day) => (
-          <div
-            key={day}
-            className="text-center text-xs font-bold text-text-muted py-2"
-          >
-            {day}
-          </div>
-        ))}
-      </div>
-
-      <div className="grid grid-cols-7 gap-1 p-2 bg-white flex-1">
-        {days.map((day, idx) => {
-          if (!day) return <div key={`empty-${idx}`} />;
-
-          const birthdays = birthdaysByMonth[currentMonth].filter((p) => {
-            const bday = parseInt(p.fechaNacimiento!.split("-")[2]);
-            return bday === day;
-          });
-
-          const isToday =
-            new Date().getDate() === day &&
-            new Date().getMonth() === currentMonth &&
-            new Date().getFullYear() === currentYear;
-
-          return (
-            <div
-              key={day}
-              className={cn(
-                "min-h-[60px] lg:min-h-[80px] p-1 rounded-lg border transition-colors",
-                isToday
-                  ? "border-primary bg-primary/5"
-                  : "border-surface-dark hover:bg-surface-dark/30",
-              )}
-            >
-              <div
-                className={cn(
-                  "text-xs font-bold mb-1",
-                  isToday ? "text-primary" : "text-text-muted",
-                )}
-              >
-                {day}
-              </div>
-              <div className="flex flex-col gap-0.5">
-                {birthdays.slice(0, 3).map((p) => (
-                  <div
-                    key={p.id}
-                    className="flex items-center gap-1 cursor-pointer hover:bg-white/50 rounded p-0.5 -mx-0.5"
-                    onClick={() => setSelectedPlayer(p)}
-                  >
-                    <Avatar p={p} size={20} />
-                    <span className="text-[10px] lg:text-xs font-medium truncate">
-                      {p.nombre}
-                    </span>
-                  </div>
-                ))}
-                {birthdays.length > 3 && (
-                  <span className="text-[10px] text-text-muted">
-                    +{birthdays.length - 3}
-                  </span>
-                )}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
       {birthdaysToday.length > 0 && (
-        <div className="p-4 bg-primary/10 border-t border-primary/20">
+        <div className="mx-4 mt-4 p-3 bg-primary/10 rounded-xl border border-primary/15">
           <div className="font-bold text-sm text-primary mb-2">
-            🎂 Cumpleaños hoy
+            Cumpleaños Hoy
           </div>
-          <div className="flex gap-3 overflow-x-auto pb-2">
+          <div className="flex gap-3 overflow-x-auto pb-1">
             {birthdaysToday.map((p) => (
               <div
                 key={p.id}
-                className="flex flex-col items-center gap-1 flex-shrink-0 cursor-pointer hover:scale-105 transition-transform"
+                className="flex items-center gap-2 flex-shrink-0 cursor-pointer"
                 onClick={() => setSelectedPlayer(p)}
               >
-                <Avatar p={p} size={48} />
-                <span className="text-xs font-bold text-center">
-                  {p.nombre} {p.apellido}
-                </span>
+                <Avatar p={p} size={40} />
+                <div>
+                  <div className="font-bold text-sm">{p.nombre} {p.apellido}</div>
+                  <div className="text-xs text-primary font-bold">¡Hoy cumple!</div>
+                </div>
               </div>
             ))}
           </div>
         </div>
       )}
 
-      <div className="p-4 bg-white border-t border-surface-dark">
-        <div className="font-bold text-sm mb-3">Cumpleaños este mes</div>
-        <div className="flex flex-col gap-2 max-h-[200px] overflow-y-auto">
-          {birthdaysByMonth[currentMonth].length === 0 ? (
-            <div className="text-sm text-text-muted text-center py-4">
-              No hay cumpleaños este mes
-            </div>
-          ) : (
-            birthdaysByMonth[currentMonth].map((p) => {
-              const day = parseInt(p.fechaNacimiento!.split("-")[2]);
-              return (
-                <div
-                  key={p.id}
-                  className="flex items-center gap-3 p-2 rounded-lg bg-surface-dark/30 cursor-pointer hover:bg-surface-dark/60 transition-colors"
-                  onClick={() => setSelectedPlayer(p)}
-                >
-                  <Avatar p={p} size={32} />
-                  <div className="flex-1">
-                    <div className="font-bold text-sm">
-                      {p.nombre} {p.apellido}
-                    </div>
-                    <div className="text-xs text-text-muted">
-                      {day} de {MONTHS[currentMonth]}
-                    </div>
+      <div className="flex gap-2 overflow-x-auto pb-2 px-4 pt-4 scrollbar-none">
+        {MONTHS.map((m, i) => (
+          <button
+            key={i}
+            onClick={() => setSelectedMonth(i)}
+            className={cn(
+              "flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-bold transition-all",
+              selectedMonth === i
+                ? "bg-primary text-white"
+                : "bg-surface-dark text-text-muted"
+            )}
+          >
+            {m.slice(0, 3)}
+          </button>
+        ))}
+      </div>
+
+      <div className="flex-1 p-4 space-y-2">
+        {birthdaysByMonth[selectedMonth].length === 0 ? (
+          <div className="text-center py-12 text-text-muted text-sm">
+            No hay cumpleaños este mes
+          </div>
+        ) : (
+          birthdaysByMonth[selectedMonth].map((p) => {
+            const day = parseInt(p.fechaNacimiento!.split("-")[2]);
+            const edad = getAge(p.fechaNacimiento);
+            const isToday =
+              today.getMonth() === selectedMonth && day === todayDay;
+            const diff = daysUntilBirthday(p.fechaNacimiento!);
+
+            return (
+              <div
+                key={p.id}
+                className="flex items-center gap-3 p-3 bg-primary/10 rounded-xl border border-primary/15 cursor-pointer"
+                onClick={() => setSelectedPlayer(p)}
+              >
+                <Avatar p={p} size={40} />
+                <div className="flex-1 min-w-0">
+                  <div className="font-bold text-sm">{p.nombre} {p.apellido}</div>
+                  <div className="text-xs text-text-muted">
+                    {edad !== null ? `${edad} años` : ""} · {day} de {MONTHS[selectedMonth]}
                   </div>
                 </div>
-              );
-            })
-          )}
-        </div>
+                {isToday ? (
+                  <span className="text-xs font-bold text-primary">¡Hoy!</span>
+                ) : diff <= 365 - 30 ? (
+                  <span className="text-xs text-text-muted">en {diff} días</span>
+                ) : (
+                  <span className="text-xs text-text-muted">hace {365 - diff} días</span>
+                )}
+              </div>
+            );
+          })
+        )}
       </div>
+
       {selectedPlayer && (
         <PlayerDetailModal
           player={selectedPlayer}

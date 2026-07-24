@@ -10,7 +10,7 @@ export class ActivitiesPage extends BasePage {
 
   constructor(page: Page) {
     super(page);
-    this.header = page.getByRole("heading", { name: "Actividades" });
+    this.header = page.getByRole("heading", { name: "Actividades" }).first();
     this.addActivityButton = page.getByRole("button", { name: /agregar actividad/i });
     this.activityList = page.locator(".cursor-pointer");
     this.newActivityModal = page.getByRole("dialog");

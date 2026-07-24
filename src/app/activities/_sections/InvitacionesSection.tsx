@@ -9,7 +9,7 @@ import { Avatar } from "@/components/ui/Avatar";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { cn } from "@/lib/utils";
+import { cn, normalizeText } from "@/lib/utils";
 import type { ParticipantBasic } from "@/lib/types";
 
 interface InvitacionWithId {
@@ -48,13 +48,13 @@ function InvitationRow({
 
   const filteredInvitadores = searchFilter.trim()
     ? participants.filter((p) =>
-        `${p.nombre} ${p.apellido}`.toLowerCase().includes(searchFilter.toLowerCase()),
+        normalizeText(`${p.nombre} ${p.apellido}`).includes(normalizeText(searchFilter)),
       )
     : participants;
 
   const filteredInvitados = searchFilterInvitado.trim()
     ? participants.filter((p) =>
-        `${p.nombre} ${p.apellido}`.toLowerCase().includes(searchFilterInvitado.toLowerCase()),
+        normalizeText(`${p.nombre} ${p.apellido}`).includes(normalizeText(searchFilterInvitado)),
       )
     : participants;
 
@@ -68,13 +68,7 @@ function InvitationRow({
   };
 
   return (
-    <div className="flex items-center gap-2 px-3 py-2 bg-white rounded-2xl border border-surface-dark relative transition-all duration-150 hover:border-primary/30">
-      <div className="absolute -top-2 left-2 text-[9px] font-black text-primary bg-white px-1 z-0 pointer-events-none">
-        INVITA
-      </div>
-      <div className="absolute -top-2 right-8 text-[9px] font-black text-purple-600 bg-white px-1 z-0 pointer-events-none">
-        INVITADO
-      </div>
+    <div className="flex items-center gap-2 px-3 py-2 bg-white rounded-2xl border border-border transition-all duration-150 hover:border-primary/30">
       <div className="flex-1 min-w-0">
         {invitador ? (
           <Popover
@@ -82,7 +76,7 @@ function InvitationRow({
             onOpenChange={(o) => setOpenDropdown(o ? `${inv.id}_invitador` : null)}
           >
             <PopoverTrigger asChild disabled={locked}>
-              <button className="flex items-center gap-2 w-full text-left p-1 -m1 rounded-lg hover:bg-surface-light transition-colors truncate">
+              <button className="flex items-center gap-2 w-full text-left p-1 -m1 rounded-lg hover:bg-card transition-colors truncate">
                 <Avatar p={invitador} size={28} />
                 <span className="text-sm font-medium truncate text-foreground">
                   {invitador.nombre} {invitador.apellido}
@@ -90,7 +84,7 @@ function InvitationRow({
               </button>
             </PopoverTrigger>
             <PopoverContent align="start" className="w-56 p-0">
-              <div className="p-2 border-b border-surface-dark">
+              <div className="p-2 border-b border-border">
                 <Input
                   placeholder="Buscar..."
                   value={searchFilter}
@@ -104,7 +98,7 @@ function InvitationRow({
                     key={p.id}
                     onClick={() => handleSelect("invitador", p.id)}
                     className={cn(
-                      "flex items-center gap-2 w-full px-3 py-2 text-left hover:bg-surface-light transition-colors",
+                      "flex items-center gap-2 w-full px-3 py-2 text-left hover:bg-card transition-colors",
                       p.id === inv.invitador && "bg-indigo-50",
                     )}
                   >
@@ -121,15 +115,15 @@ function InvitationRow({
             onOpenChange={(o) => setOpenDropdown(o ? `${inv.id}_invitador` : null)}
           >
             <PopoverTrigger asChild disabled={locked}>
-              <button className="flex items-center gap-2 w-full text-left p-2 rounded-lg border border-dashed border-surface-dark hover:border-primary/40 hover:bg-indigo-50/30 transition-colors text-sm text-text-muted">
-                <div className="w-7 h-7 rounded-full bg-surface-dark flex items-center justify-center text-xs font-black text-text-muted">
+              <button className="flex items-center gap-2 w-full text-left p-2 rounded-lg border border-dashed border-border hover:border-primary/40 hover:bg-indigo-50/30 transition-colors text-sm text-muted-foreground">
+                <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center text-xs font-black text-muted-foreground">
                   ?
                 </div>
                 <span>Quién invita?</span>
               </button>
             </PopoverTrigger>
             <PopoverContent align="start" className="w-56 p-0">
-              <div className="p-2 border-b border-surface-dark">
+              <div className="p-2 border-b border-border">
                 <Input
                   placeholder="Buscar..."
                   value={searchFilter}
@@ -142,7 +136,7 @@ function InvitationRow({
                   <button
                     key={p.id}
                     onClick={() => handleSelect("invitador", p.id)}
-                    className="flex items-center gap-2 w-full px-3 py-2 text-left hover:bg-surface-light transition-colors"
+                    className="flex items-center gap-2 w-full px-3 py-2 text-left hover:bg-card transition-colors"
                   >
                     <Avatar p={p} size={24} />
                     <span className="text-sm truncate">{p.nombre} {p.apellido}</span>
@@ -165,7 +159,7 @@ function InvitationRow({
             onOpenChange={(o) => setOpenDropdown(o ? `${inv.id}_invitado` : null)}
           >
             <PopoverTrigger asChild disabled={locked}>
-              <button className="flex items-center gap-2 w-full text-left p-1 -m1 rounded-lg hover:bg-surface-light transition-colors truncate">
+              <button className="flex items-center gap-2 w-full text-left p-1 -m1 rounded-lg hover:bg-card transition-colors truncate">
                 <Avatar p={invitado} size={28} />
                 <span className="text-sm font-medium truncate text-foreground">
                   {invitado.nombre} {invitado.apellido}
@@ -173,7 +167,7 @@ function InvitationRow({
               </button>
             </PopoverTrigger>
             <PopoverContent align="start" className="w-56 p-0">
-              <div className="p-2 border-b border-surface-dark">
+              <div className="p-2 border-b border-border">
                 <Input
                   placeholder="Buscar..."
                   value={searchFilterInvitado}
@@ -187,7 +181,7 @@ function InvitationRow({
                     key={p.id}
                     onClick={() => handleSelect("invitado", p.id)}
                     className={cn(
-                      "flex items-center gap-2 w-full px-3 py-2 text-left hover:bg-surface-light transition-colors",
+                      "flex items-center gap-2 w-full px-3 py-2 text-left hover:bg-card transition-colors",
                       p.id === inv.invitadoId && "bg-indigo-50",
                     )}
                   >
@@ -204,15 +198,15 @@ function InvitationRow({
             onOpenChange={(o) => setOpenDropdown(o ? `${inv.id}_invitado` : null)}
           >
             <PopoverTrigger asChild disabled={locked}>
-              <button className="flex items-center gap-2 w-full text-left p-2 rounded-lg border border-dashed border-surface-dark hover:border-primary/40 hover:bg-indigo-50/30 transition-colors text-sm text-text-muted">
-                <div className="w-7 h-7 rounded-full bg-surface-dark flex items-center justify-center text-xs font-black text-text-muted">
+              <button className="flex items-center gap-2 w-full text-left p-2 rounded-lg border border-dashed border-border hover:border-primary/40 hover:bg-indigo-50/30 transition-colors text-sm text-muted-foreground">
+                <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center text-xs font-black text-muted-foreground">
                   ?
                 </div>
                 <span>Invitado</span>
               </button>
             </PopoverTrigger>
             <PopoverContent align="start" className="w-56 p-0">
-              <div className="p-2 border-b border-surface-dark">
+              <div className="p-2 border-b border-border">
                 <Input
                   placeholder="Buscar..."
                   value={searchFilterInvitado}
@@ -225,7 +219,7 @@ function InvitationRow({
                   <button
                     key={p.id}
                     onClick={() => handleSelect("invitado", p.id)}
-                    className="flex items-center gap-2 w-full px-3 py-2 text-left hover:bg-surface-light transition-colors"
+                    className="flex items-center gap-2 w-full px-3 py-2 text-left hover:bg-card transition-colors"
                   >
                     <Avatar p={p} size={24} />
                     <span className="text-sm truncate">{p.nombre} {p.apellido}</span>
@@ -429,8 +423,8 @@ export function InvitacionesSection() {
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center py-8 text-center">
-              <div className="w-12 h-12 rounded-full bg-surface-dark flex items-center justify-center mb-3">
-                <Mail className="w-6 h-6 text-text-muted" />
+              <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-3">
+                <Mail className="w-6 h-6 text-muted-foreground" />
               </div>
               <p className="text-sm text-white/60 mb-3">No hay invitaciones aún</p>
               <Button
@@ -464,7 +458,7 @@ export function InvitacionesSection() {
                   onClick={() => setSelectedInviter(inviter.id)}
                   className="bg-white/90 rounded-xl p-3 flex items-center gap-3 text-left hover:bg-white transition-colors"
                 >
-                  <div className="w-7 h-7 flex items-center justify-center font-bold text-xs text-text-muted">
+                  <div className="w-7 h-7 flex items-center justify-center font-bold text-xs text-muted-foreground">
                     {i + 1}
                   </div>
                   {inviter.participant && <Avatar p={inviter.participant} size={30} />}
@@ -481,8 +475,8 @@ export function InvitacionesSection() {
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center py-8 text-center">
-              <div className="w-12 h-12 rounded-full bg-surface-dark flex items-center justify-center mb-3">
-                <Users className="w-6 h-6 text-text-muted" />
+              <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-3">
+                <Users className="w-6 h-6 text-muted-foreground" />
               </div>
               <p className="text-sm text-white/60">No hay invitaciones</p>
             </div>
@@ -507,7 +501,7 @@ export function InvitacionesSection() {
               selectedInviterInvited.map((p) => (
                 <div
                   key={p.id}
-                  className="flex items-center gap-3 p-2 rounded-lg bg-surface-light"
+                  className="flex items-center gap-3 p-2 rounded-lg bg-card"
                 >
                   <Avatar p={p} size={32} />
                   <span className="font-medium text-sm">

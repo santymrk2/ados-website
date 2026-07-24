@@ -8,7 +8,7 @@ import { SexBadge } from "@/components/ui/Badges";
 import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/button";
 import { PlayerPointsModal } from "@/app/activities/_components/PlayerPointsModal";
-import { cn } from "@/lib/utils";
+import { cn, normalizeText } from "@/lib/utils";
 import { confirmDialog } from "@/components/ui/confirm-dialog";
 import {
   AlertDialog,
@@ -78,9 +78,7 @@ export function EquiposSection() {
       (p) =>
         act.equipos?.[p.id] === selectedTeam &&
         (!searchQuery ||
-          `${p.nombre} ${p.apellido}`
-            .toLowerCase()
-            .includes(searchQuery.toLowerCase())),
+          normalizeText(`${p.nombre} ${p.apellido}`).includes(normalizeText(searchQuery))),
     );
     return {
       team: selectedTeam,
@@ -237,10 +235,8 @@ export function EquiposSection() {
         {teamStats.map(({ team, total, m, f }) => (
           <div
             key={team}
-            className="rounded-2xl border border-surface-dark bg-white p-3 flex items-center gap-2 cursor-pointer transition-shadow hover:shadow-md"
+            className="rounded-xl border border-white/30 bg-white/20 p-2.5 flex items-center gap-2 cursor-pointer transition-colors hover:bg-white/30"
             style={{
-              borderLeftColor: TEAM_COLORS[team],
-              borderLeftWidth: 4,
               ...(selectedTeam === team
                 ? { boxShadow: `0 0 0 2px ${TEAM_COLORS[team]}` }
                 : {}),
@@ -248,14 +244,14 @@ export function EquiposSection() {
             onClick={() => handleTeamClick(team)}
           >
             <div
-              className="font-black text-lg shrink-0"
-              style={{ color: TEAM_COLORS[team] }}
+              className="w-8 h-8 rounded-full flex items-center justify-center font-black text-sm shrink-0 text-white"
+              style={{ backgroundColor: TEAM_COLORS[team] }}
             >
               {team}
             </div>
             <div className="flex-1 text-center">
-              <div className="font-black text-xl">{total}</div>
-              <div className="text-[10px] text-text-muted flex items-center justify-center gap-0.5">
+              <div className="font-black text-xl text-white">{total}</div>
+              <div className="text-[10px] text-white/60 flex items-center justify-center gap-0.5">
                 <SexBadge sex="M" size={12} />
                 {m} <SexBadge sex="F" size={12} />
                 {f}
@@ -302,7 +298,7 @@ export function EquiposSection() {
             </div>
             <div className="flex flex-col gap-3">
               {selectedTeamData.women.length > 0 && (
-                <div className="bg-white rounded-xl p-3 border border-surface-dark">
+                <div className="bg-white rounded-xl p-3 border border-border">
               <div className="font-bold text-sm text-muted-foreground mb-2 flex items-center gap-2">
                     <SexBadge sex="F" size={16} /> Mujer (
                     {selectedTeamData.women.length})
@@ -317,7 +313,7 @@ export function EquiposSection() {
                         className={cn(
                           "rounded-lg p-2 flex items-center gap-2",
                           !editing &&
-                            "cursor-pointer hover:bg-surface-light transition-colors",
+                            "cursor-pointer hover:bg-card transition-colors",
                         )}
                       >
                         <Avatar p={p} size={24} />
@@ -338,7 +334,7 @@ export function EquiposSection() {
               )}
 
               {selectedTeamData.men.length > 0 && (
-                <div className="bg-white rounded-xl p-3 border border-surface-dark">
+                <div className="bg-white rounded-xl p-3 border border-border">
                   <div className="font-bold text-sm text-muted-foreground mb-2 flex items-center gap-2">
                     <SexBadge sex="M" size={16} /> Varón (
                     {selectedTeamData.men.length})
@@ -353,7 +349,7 @@ export function EquiposSection() {
                         className={cn(
                           "rounded-lg p-2 flex items-center gap-2",
                           !editing &&
-                            "cursor-pointer hover:bg-surface-light transition-colors",
+                            "cursor-pointer hover:bg-card transition-colors",
                         )}
                       >
                         <Avatar p={p} size={24} />
@@ -405,16 +401,14 @@ export function EquiposSection() {
                 .filter(
                   (p) =>
                     !searchQuery ||
-                    `${p.nombre} ${p.apellido}`
-                      .toLowerCase()
-                      .includes(searchQuery.toLowerCase()),
+                    normalizeText(`${p.nombre} ${p.apellido}`).includes(normalizeText(searchQuery)),
                 )
                 .map((p) => {
                   const cur = act.equipos?.[p.id];
                   return (
                     <div
                       key={p.id}
-                      className="rounded-2xl border border-surface-dark bg-white p-3 flex items-center gap-3"
+                      className="rounded-2xl border border-border bg-white p-3 flex items-center gap-3"
                       style={{
                         borderLeftColor: cur
                           ? TEAM_COLORS[cur]

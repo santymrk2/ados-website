@@ -12,7 +12,7 @@ export class DashboardPage extends BasePage {
 
   constructor(page: Page) {
     super(page);
-    this.header = page.getByRole("heading", { name: "Dashboard" });
+    this.header = page.getByRole("heading", { name: "Dashboard" }).first();
     this.settingsButton = page.locator("button").filter({ has: page.locator("svg") }).first();
     this.settingsPanel = page.getByRole("dialog");
     this.bottomNav = page.locator("nav").last();

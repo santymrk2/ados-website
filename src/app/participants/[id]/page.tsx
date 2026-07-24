@@ -5,23 +5,27 @@ import { useRouter } from "next/navigation";
 import { useApp } from "@/hooks/useApp";
 import { useStore } from "@nanostores/react";
 import { $role } from "@/store/appStore";
-import {
-  ChevronLeft,
-  Star,
-  CheckCircle,
-  Award,
-  Trophy,
-  Target,
-  Clock,
-} from "lucide-react";
+import { Phone, Pencil, Trash2 } from "lucide-react";
 import { TEAM_COLORS, getEdad } from "@/lib/constants";
 import { actPts } from "@/lib/calc";
 import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Input } from "@/components/ui/input";
 import { formatDate, cn, getImg } from "@/lib/utils";
 import { imagesEnabled } from "@/lib/images-config";
 import { ImageExpandModal } from "@/components/ui/ImageExpandModal";
 import { getParticipant } from "@/lib/api-client";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export const dynamic = "force-dynamic";
 
@@ -32,7 +36,7 @@ export default function Page({
 }) {
   const router = useRouter();
   const { id } = use(params);
-  const { db, isLoading: dbLoading } = useApp();
+  const { db, isLoading: dbLoading, deleteParticipant } = useApp();
   const role = useStore($role);
   const isAdmin = role === "admin";
 
@@ -45,6 +49,8 @@ export default function Page({
   const [expandedImage, setExpandedImage] = useState<string | null>(null);
   const [player, setPlayer] = useState(initialParticipant);
   const [isLoadingFull, setIsLoadingFull] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [confirmName, setConfirmName] = useState("");
 
   const playerId = player?.id;
 
@@ -74,50 +80,36 @@ export default function Page({
       .sort((a, b) => b.fecha.localeCompare(a.fecha));
   }, [playerId, db]);
 
-  const goalsBySport = useMemo(() => {
-    const result = { f: 0, h: 0, b: 0 };
-    if (!playerId || !db?.activities) return result;
-    db.activities.forEach((a) => {
-      (a.goles || []).forEach((g) => {
-        if (g.pid === playerId) {
-          result[g.tipo as keyof typeof result] = (result[g.tipo as keyof typeof result] || 0) + g.cant;
-        }
-      });
-    });
-    return result;
-  }, [playerId, db]);
-
-  const teamsPlayed = useMemo(() => {
-    if (!playerId || !db?.activities) return [];
-    return Array.from(
-      new Set(
-        db.activities.flatMap((a) =>
-          a.asistentes.includes(playerId) && a.equipos?.[playerId]
-            ? [a.equipos[playerId]]
-            : [],
-        ),
-      ),
-    );
-  }, [playerId, db]);
-
   if (dbLoading || !db) {
     return (
-      <div className="min-h-screen bg-primary flex items-center justify-center">
-        <div className="animate-pulse text-white font-black">Cargando...</div>
+      <div className="p-4 space-y-4">
+        <div className="flex items-center gap-4">
+          <Skeleton className="w-16 h-16 rounded-full" />
+          <div className="flex-1 space-y-2">
+            <Skeleton className="h-6 w-40" />
+            <Skeleton className="h-4 w-24" />
+          </div>
+        </div>
+        <div className="grid grid-cols-3 gap-3">
+          <Skeleton className="h-20 rounded-xl" />
+          <Skeleton className="h-20 rounded-xl" />
+          <Skeleton className="h-20 rounded-xl" />
+        </div>
+        <Skeleton className="h-48 rounded-xl" />
       </div>
     );
   }
 
   if (!player) {
     return (
-      <div className="min-h-screen bg-white flex flex-col items-center justify-center p-6 text-center">
-        <div className="bg-slate-100 p-6 rounded-full mb-4">
-          <ChevronLeft className="w-12 h-12 text-slate-300" />
-        </div>
-        <h2 className="text-2xl font-black text-slate-900">Jugador no encontrado</h2>
-        <Button variant="link" onClick={() => router.push("/participants")} className="mt-2">
+      <div className="p-8 text-center">
+        <p className="text-text-muted font-bold mb-2">Jugador no encontrado</p>
+        <button
+          onClick={() => router.push("/participants")}
+          className="text-primary font-bold text-sm"
+        >
           Volver a la lista
-        </Button>
+        </button>
       </div>
     );
   }
@@ -128,216 +120,153 @@ export default function Page({
     if (imageToShow) setExpandedImage(getImg(imageToShow));
   };
 
+  const handleDelete = async () => {
+    if (confirmName.trim() === "Confirmar" && player) {
+      await deleteParticipant(player.id);
+      setDeleteDialogOpen(false);
+      router.push("/participants");
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col pb-20">
-      {/* Header & Hero */}
-      <div className="bg-primary pt-safe shadow-2xl relative overflow-hidden">
-        {/* Decoración de fondo */}
-        <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl pointer-events-none" />
-        
-        <div className="relative z-10 p-4">
-          <div className="flex items-center gap-3 mb-6">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => router.push("/participants")}
-              className="text-white hover:bg-white/20 rounded-full"
-            >
-              <ChevronLeft className="w-6 h-6" />
-            </Button>
-            <div className="flex-1">
-              <div className="font-black text-white/70 uppercase tracking-widest text-[10px]">Perfil de Jugador</div>
+    <div className="p-4 space-y-4">
+      {/* Player Info */}
+      <div className="flex items-center gap-4">
+        <div
+          onClick={handlePhotoClick}
+          className={cn(
+            "relative",
+            imagesEnabled &&
+              player.foto &&
+              "cursor-pointer hover:scale-105 transition-transform",
+          )}
+        >
+          <Avatar p={player} size={64} className="w-16 h-16" />
+          {isLoadingFull && (
+            <div className="absolute inset-0 bg-black/20 rounded-full flex items-center justify-center">
+              <div className="w-4 h-4 border-2 border-white border-t-transparent animate-spin rounded-full" />
             </div>
-            {isAdmin && (
-              <Button 
-                onClick={() => router.push(`/participants/${player.id}/edit`)} 
-                variant="secondary" 
-                size="sm"
-                className="rounded-full px-5 font-black h-8"
-              >
-                Editar
-              </Button>
+          )}
+        </div>
+        <div className="flex-1 min-w-0">
+          <h1 className="font-bold text-lg truncate">
+            {player.nombre} {player.apellido}
+          </h1>
+          <div className="flex items-center gap-2 mt-0.5">
+            <span className="text-text-muted text-sm">
+              {getEdad(player.fechaNacimiento)} años
+            </span>
+            {player.apodo && (
+              <>
+                <span className="text-text-muted">·</span>
+                <span className="text-text-muted text-sm italic">
+                  &ldquo;{player.apodo}&rdquo;
+                </span>
+              </>
             )}
           </div>
-
-          <div className="flex items-center gap-5 mb-4">
-            <div
-              onClick={handlePhotoClick}
-              className={cn(
-                "relative",
-                imagesEnabled && player.foto ? "cursor-pointer hover:scale-105 transition-transform" : ""
-              )}
+          {player.telefono && (
+            <div className="flex items-center gap-1.5 mt-1">
+              <Phone className="w-3.5 h-3.5 text-text-muted" />
+              <span className="text-text-muted text-sm">
+                {player.telefono}
+              </span>
+            </div>
+          )}
+        </div>
+        {isAdmin && (
+          <div className="flex gap-2 flex-shrink-0">
+            <Button
+              onClick={() => router.push(`/participants/${player.id}/edit`)}
+              variant="outline"
+              size="icon"
+              className="h-10 w-10"
             >
-              <div className="border-4 border-white/20 rounded-full p-1">
-                <Avatar p={player} size={80} className="w-20 h-20 shadow-xl" />
-              </div>
-              {isLoadingFull && (
-                <div className="absolute inset-0 bg-black/20 rounded-full flex items-center justify-center">
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent animate-spin rounded-full" />
-                </div>
-              )}
-            </div>
-            
-            <div className="flex-1">
-              <h1 className="font-black text-3xl text-white leading-tight">
-                {player.nombre} {player.apellido}
-              </h1>
-              <div className="flex items-center gap-3 mt-1">
-                <span className="text-white/80 font-bold text-sm bg-white/10 px-2 py-0.5 rounded-full border border-white/10">
-                  {getEdad(player.fechaNacimiento)} años
-                </span>
-                {player.apodo && (
-                  <span className="text-white/60 font-medium italic text-sm">
-                    &ldquo;{player.apodo}&rdquo;
-                  </span>
-                )}
-              </div>
-              <div className="flex gap-1.5 mt-3 flex-wrap">
-                {teamsPlayed.map((t) => (
-                  <span
-                    key={t}
-                    className="text-[10px] font-black px-2 py-0.5 rounded-md uppercase"
-                    style={{
-                      backgroundColor: TEAM_COLORS[t] + '30',
-                      color: 'white',
-                      border: `1px solid ${TEAM_COLORS[t]}50`
-                    }}
-                  >
-                    {t}
-                  </span>
-                ))}
-              </div>
-            </div>
+              <Pencil className="w-4 h-4" />
+            </Button>
+            <Button
+              onClick={() => {
+                setConfirmName("");
+                setDeleteDialogOpen(true);
+              }}
+              variant="destructive"
+              size="icon"
+              className="h-10 w-10"
+            >
+              <Trash2 className="w-4 h-4" />
+            </Button>
+          </div>
+        )}
+      </div>
+
+      {/* Stats */}
+      <div className="grid grid-cols-3 gap-3">
+        <div className="bg-primary rounded-xl p-3 text-center">
+          <div className="text-2xl font-black text-accent">{stats.total}</div>
+          <div className="text-[10px] font-bold opacity-60 text-accent">
+            Puntos
+          </div>
+        </div>
+        <div className="bg-primary rounded-xl p-3 text-center">
+          <div className="text-2xl font-black text-accent">{stats.acts}</div>
+          <div className="text-[10px] font-bold opacity-60 text-accent">
+            Asistencias
+          </div>
+        </div>
+        <div className="bg-primary rounded-xl p-3 text-center">
+          <div className="text-2xl font-black text-accent">{stats.gf}</div>
+          <div className="text-[10px] font-bold opacity-60 text-accent">
+            Goles
           </div>
         </div>
       </div>
 
-      <div className="px-4 -mt-6 relative z-20 space-y-4">
-        {/* Stats Principales */}
-        <div className="grid grid-cols-2 gap-3">
-          <div className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100 flex flex-col items-center">
-            <div className="bg-primary/10 p-2 rounded-2xl mb-2">
-              <Target className="w-6 h-6 text-primary" />
-            </div>
-            <div className="text-3xl font-black text-slate-900 tabular-nums">
-              {stats.total}
-            </div>
-            <div className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">
-              PUNTOS TOTALES
-            </div>
+      {/* Activity History */}
+      <div>
+        <div className="font-bold text-base mb-3">Historial</div>
+        {playerActivities.length === 0 ? (
+          <div className="text-center py-8 text-text-muted text-sm">
+            Sin actividades registradas
           </div>
-          <div className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100 flex flex-col items-center">
-            <div className="bg-cyan-100 p-2 rounded-2xl mb-2">
-              <Award className="w-6 h-6 text-cyan-600" />
-            </div>
-            <div className="text-3xl font-black text-slate-900 tabular-nums">
-              {stats.acts}
-            </div>
-            <div className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">
-              ASISTENCIAS
-            </div>
-          </div>
-        </div>
-
-        {/* Goles Breakdown */}
-        <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100">
-          <div className="flex items-center justify-between mb-4">
-            <h4 className="font-black text-xs uppercase tracking-widest text-slate-400">Goles por deporte</h4>
-            <Trophy className="w-4 h-4 text-slate-300" />
-          </div>
-          <div className="grid grid-cols-3 gap-3">
-            <div className="text-center p-3 bg-slate-50 rounded-2xl border border-slate-100">
-              <div className="font-black text-2xl text-slate-900">{goalsBySport.f}</div>
-              <div className="text-[10px] font-bold text-slate-400">Fútbol</div>
-            </div>
-            <div className="text-center p-3 bg-slate-50 rounded-2xl border border-slate-100">
-              <div className="font-black text-2xl text-slate-900">{goalsBySport.h}</div>
-              <div className="text-[10px] font-bold text-slate-400">Handball</div>
-            </div>
-            <div className="text-center p-3 bg-slate-50 rounded-2xl border border-slate-100">
-              <div className="font-black text-2xl text-slate-900">{goalsBySport.b}</div>
-              <div className="text-[10px] font-bold text-slate-400">Básquet</div>
-            </div>
-          </div>
-        </div>
-
-        {/* Historial de Actividades */}
-        <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 overflow-hidden">
-          <div className="flex items-center justify-between mb-4">
-            <h4 className="font-black text-xs uppercase tracking-widest text-slate-400">Historial Reciente</h4>
-            <Clock className="w-4 h-4 text-slate-300" />
-          </div>
-          
-          {playerActivities.length === 0 ? (
-            <div className="py-8 text-center bg-slate-50 rounded-2xl border border-dashed border-slate-200">
-              <div className="text-slate-400 font-bold text-sm">Sin actividades registradas</div>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {playerActivities.slice(0, 10).map((a) => {
-                const pts = actPts(player.id, a, db.participants);
-                const team = a.equipos?.[player.id];
-                return (
-                  <div
-                    key={a.id}
-                    className="flex items-center gap-3 p-3 bg-slate-50 hover:bg-slate-100 transition-colors rounded-2xl border border-slate-100"
-                  >
-                    <div className="flex flex-col">
-                      <span className="text-[10px] font-black text-slate-400 leading-none mb-1">
-                        {formatDate(a.fecha)}
-                      </span>
-                      <span className="font-bold text-sm text-slate-800 line-clamp-1">
-                        {a.titulo || "Actividad"}
-                      </span>
+        ) : (
+          <div className="flex flex-col gap-2">
+            {playerActivities.slice(0, 10).map((a) => {
+              const pts = actPts(player.id, a, db.participants);
+              const team = a.equipos?.[player.id];
+              return (
+                <div
+                  key={a.id}
+                  className="flex items-center gap-3 p-3 bg-white rounded-xl border border-surface-dark"
+                >
+                  <div className="flex-1 min-w-0">
+                    <div className="font-bold text-sm truncate">
+                      {a.titulo || "Actividad"}
                     </div>
-                    <div className="flex-1" />
-                    {team && (
-                      <span
-                        className="text-[10px] font-black px-2 py-0.5 rounded bg-white shadow-sm"
-                        style={{ color: TEAM_COLORS[team] }}
-                      >
-                        {team}
-                      </span>
-                    )}
-                    <div className="font-black text-primary text-sm whitespace-nowrap bg-primary/10 px-3 py-1 rounded-full">
-                      {pts} pts
+                    <div className="text-xs text-text-muted">
+                      {formatDate(a.fecha)}
                     </div>
                   </div>
-                );
-              })}
-              {playerActivities.length > 10 && (
-                <div className="text-center text-[10px] font-black text-slate-400 pt-2 uppercase tracking-widest">
-                  +{playerActivities.length - 10} actividades más
+                  {team && (
+                    <span
+                      className="text-[10px] font-bold px-2 py-0.5 rounded"
+                      style={{ color: TEAM_COLORS[team] }}
+                    >
+                      {team}
+                    </span>
+                  )}
+                  <div className="font-black text-primary text-sm">
+                    {pts} pts
+                  </div>
                 </div>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Badges / Achievements Placeholder */}
-        <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100">
-          <h4 className="font-black text-xs uppercase tracking-widest text-slate-400 mb-4">Atributos</h4>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="flex items-center gap-3">
-              <div className={cn("p-2 rounded-xl", stats.acts > 5 ? "bg-primary/10 text-primary" : "bg-slate-100 text-slate-300")}>
-                <Star className="w-5 h-5" />
+              );
+            })}
+            {playerActivities.length > 10 && (
+              <div className="text-center text-xs text-text-muted pt-2">
+                +{playerActivities.length - 10} más
               </div>
-              <div className="flex flex-col">
-                <span className="text-xs font-black text-slate-700">Fidelidad</span>
-                <span className="text-[10px] font-medium text-slate-400">{stats.acts > 5 ? "Frecuente" : "Iniciado"}</span>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <div className={cn("p-2 rounded-xl", goalsBySport.f + goalsBySport.h + goalsBySport.b > 5 ? "bg-primary/10 text-primary" : "bg-slate-100 text-slate-300")}>
-                <CheckCircle className="w-5 h-5" />
-              </div>
-              <div className="flex flex-col">
-                <span className="text-xs font-black text-slate-700">Goleador</span>
-                <span className="text-[10px] font-medium text-slate-400">{goalsBySport.f + goalsBySport.h + goalsBySport.b > 5 ? "Efectivo" : "En progreso"}</span>
-              </div>
-            </div>
+            )}
           </div>
-        </div>
+        )}
       </div>
 
       {imagesEnabled && (
@@ -347,6 +276,38 @@ export default function Page({
           onClose={() => setExpandedImage(null)}
         />
       )}
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar jugador?</AlertDialogTitle>
+            <AlertDialogDescription>
+              ¿Estás seguro que querés eliminar a{" "}
+              <span className="font-semibold text-foreground">
+                {player.nombre} {player.apellido}
+              </span>
+              ?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <Input
+            type="text"
+            value={confirmName}
+            onChange={(e) => setConfirmName(e.target.value)}
+            placeholder="Escribí Confirmar"
+            className="mt-2"
+          />
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={confirmName.trim() !== "Confirmar"}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

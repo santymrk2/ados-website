@@ -11,7 +11,8 @@ import { Input } from "@/components/ui/input";
 import { Label, Empty } from "@/components/ui/Common";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Avatar } from "@/components/ui/Avatar";
-import { cn } from "@/lib/utils";
+import { DetailSheet } from "@/components/ui/DetailSheet";
+import { cn, normalizeText } from "@/lib/utils";
 import { confirmDialog } from "@/components/ui/confirm-dialog";
 import type { Juego, ParticipantBasic } from "@/lib/types";
 
@@ -106,45 +107,31 @@ function GameDetailModal({
 
   const filteredPlayers = useMemo(() => {
     if (!search.trim()) return availablePlayers;
-    const q = search.toLowerCase();
+    const q = normalizeText(search);
     return availablePlayers.filter((p) =>
-      `${p.nombre} ${p.apellido}`.toLowerCase().includes(q),
+      normalizeText(`${p.nombre} ${p.apellido}`).includes(q),
     );
   }, [availablePlayers, search]);
 
   return (
     <div className="space-y-4">
-      <div className="flex items-start gap-3">
+      <div className="flex items-center justify-between">
         <Button
           type="button"
           variant="ghost"
-          size="icon"
+          size="sm"
           disabled={saving}
           onClick={onDelete}
-          className="shrink-0 hover:bg-red-50 hover:text-red-500"
+          className="text-red-500 hover:bg-red-50 hover:text-red-500 gap-1"
         >
-          <Trash2 className="h-4 w-4" />
+          <Trash2 className="h-4 w-4" /> Eliminar
         </Button>
-        <div className="min-w-0 flex-1 space-y-2 text-center">
-          <DialogHeader>
-            <DialogTitle>Detalle del juego</DialogTitle>
-          </DialogHeader>
-          <div className="flex items-center justify-center gap-2 flex-wrap">
-                  <span className="inline-flex items-center gap-1 rounded-full border border-surface-dark/60 bg-surface-light px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
-              {game.tipo === "individual" ? <Users className="h-3 w-3" /> : <Gamepad2 className="h-3 w-3" />}
-              {gameTypeLabel(game.tipo || "grupal")}
-            </span>
-          </div>
+        <div className="flex items-center gap-2">
+          <span className="inline-flex items-center gap-1 rounded-full border border-border/60 bg-card px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+            {game.tipo === "individual" ? <Users className="h-3 w-3" /> : <Gamepad2 className="h-3 w-3" />}
+            {gameTypeLabel(game.tipo || "grupal")}
+          </span>
         </div>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          onClick={onClose}
-          className="shrink-0"
-        >
-          <X className="h-4 w-4" />
-        </Button>
       </div>
 
       <div className="space-y-2">
@@ -164,7 +151,7 @@ function GameDetailModal({
           return (
             <div
               key={pos}
-              className="rounded-2xl border border-surface-dark bg-surface-light/20 p-3 space-y-3"
+              className="rounded-2xl border border-border bg-card/20 p-3 space-y-3"
             >
               <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                 <button
@@ -196,10 +183,10 @@ function GameDetailModal({
                           <Plus className="w-3 h-3 mr-1" /> Agregar
                         </Button>
                       </PopoverTrigger>
-                      <PopoverContent align="end" className="w-64 p-0 shadow-xl border-surface-dark">
-                        <div className="p-2 border-b border-surface-dark bg-surface-light/50">
+                      <PopoverContent align="end" className="w-64 p-0 shadow-xl border-border">
+                        <div className="p-2 border-b border-border bg-card/50">
                           <div className="relative">
-                            <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text-muted" />
+                            <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
                             <Input
                               placeholder="Buscar jugador..."
                               value={search}
@@ -220,11 +207,11 @@ function GameDetailModal({
                               >
                                 <Avatar p={p} size={24} />
                                 <span className="text-sm font-medium">{p.nombre} {p.apellido}</span>
-                                <span className="text-xs text-text-muted ml-auto">{p.team}</span>
+                                <span className="text-xs text-muted-foreground ml-auto">{p.team}</span>
                               </button>
                             ))
                           ) : (
-                            <div className="px-3 py-6 text-center text-xs text-text-muted italic">
+                            <div className="px-3 py-6 text-center text-xs text-muted-foreground italic">
                               {search.trim()
                                 ? "No se encontraron jugadores"
                                 : "No hay jugadores disponibles"}
@@ -245,8 +232,8 @@ function GameDetailModal({
                     </Button>
                   </div>
                 ) : (
-                  <span className="text-xs text-muted-foreground">
-                    {selected.length} {selected.length === 1 ? "equipo" : "equipos"}
+                  <span className="text-xs font-bold text-primary">
+                    +{PTS.rec[Number(pos)] || 0} pts
                   </span>
                 )}
               </div>
@@ -259,13 +246,13 @@ function GameDetailModal({
                       return (
                         <div
                           key={value}
-                          className="inline-flex items-center gap-1.5 rounded-full border border-surface-dark bg-white px-2.5 py-1 text-xs font-medium shadow-sm"
+                          className="inline-flex items-center gap-1.5 rounded-full border border-border bg-white px-2.5 py-1 text-xs font-medium shadow-sm"
                         >
                           {person ? (
                             <>
                               <Avatar p={person} size={18} />
                               <span>{person.nombre} {person.apellido}</span>
-                              <span className="text-text-muted">· {person.team}</span>
+                              <span className="text-muted-foreground">· {person.team}</span>
                             </>
                           ) : (
                             <span>{value}</span>
@@ -274,7 +261,7 @@ function GameDetailModal({
                             type="button"
                             disabled={locked || saving}
                             onClick={() => onToggleItem(game.id, value, pos)}
-                            className="ml-0.5 rounded-full p-0.5 text-text-muted hover:bg-red-50 hover:text-red-500 transition-colors"
+                            className="ml-0.5 rounded-full p-0.5 text-muted-foreground hover:bg-red-50 hover:text-red-500 transition-colors"
                           >
                             <X className="w-3 h-3" />
                           </button>
@@ -283,7 +270,7 @@ function GameDetailModal({
                     })}
                   </div>
                 ) : (
-                  <p className="text-xs text-text-muted italic">Sin asignar</p>
+                  <p className="text-xs text-muted-foreground italic">Sin asignar</p>
                 )
               ) : (
                 <div className="flex flex-wrap gap-2">
@@ -299,7 +286,7 @@ function GameDetailModal({
                           "rounded-full border px-3 py-1.5 text-xs font-bold transition",
                           active
                             ? "border-primary bg-primary text-white"
-                            : "border-surface-dark bg-white hover:border-primary hover:text-primary",
+                            : "border-border bg-white hover:border-primary hover:text-primary",
                         )}
                       >
                         {team}
@@ -481,13 +468,13 @@ export function JuegosSection() {
           return (
             <div
               key={String(j.id)}
-              className="bg-white rounded-2xl border border-surface-dark overflow-hidden"
+              className="bg-white rounded-2xl border border-border overflow-hidden"
             >
-              <div className="flex items-center justify-between gap-3 p-3 border-b border-surface-dark">
+              <div className="flex items-center justify-between gap-3 p-3 border-b border-border">
                 <div className="min-w-0 flex-1">
                   <div className="font-bold truncate">{j.nombre || `Juego ${index + 1}`}</div>
-                  <div className="mt-1 flex items-center gap-2 flex-wrap text-[11px] text-text-muted">
-                    <span className="inline-flex items-center gap-1 rounded-full border border-surface-dark/60 bg-surface-light px-2 py-0.5 font-bold uppercase tracking-wide">
+                  <div className="mt-1 flex items-center gap-2 flex-wrap text-[11px] text-muted-foreground">
+                    <span className="inline-flex items-center gap-1 rounded-full border border-border/60 bg-card px-2 py-0.5 font-bold uppercase tracking-wide">
                       {j.tipo === "individual" ? (
                         <Users className="h-3 w-3" />
                       ) : (
@@ -500,47 +487,27 @@ export function JuegosSection() {
                 </div>
               </div>
 
-              <div className="flex flex-col gap-2 p-2">
+              <div className="flex flex-col divide-y divide-border/40">
                 {POSITIONS.map((pos) => {
                   const values = (j.pos || {})[pos] || [];
                   return (
-                    <div
-                      key={pos}
-                      className="rounded-2xl border border-surface-dark/60 bg-surface-light/40 p-3"
-                    >
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="text-[11px] font-black uppercase tracking-wide text-foreground/70">
-                          Puesto {pos}
-                        </div>
-                        <div className="text-[11px] font-medium text-text-muted">
-                          {values.length} asignados
-                        </div>
-                      </div>
-                      <div className="mt-2 flex flex-wrap gap-2">
+                    <div key={pos} className="flex items-center gap-2 text-xs py-1 px-3">
+                      <span className="font-bold text-foreground/60 w-6">P{pos}</span>
+                      <div className="flex flex-wrap gap-1">
                         {values.length > 0 ? (
-                          values.map((value) => {
-                            const isTeam = j.tipo === "grupal";
-                            // teamColor removed (unused)
-                            return (
-                              <span
-                                key={`${pos}-${value}`}
-                                className={cn(
-                                  "rounded-full border px-3 py-1 text-xs font-semibold",
-                                  isTeam
-                                    ? "bg-white"
-                                    : "border-surface-dark/50 bg-white text-foreground",
-                                )}
-                              >
-                                {labelFor(j, value)}
-                              </span>
-                            );
-                          })
+                          values.map((value) => (
+                            <span
+                              key={`${pos}-${value}`}
+                              className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-foreground"
+                            >
+                              {labelFor(j, value)}
+                            </span>
+                          ))
                         ) : (
-                          <span className="text-xs font-medium text-text-muted">
-                            Sin asignar
-                          </span>
+                          <span className="text-[10px] text-muted-foreground italic">—</span>
                         )}
                       </div>
+                      <span className="text-[10px] text-muted-foreground ml-auto">{values.length}</span>
                     </div>
                   );
                 })}
@@ -588,7 +555,7 @@ export function JuegosSection() {
             onKeyDown={(e) => {
               if (e.key === "Enter" || e.key === " ") setSelectedId(game.id);
             }}
-            className="text-left rounded-2xl border border-surface-dark bg-white p-4 shadow-sm transition hover:shadow-md cursor-pointer"
+            className="text-left rounded-2xl border border-border bg-white p-4 shadow-sm transition hover:shadow-md cursor-pointer"
           >
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0 flex-1">
@@ -596,7 +563,7 @@ export function JuegosSection() {
                   <span className="font-black text-sm truncate">
                     {game.nombre || `Juego ${index + 1}`}
                   </span>
-                  <span className="inline-flex items-center gap-1 rounded-full border border-surface-dark/60 bg-surface-light px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-text-muted">
+                  <span className="inline-flex items-center gap-1 rounded-full border border-border/60 bg-card px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
                     {game.tipo === "individual" ? (
                       <Users className="h-3 w-3" />
                     ) : (
@@ -605,7 +572,7 @@ export function JuegosSection() {
                     {gameTypeLabel(game.tipo || "grupal")}
                   </span>
                 </div>
-                <p className="mt-1 text-xs text-text-muted">{renderSummary(game)}</p>
+                <p className="mt-1 text-xs text-muted-foreground">{renderSummary(game)}</p>
               </div>
               <Button
                 type="button"
@@ -639,7 +606,7 @@ export function JuegosSection() {
             <button
               type="button"
               onClick={() => addGame("grupal")}
-              className="rounded-2xl border border-surface-dark bg-white p-4 text-left transition hover:border-primary hover:shadow-md"
+              className="rounded-2xl border border-border bg-white p-4 text-left transition hover:border-primary hover:shadow-md"
             >
               <div className="flex items-center gap-2 font-black">
                 <Gamepad2 className="h-4 w-4" />
@@ -652,7 +619,7 @@ export function JuegosSection() {
             <button
               type="button"
               onClick={() => addGame("individual")}
-              className="rounded-2xl border border-surface-dark bg-white p-4 text-left transition hover:border-primary hover:shadow-md"
+              className="rounded-2xl border border-border bg-white p-4 text-left transition hover:border-primary hover:shadow-md"
             >
               <div className="flex items-center gap-2 font-black">
                 <Users className="h-4 w-4" />
@@ -666,14 +633,11 @@ export function JuegosSection() {
         </DialogContent>
       </Dialog>
 
-      <Dialog
+      <DetailSheet
         open={!!selectedGame}
         onOpenChange={(open) => !open && setSelectedId(null)}
+        title={selectedGame ? (selectedGame.nombre || `Juego ${(gameList.indexOf(selectedGame) + 1)}`) : "Juego"}
       >
-        <DialogContent
-          className="max-h-[90vh] overflow-y-auto sm:max-w-4xl"
-          showCloseButton={false}
-        >
           {selectedGame && (
             <GameDetailModal
               game={selectedGame}
@@ -694,8 +658,7 @@ export function JuegosSection() {
               onFillRemaining={fillWithRemaining}
             />
           )}
-        </DialogContent>
-      </Dialog>
+      </DetailSheet>
     </>
   );
 

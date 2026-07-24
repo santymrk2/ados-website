@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { toast } from "@/hooks/use-toast";
-import { X, Download, Camera, User, ChevronLeft } from "lucide-react";
+import { X, Download, Camera, User, ChevronLeft, Phone } from "lucide-react";
 import { newPart, getEdad } from "@/lib/constants";
 import { Label } from "@/components/ui/Common";
 import { Button } from "@/components/ui/button";
@@ -267,6 +267,19 @@ export function ParticipantForm({ db, initial, onClose, onSave }: ParticipantFor
                 </TabsTrigger>
               </TabsList>
             </Tabs>
+          </div>
+
+          <div className="space-y-2">
+            <Label className="text-slate-600 font-bold ml-1">Teléfono</Label>
+            <div className="relative">
+              <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <Input
+                value={form.telefono || ""}
+                onChange={(e) => F("telefono", e.target.value || null)}
+                placeholder="Ej. +54 11 1234-5678"
+                className="rounded-xl border-slate-200 focus:ring-primary pl-10"
+              />
+            </div>
           </div>
         </div>
 

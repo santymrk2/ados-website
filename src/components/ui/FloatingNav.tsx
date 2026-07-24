@@ -34,7 +34,7 @@ const FILTER_HEIGHT = 200;
 // Configuración de la barra deslizable
 const NAV_WIDTH = 220;
 const INNER_NAV_WIDTH = 218;
-const ITEM_WIDTH = 64;
+const ITEM_WIDTH = 72;
 
 const SPACER_LEFT = (INNER_NAV_WIDTH - ITEM_WIDTH) / 2;
 const SPACER_RIGHT = SPACER_LEFT + 40;
@@ -42,7 +42,7 @@ const SPACER_RIGHT = SPACER_LEFT + 40;
 // --- FUNCIÓN DE VIBRACIÓN ---
 const triggerHapticFeedback = () => {
   if (typeof navigator !== "undefined" && navigator.vibrate) {
-    navigator.vibrate(15);
+    navigator.vibrate([30, 50, 30]);
   }
 };
 
@@ -77,6 +77,7 @@ export function FloatingNav({
 
   const longPressTimer = useRef<NodeJS.Timeout | null>(null);
   const longPressTriggered = useRef(false);
+  const scrollEndTimer = useRef<NodeJS.Timeout | null>(null);
 
   const showSearch = searchValue !== undefined && onSearchChange !== undefined;
   const showFilter = filterContent !== undefined;
@@ -118,6 +119,13 @@ export function FloatingNav({
     }
   }, [searchMode, filterMode, isExpandedMenuOpen, onSearchModeChange]);
 
+  // Cleanup scroll-end timer on unmount
+  useEffect(() => {
+    return () => {
+      if (scrollEndTimer.current) clearTimeout(scrollEndTimer.current);
+    };
+  }, []);
+
   // ── FIX: Sincronizar rueda al cambiar valor, cerrar menú expandido o VOLVER de búsqueda/filtros ──
   useEffect(() => {
     // Añadimos 'showAll' a la comprobación para asegurarnos de que la rueda está en pantalla
@@ -154,6 +162,19 @@ export function FloatingNav({
       setActiveIndex(index);
       triggerHapticFeedback();
     }
+
+    // Auto-select tab when scroll settles (ViewPager-like behavior)
+    if (scrollEndTimer.current) clearTimeout(scrollEndTimer.current);
+    scrollEndTimer.current = setTimeout(() => {
+      if (index >= 0 && index < items.length) {
+        const settledItem = items[index];
+        if (settledItem && settledItem.value !== value) {
+          if (useCallback && onValueChange) {
+            onValueChange(settledItem.value);
+          }
+        }
+      }
+    }, 150);
   };
 
   const handleItemClick = (
@@ -417,8 +438,9 @@ export function FloatingNav({
                       onPointerCancel: cancelLongPress,
                       onClick: (e: React.MouseEvent) =>
                         handleItemClick(e, i, item),
+                      "aria-label": `${item.label}. Mantén presionado para ver más opciones`,
                       className:
-                        "flex flex-col items-center justify-center gap-0.5 shrink-0 snap-center select-none transition-colors",
+                        "flex flex-col items-center justify-center gap-0.5 shrink-0 snap-center select-none transition-colors min-w-[44px] min-h-[44px]",
                       style: {
                         flex: `0 0 ${ITEM_WIDTH}px`,
                         width: ITEM_WIDTH,
@@ -445,8 +467,8 @@ export function FloatingNav({
                   />
                 </div>
 
-                <div className="absolute top-0 bottom-0 left-0 w-6 bg-gradient-to-r from-white dark:from-background to-transparent pointer-events-none z-20" />
-                <div className="absolute top-0 bottom-0 right-0 w-6 bg-gradient-to-l from-white dark:from-background to-transparent pointer-events-none z-20" />
+                <div className="absolute top-0 bottom-0 left-0 w-6 bg-gradient-to-r from-white to-transparent pointer-events-none z-20" />
+                <div className="absolute top-0 bottom-0 right-0 w-6 bg-gradient-to-l from-white to-transparent pointer-events-none z-20" />
               </div>
             )}
           </motion.div>

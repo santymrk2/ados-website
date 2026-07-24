@@ -6,7 +6,7 @@ import { getEdad } from "@/lib/constants";
 import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/button";
 import { Empty } from "@/components/ui/Common";
-import { cn } from "@/lib/utils";
+import { cn, normalizeText } from "@/lib/utils";
 import { BookOpen } from "lucide-react";
 import type { ParticipantBasic } from "@/lib/types";
 
@@ -41,9 +41,9 @@ export function BibliaSection() {
       act.asistentes.includes(p.id),
     );
     if (searchQuery) {
-      const q = searchQuery.toLowerCase();
+      const q = normalizeText(searchQuery);
       arr = arr.filter((p) =>
-        `${p.nombre} ${p.apellido}`.toLowerCase().includes(q),
+        normalizeText(`${p.nombre} ${p.apellido}`).includes(q),
       );
     }
     arr.sort((a, b) =>
@@ -95,13 +95,10 @@ export function BibliaSection() {
 
       {!editing && (
         <>
-          <div className="bg-white/20 rounded-xl p-3 text-center border border-white/20 mb-5">
-            <div className="text-2xl font-black text-accent">
-              {participantsWithBiblia.length}
-            </div>
-            <div className="text-xs font-bold opacity-60 text-accent flex items-center justify-center gap-1">
-              <BookOpen className="w-3 h-3" /> Trajeron Biblia
-            </div>
+          <div className="flex items-center justify-center mb-5">
+            <span className="text-xs font-bold text-white/60 bg-white/10 px-3 py-1 rounded-full">
+              {participantsWithBiblia.length} trajeron biblia
+            </span>
           </div>
 
           {participantsWithBiblia.length === 0
@@ -112,9 +109,6 @@ export function BibliaSection() {
             )
             : (
               <div>
-                <h3 className="font-bold text-sm text-white/70 mb-2">
-                  Participantes con biblia
-                </h3>
                 <div className="flex flex-col gap-1">
                   {participantsWithBiblia.map((p) => (
                     <div
@@ -123,16 +117,13 @@ export function BibliaSection() {
                     >
                       <Avatar p={p} size={28} />
                       <div className="flex-1">
-                        <div className="font-bold text-sm text-dark">
+                        <div className="font-bold text-sm text-foreground">
                           {p.nombre} {p.apellido}
                         </div>
-                        <div className="text-xs text-dark/60">
+                        <div className="text-xs text-foreground/60">
                           {getEdad(p.fechaNacimiento)} años
                         </div>
                       </div>
-                      <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
-                        Biblia
-                      </span>
                     </div>
                   ))}
                 </div>
@@ -161,7 +152,7 @@ export function BibliaSection() {
                   return (
                     <div
                       key={p.id}
-                      className={`rounded-2xl border bg-white ${bib ? "border-primary shadow-md shadow-primary/20" : "border-surface-dark"}`}
+                      className={`rounded-2xl border bg-white ${bib ? "border-primary shadow-md shadow-primary/20" : "border-border"}`}
                     >
                       <div className="flex items-center p-3 gap-3">
                         <Avatar p={p} size={30} />
@@ -169,12 +160,12 @@ export function BibliaSection() {
                           <div
                             className={cn(
                               "font-bold text-sm",
-                              bib ? "text-foreground" : "text-text-muted",
+                              bib ? "text-foreground" : "text-muted-foreground",
                             )}
                           >
                             {p.nombre} {p.apellido}
                           </div>
-                          <div className="text-xs text-text-muted">
+                          <div className="text-xs text-muted-foreground">
                             {getEdad(p.fechaNacimiento)}a
                           </div>
                         </div>
@@ -187,7 +178,7 @@ export function BibliaSection() {
                               "opacity-50 cursor-not-allowed pointer-events-none",
                             bib
                               ? "bg-primary text-primary-foreground border-primary"
-                              : "bg-surface-light text-text-muted border-surface-dark",
+                              : "bg-card text-muted-foreground border-border",
                           )}
                         >
                           <BookOpen className="w-3.5 h-3.5" />

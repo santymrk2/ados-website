@@ -52,7 +52,7 @@ export class LoginPage extends BasePage {
   }
 
   async expectAuthenticatedHome(): Promise<void> {
-    await expect(this.page.getByRole("heading", { name: "Dashboard" })).toBeVisible({
+    await expect(this.page.getByRole("heading", { name: "Dashboard" }).first()).toBeVisible({
       timeout: 15_000,
     });
   }

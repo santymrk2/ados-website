@@ -22,7 +22,6 @@ export const $dataVersion = atom<number>(0);
 
 // UI State
 export const $showSettings = atom<boolean>(false);
-export const $showNotifications = atom<boolean>(false);
 
 // Promise-based locking to prevent race conditions
 // Using a Promise instead of a boolean prevents race conditions between concurrent calls

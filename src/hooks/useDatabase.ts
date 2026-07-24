@@ -71,25 +71,22 @@ export function useDatabase() {
   }, []);
 
   // Quick update (asistencia, equipos, etc)
-  const quickUpdate = useCallback(async (activityId: number, type: string, data: unknown, version?: number, skipRefresh = false) => {
+  // Skip refresh post-update: el SSE se encargará de sincronizar cambios de otros usuarios
+  const quickUpdate = useCallback(async (activityId: number, type: string, data: unknown, version?: number, _skipRefresh = false) => {
     const perform = async (currentVersion?: number) => quickUpdateActivity(activityId, type, data, currentVersion);
 
     try {
       const result = await perform(version);
-      if (!skipRefresh) {
-        await refreshData(false);
-      }
+      // No refresh - el SSE se encargará de sync si hay cambios de otros usuarios
       return result;
     } catch (error) {
       const isConflict = error instanceof VersionConflictError;
 
       if (isConflict && RETRYABLE_QUICK_UPDATE_TYPES.has(type)) {
+        // En conflicto, sí refresh para obtener datos frescos antes de reintentar
         await refreshData(false);
         const freshVersion = $activities.get().find((activity) => activity.id === activityId)?.version;
         const retriedResult = await perform(freshVersion);
-        if (!skipRefresh) {
-          await refreshData(false);
-        }
         return retriedResult;
       }
 

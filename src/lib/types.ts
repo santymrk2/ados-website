@@ -151,7 +151,6 @@ export interface AuthState {
 // ----------------------------------------------------------------------------
 export interface UIState {
   showSettings: boolean;
-  showNotifications: boolean;
 }
 
 // ----------------------------------------------------------------------------

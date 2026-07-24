@@ -9,7 +9,7 @@ export class ParticipantsPage extends BasePage {
 
   constructor(page: Page) {
     super(page);
-    this.header = page.getByRole("heading", { name: "Jugadores" });
+    this.header = page.getByRole("heading", { name: "Jugadores" }).first();
     this.addButton = page.getByRole("link", { name: /nuevo jugador/i });
     this.participantList = page.locator("a[href*='/participants/']").filter({ hasNot: page.locator("text=nuevo") });
   }

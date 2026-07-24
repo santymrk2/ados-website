@@ -17,7 +17,16 @@ Framework skills still apply when the touched area needs them:
 | React components and hooks | `~/.codex/skills/react-19/SKILL.md` |
 | TypeScript types and contracts | `~/.codex/skills/typescript/SKILL.md` |
 | Tailwind CSS 4 styling | `~/.codex/skills/tailwind-4/SKILL.md` |
-| Playwright tests | `~/.codex/skills/playwright/SKILL.md` |
+| Zustand 5 state management | `~/.claude/skills/zustand-5/SKILL.md` |
+| Zod 4 schema validation | `~/.agents/skills/zod-4/SKILL.md` |
+| Playwright E2E tests | `~/.claude/skills/playwright/SKILL.md` |
+
+UI/UX skills for design and audit work:
+
+| Context | Skill |
+| --- | --- |
+| Frontend UI/UX audit, responsive design, accessibility | `~/.config/opencode/skill/frontend-audit/SKILL.md` |
+| QA user flow testing, UX friction, edge cases | `~/.config/opencode/skill/qa-user-audit/SKILL.md` |
 
 Use `bat`, `rg`, `fd`, `sd`, and `eza` for local inspection. Do not use `cat`, `grep`, `find`, `sed`, or `ls` in this repository.
 

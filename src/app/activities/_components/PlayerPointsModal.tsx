@@ -1,9 +1,9 @@
 "use client";
 
-import { useMemo } from "react";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { useMemo, useState } from "react";
+import { DetailSheet } from "@/components/ui/DetailSheet";
 import { Button } from "@/components/ui/button";
-import { X, CalendarCheck, CalendarX, Clock, Coffee, Zap } from "lucide-react";
+import { CalendarCheck, CalendarX, Clock, Coffee, Zap, Check, Loader2 } from "lucide-react";
 import { Avatar } from "@/components/ui/Avatar";
 import { cn } from "@/lib/utils";
 import { TEAM_COLORS, getEdad } from "@/lib/constants";
@@ -47,10 +47,23 @@ export function PlayerPointsModal({
   const team = act.equipos?.[String(player.id)];
   const tieneBiblia = act.biblias.includes(player.id);
   const edad = getEdad(player.fechaNacimiento);
+  const [saving, setSaving] = useState(false);
 
   const withClose = (fn: () => Promise<void>) => {
     onClose();
     fn().catch(() => {});
+  };
+
+  const withSaving = async (fn: () => Promise<void>) => {
+    if (saving) return;
+    setSaving(true);
+    try {
+      await fn();
+    } catch {
+      // Error already handled
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleToggleAttendance = () => {
@@ -110,7 +123,6 @@ export function PlayerPointsModal({
   const handleAutoAssign = () => {
     if (!performQuickUpdate) return;
 
-    // Count current members per active team
     const counts: Record<string, number> = {};
     for (const t of activeTeams) counts[t] = 0;
     for (const pid of act.asistentes) {
@@ -118,14 +130,13 @@ export function PlayerPointsModal({
       if (t && t in counts) counts[t]++;
     }
 
-    // Find the team with fewest members (ties → first alphabetical)
     const sorted = [...activeTeams].sort(
       (a, b) => counts[a] - counts[b] || a.localeCompare(b),
     );
     const targetTeam = sorted[0];
     if (!targetTeam) return;
 
-    withClose(async () => {
+    withSaving(async () => {
       await performQuickUpdate("team", {
         participantId: player.id,
         team: targetTeam,
@@ -133,198 +144,242 @@ export function PlayerPointsModal({
     });
   };
 
+  const handleSelectTeam = (selectedTeam: string) => {
+    if (!performQuickUpdate) return;
+    withSaving(async () => {
+      await performQuickUpdate("team", {
+        participantId: player.id,
+        team: selectedTeam,
+      });
+    });
+  };
+
   const showActions = canEdit && !locked && fromEditMode;
 
   return (
-    <Dialog open={!!player} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent
-        showCloseButton={false}
-        className="max-w-sm bg-white rounded-3xl p-5 flex flex-col overflow-y-auto max-h-[90vh] shadow-2xl border-none"
-      >
-        <DialogTitle className="sr-only">
-          Detalle de {player.nombre} {player.apellido}
-        </DialogTitle>
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          onClick={onClose}
-          className="absolute top-4 right-4 rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 transition-colors"
-        >
-          <X className="w-5 h-5" />
-        </Button>
-
-        {/* HEADER: Avatar + Info */}
-        <div className="flex items-center gap-4 mb-4">
-          <Avatar p={player} size={80} />
-          <div className="flex-1">
-            <h3 className="font-black text-xl text-slate-900 leading-tight">
-              {player.nombre} {player.apellido}
-            </h3>
-            <div className="flex flex-wrap gap-x-2 gap-y-1 mt-1">
-              {edad !== null && (
-                <span className="text-xs font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
-                  {edad} años
-                </span>
-              )}
-              {isSocial ? (
-                <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">
-                  Social
-                </span>
-              ) : team ? (
-                <span
-                  className="text-xs font-bold px-2 py-0.5 rounded-full"
-                  style={{
-                    backgroundColor: TEAM_COLORS[team] + "20",
-                    color: TEAM_COLORS[team],
-                  }}
-                >
-                  Equipo {team}
-                </span>
-              ) : isPresent ? (
-                <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-500">
-                  Sin equipo
-                </span>
-              ) : null}
-              <span
-                className={cn(
-                  "text-xs font-bold px-2 py-0.5 rounded-full",
-                  tieneBiblia
-                    ? "bg-emerald-100 text-emerald-700"
-                    : "bg-slate-100 text-slate-600",
-                )}
-              >
-                {tieneBiblia ? "Trajo Biblia" : "No trajo Biblia"}
+    <DetailSheet
+      open={!!player}
+      onOpenChange={(open) => !open && onClose()}
+      title={`${player.nombre} ${player.apellido}`}
+    >
+      {/* HEADER: Avatar + Info */}
+      <div className="flex items-center gap-4 mb-4">
+        <Avatar p={player} size={64} />
+        <div className="flex-1">
+          <div className="flex flex-wrap gap-x-2 gap-y-1">
+            {edad !== null && (
+              <span className="text-xs font-bold text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
+                {edad} años
               </span>
-            </div>
+            )}
+            {isSocial ? (
+              <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">
+                Social
+              </span>
+            ) : team ? (
+              <span
+                className="text-xs font-bold px-2 py-0.5 rounded-full"
+                style={{
+                  backgroundColor: TEAM_COLORS[team] + "20",
+                  color: TEAM_COLORS[team],
+                }}
+              >
+                Equipo {team}
+              </span>
+            ) : isPresent ? (
+              <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
+                Sin equipo
+              </span>
+            ) : null}
+            <span
+              className={cn(
+                "text-xs font-bold px-2 py-0.5 rounded-full",
+                tieneBiblia
+                  ? "bg-emerald-100 text-emerald-700"
+                  : "bg-muted text-muted-foreground",
+              )}
+            >
+              {tieneBiblia ? "Trajo Biblia" : "No trajo Biblia"}
+            </span>
           </div>
         </div>
+      </div>
 
-        {/* ACTION BUTTONS */}
-        {showActions && (
-          <>
-            <div className="flex gap-2 mb-3">
+      {/* ACTION BUTTONS */}
+      {showActions && (
+        <>
+          <div className="flex gap-2 mb-3">
+            <button
+              onClick={handleToggleAttendance}
+              disabled={locked || saving}
+              className={cn(
+                "flex items-center gap-1.5 justify-center h-10 px-3 text-sm font-bold transition-colors rounded-xl border flex-1",
+                (locked || saving) &&
+                  "opacity-50 cursor-not-allowed pointer-events-none",
+                isPresent
+                  ? "bg-primary text-primary-foreground border-primary"
+                  : "bg-muted text-muted-foreground border-border",
+              )}
+            >
+              {isPresent ? (
+                <CalendarCheck className="w-4 h-4" />
+              ) : (
+                <CalendarX className="w-4 h-4" />
+              )}
+              <span>{isPresent ? "Presente" : "Ausente"}</span>
+            </button>
+            <button
+              onClick={handleTogglePunctual}
+              disabled={locked || saving}
+              className={cn(
+                "flex items-center gap-1.5 justify-center h-10 px-3 text-sm font-bold transition-colors rounded-xl border flex-1",
+                (locked || saving) &&
+                  "opacity-50 cursor-not-allowed pointer-events-none",
+                isPunctual
+                  ? "bg-primary text-primary-foreground border-primary"
+                  : "bg-muted text-muted-foreground border-border",
+              )}
+            >
+              <Clock className="w-4 h-4" />
+              <span>Puntual</span>
+            </button>
+            {isPresent && (
               <button
-                onClick={handleToggleAttendance}
-                disabled={locked}
+                onClick={handleToggleSocial}
+                disabled={locked || saving}
                 className={cn(
                   "flex items-center gap-1.5 justify-center h-10 px-3 text-sm font-bold transition-colors rounded-xl border flex-1",
-                  locked &&
+                  (locked || saving) &&
                     "opacity-50 cursor-not-allowed pointer-events-none",
-                  isPresent
-                    ? "bg-primary text-primary-foreground border-primary"
-                    : "bg-slate-100 text-slate-500 border-slate-200",
+                  isSocial
+                    ? "bg-[#F59E0B33] border-[#F59E0B66] text-[#F59E0B]"
+                    : "bg-primary/20 border-primary/40 text-primary",
                 )}
               >
-                {isPresent ? (
-                  <CalendarCheck className="w-4 h-4" />
+                {isSocial ? (
+                  <Coffee className="w-4 h-4" />
                 ) : (
-                  <CalendarX className="w-4 h-4" />
+                  <Zap className="w-4 h-4" />
                 )}
-                <span>{isPresent ? "Presente" : "Ausente"}</span>
+                <span>{isSocial ? "Social" : "Juegos"}</span>
               </button>
-              <button
-                onClick={handleTogglePunctual}
-                disabled={locked}
-                className={cn(
-                  "flex items-center gap-1.5 justify-center h-10 px-3 text-sm font-bold transition-colors rounded-xl border flex-1",
-                  locked &&
-                    "opacity-50 cursor-not-allowed pointer-events-none",
-                  isPunctual
-                    ? "bg-primary text-primary-foreground border-primary"
-                    : "bg-slate-100 text-slate-500 border-slate-200",
-                )}
-              >
-                <Clock className="w-4 h-4" />
-                <span>Puntual</span>
-              </button>
-              {isPresent && (
+            )}
+          </div>
+
+          {/* TEAM SELECTOR */}
+          {isPresent && !isSocial && activeTeams.length > 0 && (
+            <div className="mb-4">
+              <div className="text-xs font-bold text-muted-foreground mb-2">Equipo</div>
+              <div className="flex gap-2 flex-wrap">
+                {activeTeams.map((t) => (
+                  <button
+                    key={t}
+                    onClick={() => handleSelectTeam(t)}
+                    disabled={locked || saving}
+                    className={cn(
+                      "flex items-center justify-center gap-1.5 h-9 px-4 text-sm font-bold transition-colors rounded-xl border",
+                      (locked || saving) &&
+                        "opacity-50 cursor-not-allowed pointer-events-none",
+                      team === t
+                        ? "border-primary text-primary"
+                        : "border-border text-muted-foreground hover:border-primary/40",
+                    )}
+                    style={{
+                      backgroundColor: team === t ? TEAM_COLORS[t] + "15" : undefined,
+                    }}
+                  >
+                    {team === t && <Check className="w-4 h-4" />}
+                    <span>{t}</span>
+                  </button>
+                ))}
+              </div>
+
+              {/* AUTO ASSIGN */}
+              {!team && (
                 <button
-                  onClick={handleToggleSocial}
-                  disabled={locked}
+                  onClick={handleAutoAssign}
+                  disabled={locked || saving}
                   className={cn(
-                    "flex items-center gap-1.5 justify-center h-10 px-3 text-sm font-bold transition-colors rounded-xl border flex-1",
-                    locked &&
+                    "w-full flex items-center justify-center gap-2 h-9 px-4 text-sm font-bold transition-colors rounded-xl border mt-2",
+                    (locked || saving) &&
                       "opacity-50 cursor-not-allowed pointer-events-none",
-                    isSocial
-                      ? "bg-[#F59E0B33] border-[#F59E0B66] text-[#F59E0B]"
-                      : "bg-primary/20 border-primary/40 text-primary",
+                    "bg-primary/10 text-primary border-primary/30 hover:bg-primary/20",
                   )}
                 >
-                  {isSocial ? (
-                    <Coffee className="w-4 h-4" />
+                  {saving ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
                   ) : (
                     <Zap className="w-4 h-4" />
                   )}
-                  <span>{isSocial ? "Social" : "Juegos"}</span>
+                  {saving ? "Asignando..." : "Asignar automáticamente"}
                 </button>
               )}
             </div>
+          )}
 
-            {/* AUTO ASSIGN TEAM */}
-            {isPresent && !isSocial && activeTeams.length > 0 && !team && (
-              <div className="mb-4">
-                <button
-                  onClick={handleAutoAssign}
-                  disabled={locked}
-                  className={cn(
-                    "w-full flex items-center justify-center gap-2 h-10 px-4 text-sm font-bold transition-colors rounded-xl border",
-                    locked &&
-                      "opacity-50 cursor-not-allowed pointer-events-none",
-                    "bg-indigo-50 text-indigo-700 border-indigo-200 hover:bg-indigo-100 hover:border-indigo-300",
-                  )}
-                >
-                  <Zap className="w-4 h-4" />
-                  Asignar automáticamente
-                </button>
+          {/* DIVIDER */}
+          <div className="border-t border-border my-3" />
+        </>
+      )}
+
+      {/* POINTS DISPLAY */}
+      {saving ? (
+        <div className="space-y-3 animate-pulse">
+          <div className="bg-primary/20 rounded-2xl p-4 text-center mb-5">
+            <div className="h-10 w-20 bg-primary/30 rounded-lg mx-auto" />
+            <div className="h-3 w-24 bg-primary/30 rounded mt-2 mx-auto" />
+          </div>
+          <div className="space-y-2">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="flex justify-between items-center bg-primary/5 rounded-xl px-3 py-2.5 border border-primary/10">
+                <div className="h-3 w-1/3 bg-muted rounded" />
+                <div className="h-3 w-8 bg-muted rounded" />
               </div>
-            )}
-
-            {/* DIVIDER */}
-            <div className="border-t border-slate-100 my-3" />
-          </>
-        )}
-
-        {/* POINTS DISPLAY */}
-        <div className="bg-primary text-white rounded-2xl p-4 text-center mb-5 shadow-inner">
-          <div className="text-4xl font-black tabular-nums">{total}</div>
-          <div className="text-[10px] font-black uppercase tracking-widest opacity-80 mt-1">
-            Puntos Totales
+            ))}
           </div>
         </div>
+      ) : (
+        <>
+          <div className="bg-primary text-white rounded-2xl p-4 text-center mb-5">
+            <div className="text-4xl font-black tabular-nums">{total}</div>
+            <div className="text-[10px] font-black uppercase tracking-widest opacity-80 mt-1">
+              Puntos Totales
+            </div>
+          </div>
 
-        {/* POINTS BREAKDOWN */}
-        <div className="flex flex-col gap-2 max-h-[40vh] overflow-y-auto pr-1 custom-scrollbar">
-          {details.map((d, i) => (
-            <div
-              key={i}
-              className="flex justify-between items-center bg-slate-50 rounded-xl px-3 py-2.5 border border-slate-100"
-            >
-              <span className="text-sm font-bold text-slate-700">
-                {d.label}
-                {d.sublabel && (
-                  <span className="ml-1 text-xs font-medium text-slate-400">
-                    · {d.sublabel}
-                  </span>
-                )}
-              </span>
-              <span
-                className={cn(
-                  "font-black text-sm tabular-nums",
-                  d.pts >= 0 ? "text-green-600" : "text-red-500",
-                )}
+          <div className="flex flex-col gap-2 max-h-[40vh] overflow-y-auto pr-1">
+            {details.map((d, i) => (
+              <div
+                key={i}
+                className="flex justify-between items-center bg-primary/5 rounded-xl px-3 py-2.5 border border-primary/10"
               >
-                {d.pts >= 0 ? "+" : ""}
-                {d.pts}
-              </span>
-            </div>
-          ))}
-          {details.length === 0 && (
-            <div className="text-center text-slate-400 text-sm py-8 font-medium italic">
-              Sin puntos registrados aún
-            </div>
-          )}
-        </div>
-      </DialogContent>
-    </Dialog>
+                <span className="text-sm font-bold text-dark">
+                  {d.label}
+                  {d.sublabel && (
+                    <span className="ml-1 text-xs font-medium text-muted-foreground">
+                      · {d.sublabel}
+                    </span>
+                  )}
+                </span>
+                <span
+                  className={cn(
+                    "font-black text-sm tabular-nums",
+                    d.pts >= 0 ? "text-green-600" : "text-red-500",
+                  )}
+                >
+                  {d.pts >= 0 ? "+" : ""}
+                  {d.pts}
+                </span>
+              </div>
+            ))}
+            {details.length === 0 && (
+              <div className="text-center text-muted-foreground text-sm py-8 font-medium italic">
+                Sin puntos registrados aún
+              </div>
+            )}
+          </div>
+        </>
+      )}
+    </DetailSheet>
   );
 }

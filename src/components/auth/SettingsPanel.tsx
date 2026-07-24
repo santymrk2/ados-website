@@ -216,7 +216,6 @@ export function SettingsPanel({
                 <Palette className="w-5 h-5 text-primary" />
                 <div className="flex-1">
                   <div className="font-bold text-sm text-dark">Colores de Equipos</div>
-                  <div className="text-xs text-text-muted">Personalizá los colores de cada equipo</div>
                 </div>
                 <ChevronRight className="w-4 h-4 text-text-muted" />
               </button>
@@ -230,7 +229,6 @@ export function SettingsPanel({
                 <Bell className="w-5 h-5 text-primary" />
                 <div className="flex-1">
                   <div className="font-bold text-sm text-dark">Notificaciones Push</div>
-                  <div className="text-xs text-text-muted">Activá alertas para cumpleaños</div>
                 </div>
                 <ChevronRight className="w-4 h-4 text-text-muted" />
               </button>
@@ -243,10 +241,24 @@ export function SettingsPanel({
               <Info className="w-5 h-5 text-primary" />
               <div className="flex-1">
                 <div className="font-bold text-sm text-dark">Acerca de</div>
-                <div className="text-xs text-text-muted">Versión y créditos</div>
               </div>
               <ChevronRight className="w-4 h-4 text-text-muted" />
             </button>
+
+            <div className="border-t border-surface-dark pt-4 mt-4">
+              <Button
+                onClick={onLogout}
+                variant="destructive"
+                className="w-full gap-3"
+                size="lg"
+              >
+                <LogOut className="w-5 h-5" />
+                Cerrar Sesión
+              </Button>
+              <div className="text-center text-xs text-text-muted mt-3">
+                Sesión activa por 24 horas
+              </div>
+            </div>
           </>
         )}
 
@@ -377,21 +389,6 @@ export function SettingsPanel({
             </div>
           </div>
         )}
-      </div>
-
-      <div className="border-t border-surface-dark pt-4 mt-4">
-        <Button
-          onClick={onLogout}
-          variant="destructive"
-          className="w-full gap-3"
-          size="lg"
-        >
-          <LogOut className="w-5 h-5" />
-          Cerrar Sesión
-        </Button>
-        <div className="text-center text-xs text-text-muted mt-3">
-          Sesión activa por 24 horas
-        </div>
       </div>
     </DetailSheet>
   );

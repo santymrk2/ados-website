@@ -1,9 +1,9 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { DetailSheet } from "@/components/ui/DetailSheet";
 import { Button } from "@/components/ui/button";
-import { CalendarCheck, CalendarX, Clock, Coffee, Zap, Check } from "lucide-react";
+import { CalendarCheck, CalendarX, Clock, Coffee, Zap, Check, Loader2 } from "lucide-react";
 import { Avatar } from "@/components/ui/Avatar";
 import { cn } from "@/lib/utils";
 import { TEAM_COLORS, getEdad } from "@/lib/constants";
@@ -47,10 +47,23 @@ export function PlayerPointsModal({
   const team = act.equipos?.[String(player.id)];
   const tieneBiblia = act.biblias.includes(player.id);
   const edad = getEdad(player.fechaNacimiento);
+  const [saving, setSaving] = useState(false);
 
   const withClose = (fn: () => Promise<void>) => {
     onClose();
     fn().catch(() => {});
+  };
+
+  const withSaving = async (fn: () => Promise<void>) => {
+    if (saving) return;
+    setSaving(true);
+    try {
+      await fn();
+    } catch {
+      // Error already handled
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleToggleAttendance = () => {
@@ -123,7 +136,7 @@ export function PlayerPointsModal({
     const targetTeam = sorted[0];
     if (!targetTeam) return;
 
-    withClose(async () => {
+    withSaving(async () => {
       await performQuickUpdate("team", {
         participantId: player.id,
         team: targetTeam,
@@ -133,7 +146,7 @@ export function PlayerPointsModal({
 
   const handleSelectTeam = (selectedTeam: string) => {
     if (!performQuickUpdate) return;
-    withClose(async () => {
+    withSaving(async () => {
       await performQuickUpdate("team", {
         participantId: player.id,
         team: selectedTeam,
@@ -155,7 +168,7 @@ export function PlayerPointsModal({
         <div className="flex-1">
           <div className="flex flex-wrap gap-x-2 gap-y-1">
             {edad !== null && (
-              <span className="text-xs font-bold text-text-muted bg-surface-dark px-2 py-0.5 rounded-full">
+              <span className="text-xs font-bold text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
                 {edad} años
               </span>
             )}
@@ -174,7 +187,7 @@ export function PlayerPointsModal({
                 Equipo {team}
               </span>
             ) : isPresent ? (
-              <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-surface-dark text-text-muted">
+              <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
                 Sin equipo
               </span>
             ) : null}
@@ -183,7 +196,7 @@ export function PlayerPointsModal({
                 "text-xs font-bold px-2 py-0.5 rounded-full",
                 tieneBiblia
                   ? "bg-emerald-100 text-emerald-700"
-                  : "bg-surface-dark text-text-muted",
+                  : "bg-muted text-muted-foreground",
               )}
             >
               {tieneBiblia ? "Trajo Biblia" : "No trajo Biblia"}
@@ -198,14 +211,14 @@ export function PlayerPointsModal({
           <div className="flex gap-2 mb-3">
             <button
               onClick={handleToggleAttendance}
-              disabled={locked}
+              disabled={locked || saving}
               className={cn(
                 "flex items-center gap-1.5 justify-center h-10 px-3 text-sm font-bold transition-colors rounded-xl border flex-1",
-                locked &&
+                (locked || saving) &&
                   "opacity-50 cursor-not-allowed pointer-events-none",
                 isPresent
                   ? "bg-primary text-primary-foreground border-primary"
-                  : "bg-surface-dark text-text-muted border-surface-dark",
+                  : "bg-muted text-muted-foreground border-border",
               )}
             >
               {isPresent ? (
@@ -217,14 +230,14 @@ export function PlayerPointsModal({
             </button>
             <button
               onClick={handleTogglePunctual}
-              disabled={locked}
+              disabled={locked || saving}
               className={cn(
                 "flex items-center gap-1.5 justify-center h-10 px-3 text-sm font-bold transition-colors rounded-xl border flex-1",
-                locked &&
+                (locked || saving) &&
                   "opacity-50 cursor-not-allowed pointer-events-none",
                 isPunctual
                   ? "bg-primary text-primary-foreground border-primary"
-                  : "bg-surface-dark text-text-muted border-surface-dark",
+                  : "bg-muted text-muted-foreground border-border",
               )}
             >
               <Clock className="w-4 h-4" />
@@ -233,10 +246,10 @@ export function PlayerPointsModal({
             {isPresent && (
               <button
                 onClick={handleToggleSocial}
-                disabled={locked}
+                disabled={locked || saving}
                 className={cn(
                   "flex items-center gap-1.5 justify-center h-10 px-3 text-sm font-bold transition-colors rounded-xl border flex-1",
-                  locked &&
+                  (locked || saving) &&
                     "opacity-50 cursor-not-allowed pointer-events-none",
                   isSocial
                     ? "bg-[#F59E0B33] border-[#F59E0B66] text-[#F59E0B]"
@@ -256,20 +269,20 @@ export function PlayerPointsModal({
           {/* TEAM SELECTOR */}
           {isPresent && !isSocial && activeTeams.length > 0 && (
             <div className="mb-4">
-              <div className="text-xs font-bold text-text-muted mb-2">Equipo</div>
+              <div className="text-xs font-bold text-muted-foreground mb-2">Equipo</div>
               <div className="flex gap-2 flex-wrap">
                 {activeTeams.map((t) => (
                   <button
                     key={t}
                     onClick={() => handleSelectTeam(t)}
-                    disabled={locked}
+                    disabled={locked || saving}
                     className={cn(
                       "flex items-center justify-center gap-1.5 h-9 px-4 text-sm font-bold transition-colors rounded-xl border",
-                      locked &&
+                      (locked || saving) &&
                         "opacity-50 cursor-not-allowed pointer-events-none",
                       team === t
                         ? "border-primary text-primary"
-                        : "border-surface-dark text-text-muted hover:border-primary/40",
+                        : "border-border text-muted-foreground hover:border-primary/40",
                     )}
                     style={{
                       backgroundColor: team === t ? TEAM_COLORS[t] + "15" : undefined,
@@ -285,66 +298,88 @@ export function PlayerPointsModal({
               {!team && (
                 <button
                   onClick={handleAutoAssign}
-                  disabled={locked}
+                  disabled={locked || saving}
                   className={cn(
                     "w-full flex items-center justify-center gap-2 h-9 px-4 text-sm font-bold transition-colors rounded-xl border mt-2",
-                    locked &&
+                    (locked || saving) &&
                       "opacity-50 cursor-not-allowed pointer-events-none",
                     "bg-primary/10 text-primary border-primary/30 hover:bg-primary/20",
                   )}
                 >
-                  <Zap className="w-4 h-4" />
-                  Asignar automáticamente
+                  {saving ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Zap className="w-4 h-4" />
+                  )}
+                  {saving ? "Asignando..." : "Asignar automáticamente"}
                 </button>
               )}
             </div>
           )}
 
           {/* DIVIDER */}
-          <div className="border-t border-surface-dark my-3" />
+          <div className="border-t border-border my-3" />
         </>
       )}
 
       {/* POINTS DISPLAY */}
-      <div className="bg-primary text-white rounded-2xl p-4 text-center mb-5">
-        <div className="text-4xl font-black tabular-nums">{total}</div>
-        <div className="text-[10px] font-black uppercase tracking-widest opacity-80 mt-1">
-          Puntos Totales
+      {saving ? (
+        <div className="space-y-3 animate-pulse">
+          <div className="bg-primary/20 rounded-2xl p-4 text-center mb-5">
+            <div className="h-10 w-20 bg-primary/30 rounded-lg mx-auto" />
+            <div className="h-3 w-24 bg-primary/30 rounded mt-2 mx-auto" />
+          </div>
+          <div className="space-y-2">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="flex justify-between items-center bg-primary/5 rounded-xl px-3 py-2.5 border border-primary/10">
+                <div className="h-3 w-1/3 bg-muted rounded" />
+                <div className="h-3 w-8 bg-muted rounded" />
+              </div>
+            ))}
+          </div>
         </div>
-      </div>
+      ) : (
+        <>
+          <div className="bg-primary text-white rounded-2xl p-4 text-center mb-5">
+            <div className="text-4xl font-black tabular-nums">{total}</div>
+            <div className="text-[10px] font-black uppercase tracking-widest opacity-80 mt-1">
+              Puntos Totales
+            </div>
+          </div>
 
-      {/* POINTS BREAKDOWN */}
-      <div className="flex flex-col gap-2 max-h-[40vh] overflow-y-auto pr-1">
-        {details.map((d, i) => (
-          <div
-            key={i}
-            className="flex justify-between items-center bg-primary/5 rounded-xl px-3 py-2.5 border border-primary/10"
-          >
-            <span className="text-sm font-bold text-dark">
-              {d.label}
-              {d.sublabel && (
-                <span className="ml-1 text-xs font-medium text-text-muted">
-                  · {d.sublabel}
+          <div className="flex flex-col gap-2 max-h-[40vh] overflow-y-auto pr-1">
+            {details.map((d, i) => (
+              <div
+                key={i}
+                className="flex justify-between items-center bg-primary/5 rounded-xl px-3 py-2.5 border border-primary/10"
+              >
+                <span className="text-sm font-bold text-dark">
+                  {d.label}
+                  {d.sublabel && (
+                    <span className="ml-1 text-xs font-medium text-muted-foreground">
+                      · {d.sublabel}
+                    </span>
+                  )}
                 </span>
-              )}
-            </span>
-            <span
-              className={cn(
-                "font-black text-sm tabular-nums",
-                d.pts >= 0 ? "text-green-600" : "text-red-500",
-              )}
-            >
-              {d.pts >= 0 ? "+" : ""}
-              {d.pts}
-            </span>
+                <span
+                  className={cn(
+                    "font-black text-sm tabular-nums",
+                    d.pts >= 0 ? "text-green-600" : "text-red-500",
+                  )}
+                >
+                  {d.pts >= 0 ? "+" : ""}
+                  {d.pts}
+                </span>
+              </div>
+            ))}
+            {details.length === 0 && (
+              <div className="text-center text-muted-foreground text-sm py-8 font-medium italic">
+                Sin puntos registrados aún
+              </div>
+            )}
           </div>
-        ))}
-        {details.length === 0 && (
-          <div className="text-center text-text-muted text-sm py-8 font-medium italic">
-            Sin puntos registrados aún
-          </div>
-        )}
-      </div>
+        </>
+      )}
     </DetailSheet>
   );
 }

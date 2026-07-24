@@ -31,20 +31,20 @@ function ActivityRow({
     <button
       type="button"
       onClick={onClick}
-      className="w-full bg-white rounded-xl p-3 border border-surface-dark flex items-center gap-3 text-left cursor-pointer hover:border-primary/40 transition-colors"
+      className="w-full bg-white rounded-xl p-3 border border-border flex items-center gap-3 text-left cursor-pointer hover:border-primary/40 transition-colors"
     >
       <div className="flex-1 min-w-0">
         <div className="font-bold text-sm truncate">
           {activity.titulo || "Sin título"}
         </div>
-        <div className="text-xs text-text-muted mt-0.5">
+        <div className="text-xs text-muted-foreground mt-0.5">
           {formatDate(activity.fecha)}
         </div>
       </div>
       {activity.locked && (
         <Lock className="w-4 h-4 text-red-500 flex-shrink-0" />
       )}
-      <ChevronRight className="w-4 h-4 text-text-muted flex-shrink-0" />
+      <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0" />
     </button>
   );
 }
@@ -113,13 +113,13 @@ export default function ActivitiesPage() {
 
   return (
     <div>
-      <div className="px-4 pt-2 pb-1 text-xs font-bold text-text-muted">
+      <div className="px-4 pt-2 pb-1 text-xs font-bold text-muted-foreground">
         {db.activities.length} registradas
       </div>
 
       <div className="p-4">
         <div className="relative mb-4">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted pointer-events-none" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -147,7 +147,7 @@ export default function ActivitiesPage() {
           <div className="space-y-4">
             {groupedByMonth.map((group) => (
               <div key={group.label}>
-                <div className="text-xs font-bold text-text-muted uppercase tracking-wide mb-2 px-1">
+                <div className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-2 px-1">
                   {group.label}
                 </div>
                 <div className="flex flex-col gap-2">

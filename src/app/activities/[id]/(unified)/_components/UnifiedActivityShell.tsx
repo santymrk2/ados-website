@@ -1,14 +1,27 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useUnifiedActivity } from "@/lib/activity-context";
 import { ACTIVITY_SECTIONS, getSectionDef, type SectionId } from "@/lib/activity-sections";
 import { cn, formatDate } from "@/lib/utils";
+import { SectionSkeleton } from "./SectionSkeleton";
 import { Button } from "@/components/ui/button";
 import { FloatingNav } from "@/components/ui/FloatingNav";
 import { Check, Loader2, AlertCircle, ChevronLeft } from "lucide-react";
 import type { Activity } from "@/lib/types";
+
+// Map each section to an appropriate skeleton variant
+const SECTION_SKELETON: Record<string, { variant: "card" | "list" | "grid" | "stats"; count?: number }> = {
+  general:      { variant: "card" },
+  asistencia:   { variant: "list", count: 6 },
+  equipos:      { variant: "grid", count: 4 },
+  biblia:       { variant: "list", count: 4 },
+  juegos:       { variant: "list", count: 3 },
+  goles:        { variant: "list", count: 3 },
+  extras:       { variant: "list", count: 3 },
+  invitaciones: { variant: "list", count: 3 },
+};
 
 interface UnifiedActivityShellProps {
   children: React.ReactNode;
@@ -107,8 +120,8 @@ export function UnifiedActivityShell({
     return (
       <div className="min-h-screen bg-primary flex flex-col">
         <SimpleHeader />
-        <div className="flex-1 flex items-center justify-center">
-          <div className="text-white animate-pulse font-black">Cargando...</div>
+        <div className="flex-1 flex items-center justify-center p-4">
+          <SectionSkeleton variant="card" />
         </div>
       </div>
     );
@@ -177,18 +190,56 @@ function ShellInner({
     });
   }, [pathnameSection, currentSection, setCurrentSection, setSearchQuery, setFilterContent, setFiltersActive, setEditingSection]);
 
+  const activeSection = pathnameSection ?? currentSection;
+
   const handleSectionChange = useCallback(
     (newValue: string) => {
+      // Evitar loading infinito si ya estamos en la misma sección
+      if (newValue === activeSection) return;
+
       setSectionLoading(true);
       const section = ACTIVITY_SECTIONS.find((s) => s.id === newValue);
       if (section) {
         router.push(`/activities/${resolvedId}/${section.id}`);
       }
     },
-    [resolvedId, router, setSectionLoading],
+    [resolvedId, router, setSectionLoading, activeSection],
   );
 
-  const activeSection = pathnameSection ?? currentSection;
+  // ── Swipe to change section ──
+  const touchStartX = useRef(0);
+  const touchStartY = useRef(0);
+  const isSwiping = useRef(false);
+
+  const sectionIds = ACTIVITY_SECTIONS.map((s) => s.id);
+
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+    touchStartY.current = e.touches[0].clientY;
+    isSwiping.current = false;
+  }, []);
+
+  const handleTouchEnd = useCallback(
+    (e: React.TouchEvent) => {
+      const dx = e.changedTouches[0].clientX - touchStartX.current;
+      const dy = e.changedTouches[0].clientY - touchStartY.current;
+
+      // Only horizontal swipes (dx > dy) with minimum distance
+      if (Math.abs(dx) < 50 || Math.abs(dy) > Math.abs(dx)) return;
+
+      const currentIndex = sectionIds.indexOf(activeSection);
+      if (currentIndex === -1) return;
+
+      if (dx < 0 && currentIndex < sectionIds.length - 1) {
+        // Swipe left → next section
+        handleSectionChange(sectionIds[currentIndex + 1]);
+      } else if (dx > 0 && currentIndex > 0) {
+        // Swipe right → previous section
+        handleSectionChange(sectionIds[currentIndex - 1]);
+      }
+    },
+    [activeSection, handleSectionChange, sectionIds],
+  );
   const sectionDef = getSectionDef(activeSection);
   const hasSearch = sectionDef.hasSearch;
   const hasFilter = sectionDef.hasFilter;
@@ -220,10 +271,14 @@ function ShellInner({
         </div>
       </div>
 
-      <div className="bg-primary px-4 pt-4 flex-1 pb-32">
+      <div
+        className="bg-primary px-4 pt-4 flex-1 pb-32"
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+      >
         {sectionLoading ? (
-          <div className="flex items-center justify-center h-full">
-            <Loader2 className="size-8 animate-spin text-white" />
+          <div className="space-y-4 animate-pulse">
+            <SectionSkeleton {...(SECTION_SKELETON[activeSection] ?? { variant: "card" })} />
           </div>
         ) : (
           children

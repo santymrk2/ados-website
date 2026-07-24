@@ -97,13 +97,13 @@ function AdjustmentRow({
               setEditingMotivo(false);
             }
           }}
-          className="h-6 min-w-0 flex-1 bg-white rounded border border-primary outline-none text-[10px] text-foreground placeholder:text-text-muted px-1"
+          className="h-6 min-w-0 flex-1 bg-white rounded border border-primary outline-none text-[10px] text-foreground placeholder:text-muted-foreground px-1"
         />
       ) : (
         <span
           className={cn(
             "h-6 min-w-0 flex-1 text-[10px] truncate cursor-pointer hover:bg-white/60 hover:rounded px-0.5 transition-colors self-center leading-6",
-            motivoInput ? "text-foreground" : "text-text-muted",
+            motivoInput ? "text-foreground" : "text-muted-foreground",
           )}
           onClick={() => {
             if (disabled) return;
@@ -118,7 +118,7 @@ function AdjustmentRow({
         <button
           disabled={disabled}
           onClick={() => onUpdatePoints(Math.max(0, item.puntos - 1))}
-          className="w-5 h-5 flex items-center justify-center text-text-muted hover:text-red-500 transition-colors disabled:opacity-30"
+          className="w-5 h-5 flex items-center justify-center text-muted-foreground hover:text-red-500 transition-colors disabled:opacity-30"
         >
           <Minus className="w-2.5 h-2.5" />
         </button>
@@ -158,7 +158,7 @@ function AdjustmentRow({
         <button
           disabled={disabled}
           onClick={() => onUpdatePoints(item.puntos + 1)}
-          className="w-5 h-5 flex items-center justify-center text-text-muted hover:text-teal-500 transition-colors disabled:opacity-30"
+          className="w-5 h-5 flex items-center justify-center text-muted-foreground hover:text-teal-500 transition-colors disabled:opacity-30"
         >
           <Plus className="w-2.5 h-2.5" />
         </button>
@@ -293,7 +293,7 @@ export function ExtrasSection() {
           return (
             <div
               key={t}
-              className="rounded-2xl p-4 flex flex-col gap-3 border-2 transition-all relative shadow-sm"
+              className="rounded-xl p-3 flex flex-col gap-2 border border-l-4 transition-all relative shadow-sm"
               style={{
                 backgroundColor: getTeamBg(t),
                 borderColor: TEAM_COLORS[t] + "44",
@@ -365,7 +365,7 @@ export function ExtrasSection() {
             Individuales
           </span>
         </div>
-        <span className="text-[10px] font-bold text-text-muted">
+        <span className="text-[10px] font-bold text-muted-foreground">
           {eligiblePlayers.length} personas
         </span>
       </div>
@@ -378,7 +378,7 @@ export function ExtrasSection() {
           return (
             <div
               key={p.id}
-              className="bg-white rounded-2xl p-3 flex items-start gap-3 border border-surface-dark shadow-sm"
+              className="bg-white rounded-xl p-3 flex items-start gap-3 border border-border shadow-sm"
             >
               <Avatar p={p} size={36} className="mt-1" />
 
@@ -386,7 +386,7 @@ export function ExtrasSection() {
                 <div className="font-bold text-sm truncate">
                   {p.nombre} {p.apellido}
                 </div>
-                <div className="text-[10px] font-black text-text-muted uppercase mb-1">
+                <div className="text-[10px] font-black text-muted-foreground uppercase mb-1">
                   Balance:{" "}
                   <span
                     className={cn(
@@ -451,7 +451,7 @@ export function ExtrasSection() {
         return (
           <div
             key={t}
-            className="rounded-2xl p-4 flex flex-col gap-3 border-2 shadow-sm"
+            className="rounded-xl p-3 flex flex-col gap-2 border border-l-4 shadow-sm"
             style={{
               backgroundColor: getTeamBg(t),
               borderColor: TEAM_COLORS[t] + "44",
@@ -532,7 +532,7 @@ export function ExtrasSection() {
             return (
               <div
                 key={p.id}
-                className="bg-white rounded-2xl p-3 flex items-center gap-3 border border-surface-dark shadow-sm"
+                className="bg-white rounded-xl p-3 flex items-center gap-3 border border-border shadow-sm"
               >
                 <Avatar p={p} size={32} />
                 <div className="flex-1 min-w-0">
@@ -561,7 +561,7 @@ export function ExtrasSection() {
                 <div
                   className={cn(
                     "font-black text-sm",
-                    total > 0 ? "text-green-600" : total < 0 ? "text-red-600" : "text-text-muted",
+                    total > 0 ? "text-green-600" : total < 0 ? "text-red-600" : "text-muted-foreground",
                   )}
                 >
                   {total > 0 ? "+" : ""}

@@ -6,6 +6,7 @@ import { useApp } from "@/hooks/useApp";
 import { $role } from "@/store/appStore";
 import {
   ChevronRight,
+  ChevronLeft,
   Award,
   ClipboardList,
   Check,
@@ -17,8 +18,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { RankBadge, PodiumBadge } from "@/components/ui/Badges";
 import { DetailSheet } from "@/components/ui/DetailSheet";
 import { cn, formatDate } from "@/lib/utils";
+import { actRankingPtsDetails } from "@/lib/calc";
 import type { ParticipantBasic, Activity, Invitacion } from "@/lib/types";
-import { PlayerHistoryModal } from "@/app/_components/PlayerHistoryModal";
 
 interface RankingWithStats extends ParticipantBasic {
   total: number;
@@ -104,6 +105,125 @@ function RankRow({
   return <div className={className}>{content}</div>;
 }
 
+function RankingDetailView({
+  player,
+  activities,
+  participants,
+  onBack,
+}: {
+  player: RankingWithStats;
+  activities: Activity[];
+  participants: ParticipantBasic[];
+  onBack: () => void;
+}) {
+  const activityHistory = useMemo(() => {
+    return activities
+      .map((activity) => {
+        const details = actRankingPtsDetails(player.id, activity, participants);
+        const total = details.reduce((sum, detail) => sum + detail.pts, 0);
+        return { activity, details, total };
+      })
+      .filter((item) => item.details.length > 0)
+      .sort(
+        (a, b) =>
+          new Date(b.activity.fecha).getTime() - new Date(a.activity.fecha).getTime(),
+      );
+  }, [activities, participants, player.id]);
+
+  const total = activityHistory.reduce((sum, item) => sum + item.total, 0);
+
+  return (
+    <>
+      {/* Back button + player header */}
+      <div className="flex items-center gap-3 mb-4">
+        <button
+          onClick={onBack}
+          className="min-w-[44px] min-h-[44px] flex items-center justify-center -ml-2 rounded-full hover:bg-muted transition-colors"
+        >
+          <ChevronLeft className="w-5 h-5" />
+        </button>
+        <Avatar p={player} size={48} />
+        <div className="flex-1 min-w-0">
+          <div className="font-black text-lg text-foreground truncate">
+            {player.nombre} {player.apellido}
+          </div>
+          <div className="text-xs font-bold text-text-muted">
+            {activityHistory.length} actividad{activityHistory.length !== 1 ? "es" : ""} con puntos
+          </div>
+        </div>
+      </div>
+
+      {/* Total points card */}
+      <div className="bg-primary text-white rounded-2xl p-4 text-center mb-5 shadow-inner">
+        <div className="text-4xl font-black tabular-nums">{total}</div>
+        <div className="text-[10px] font-black uppercase tracking-widest opacity-80 mt-1">
+          Puntos Totales
+        </div>
+      </div>
+
+      {/* Activity history */}
+      {activityHistory.length > 0 ? (
+        <div className="flex flex-col gap-3">
+          {activityHistory.map(({ activity, details, total: activityTotal }) => (
+            <div
+              key={activity.id}
+              className="bg-primary/5 rounded-2xl border border-primary/15 p-4"
+            >
+              <div className="flex items-start justify-between gap-3 mb-3">
+                <div className="min-w-0">
+                  <div className="font-black text-foreground truncate">
+                    {activity.titulo || formatDate(activity.fecha)}
+                  </div>
+                  <div className="text-xs font-bold text-text-muted mt-1">
+                    {formatDate(activity.fecha)}
+                  </div>
+                </div>
+                <div className="bg-primary/10 text-primary rounded-xl px-3 py-1 text-sm font-black tabular-nums shrink-0">
+                  {activityTotal >= 0 ? "+" : ""}
+                  {activityTotal}
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-2">
+                {details.map((detail, index) => (
+                  <div
+                    key={`${detail.type}-${detail.label}-${index}`}
+                    className="flex items-center justify-between gap-3 bg-white rounded-xl px-3 py-2 border border-primary/10"
+                  >
+                    <div className="min-w-0">
+                      <div className="text-sm font-bold text-foreground truncate">
+                        {detail.label}
+                      </div>
+                      {detail.sublabel && (
+                        <div className="text-xs font-medium text-text-muted truncate">
+                          {detail.sublabel}
+                        </div>
+                      )}
+                    </div>
+                    <div
+                      className={cn(
+                        "font-black text-sm tabular-nums shrink-0",
+                        detail.pts >= 0 ? "text-green-600" : "text-red-500",
+                      )}
+                    >
+                      {detail.pts >= 0 ? "+" : ""}
+                      {detail.pts}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="text-center text-text-muted text-sm py-10 font-medium italic">
+          Sin puntos registrados aún
+        </div>
+      )}
+    </>
+  );
+}
+
 export default function Page() {
   const { db, isLoading } = useApp();
   const { participants, activities, rankings } = db;
@@ -118,6 +238,7 @@ export default function Page() {
     useState<InvitacionRanking | null>(null);
   const [selectedRankingPlayer, setSelectedRankingPlayer] =
     useState<RankingWithStats | null>(null);
+  const [rankingView, setRankingView] = useState<"list" | "detail">("list");
   const [selectedActivityIds, setSelectedActivityIds] = useState<number[]>([]);
   const [invFilterOpen, setInvFilterOpen] = useState(false);
 
@@ -315,7 +436,7 @@ export default function Page() {
           className="flex items-center gap-2 mb-3 cursor-pointer select-none"
           onClick={() => setRankingOpen(true)}
         >
-          <div className="font-bold text-lg">Ranking Individual</div>
+          <div className="font-bold text-lg">Puntaje</div>
           <ChevronRight className="w-4 h-4 text-text-muted" />
         </div>
         {calculatedRankings.length === 0 ? (
@@ -424,53 +545,67 @@ export default function Page() {
       {/* ─── SHEET: RANKING ─── */}
       <DetailSheet
         open={rankingOpen}
-        onOpenChange={setRankingOpen}
-        title="Ranking Individual"
+        onOpenChange={(open) => {
+          setRankingOpen(open);
+          if (!open) setRankingView("list");
+        }}
+        title="Puntaje"
       >
-        {/* Metric selector */}
-        <div className="grid grid-cols-2 gap-2 mb-4">
-          {RANKING_METRICS.map((metric) => {
-            const Icon = metric.Icon;
-            return (
-              <button
-                key={metric.key}
-                onClick={() => setRankingMetric(metric.key)}
-                className={cn(
-                  "flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg text-xs font-bold transition-all",
-                  rankingMetric === metric.key
-                    ? "bg-primary text-white"
-                    : "bg-surface-dark text-text-muted hover:bg-surface-dark/80",
-                )}
-              >
-                <Icon className="w-4 h-4" />
-                <span>{metric.label}</span>
-              </button>
-            );
-          })}
-        </div>
-
-        {calculatedRankings.length === 0 ? (
-          <Empty text="Aún no hay participantes" />
+        {rankingView === "detail" && selectedRankingPlayer ? (
+          <RankingDetailView
+            player={selectedRankingPlayer}
+            activities={activities}
+            participants={participants}
+            onBack={() => setRankingView("list")}
+          />
         ) : (
-          <div className="flex flex-col gap-2">
-            {calculatedRankings.map((p, i) => (
-              <RankRow
-                key={p.id}
-                p={p}
-                pos={i + 1}
-                metric={rankingMetric}
-                isClickable={rankingMetric === "total"}
-                onClick={
-                  rankingMetric === "total"
-                    ? () => {
-                        setRankingOpen(false);
-                        setSelectedRankingPlayer(p);
-                      }
-                    : undefined
-                }
-              />
-            ))}
-          </div>
+          <>
+            {/* Metric selector */}
+            <div className="grid grid-cols-2 gap-2 mb-4">
+              {RANKING_METRICS.map((metric) => {
+                const Icon = metric.Icon;
+                return (
+                  <button
+                    key={metric.key}
+                    onClick={() => setRankingMetric(metric.key)}
+                    className={cn(
+                      "flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg text-xs font-bold transition-all",
+                      rankingMetric === metric.key
+                        ? "bg-primary text-white"
+                        : "bg-surface-dark text-text-muted hover:bg-surface-dark/80",
+                    )}
+                  >
+                    <Icon className="w-4 h-4" />
+                    <span>{metric.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {calculatedRankings.length === 0 ? (
+              <Empty text="Aún no hay participantes" />
+            ) : (
+              <div className="flex flex-col gap-2">
+                {calculatedRankings.map((p, i) => (
+                  <RankRow
+                    key={p.id}
+                    p={p}
+                    pos={i + 1}
+                    metric={rankingMetric}
+                    isClickable={rankingMetric === "total"}
+                    onClick={
+                      rankingMetric === "total"
+                        ? () => {
+                            setSelectedRankingPlayer(p);
+                            setRankingView("detail");
+                          }
+                        : undefined
+                    }
+                  />
+                ))}
+              </div>
+            )}
+          </>
         )}
       </DetailSheet>
 
@@ -597,15 +732,6 @@ export default function Page() {
       </DetailSheet>
 
       {/* ─── MODALS ─── */}
-      {selectedRankingPlayer && (
-        <PlayerHistoryModal
-          player={selectedRankingPlayer}
-          activities={activities}
-          participants={participants}
-          onClose={() => setSelectedRankingPlayer(null)}
-        />
-      )}
-
       {selectedInviter && (
         <DetailSheet
           open={!!selectedInviter}

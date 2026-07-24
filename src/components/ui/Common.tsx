@@ -27,7 +27,7 @@ export function Label({
   return (
     <ShadcnLabel
       className={
-        "text-xs text-text-muted font-bold uppercase tracking-wide mb-2 block" +
+        "text-xs text-muted-foreground font-bold uppercase tracking-wide mb-2 block" +
         (className ? " " + className : "")
       }
       style={style}
@@ -40,7 +40,7 @@ export function Label({
 // MANTENIDO: Empty con mejoras
 export function Empty({ text, className = "" }) {
   return (
-    <div className={cn("text-center py-8 text-text-muted text-sm", className)}>
+    <div className={cn("text-center py-8 text-muted-foreground text-sm", className)}>
       {text}
     </div>
   );
@@ -49,8 +49,8 @@ export function Empty({ text, className = "" }) {
 // MIGRADO: InfoCard → Card de shadcn/ui
 export function InfoCard({ text }) {
   return (
-    <Card className="border-surface-dark bg-surface-dark">
-      <CardContent className="pt-6 text-sm text-text-muted leading-relaxed">
+    <Card className="border-border bg-muted">
+      <CardContent className="pt-6 text-sm text-muted-foreground leading-relaxed">
         {text}
       </CardContent>
     </Card>

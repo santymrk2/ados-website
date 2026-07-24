@@ -6,6 +6,11 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
+/** Strip accents/diacritics and lowercase — "Martín" → "martin" */
+export function normalizeText(str: string): string {
+  return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+}
+
 export function formatDate(d: string | Date | null | undefined): string {
   if (!d) return '';
   if (d instanceof Date) {

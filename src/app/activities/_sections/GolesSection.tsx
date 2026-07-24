@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar } from "@/components/ui/Avatar";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { cn } from "@/lib/utils";
+import { cn, normalizeText } from "@/lib/utils";
 import type { Gol, ParticipantBasic } from "@/lib/types";
 
 const GOAL_TYPES = [
@@ -42,7 +42,7 @@ function GoalRow({
 
   const filteredPlayers = search.trim()
     ? availablePlayers.filter((p) =>
-        `${p.nombre} ${p.apellido}`.toLowerCase().includes(search.toLowerCase()),
+        normalizeText(`${p.nombre} ${p.apellido}`).includes(normalizeText(search)),
       )
     : availablePlayers;
 
@@ -57,7 +57,7 @@ function GoalRow({
   };
 
   return (
-    <div className="flex items-center gap-2 p-2 bg-white rounded-2xl border border-surface-dark shadow-sm transition-all duration-200 hover:border-primary/30">
+    <div className="flex items-center gap-2 p-2 bg-white rounded-2xl border border-border shadow-sm transition-all duration-200 hover:border-primary/30">
       <div className="flex-1 min-w-0">
         <Popover
           open={openDropdown === g.id}
@@ -66,8 +66,8 @@ function GoalRow({
           <PopoverTrigger asChild disabled={locked}>
             <button
               className={cn(
-                "flex items-center gap-2 w-full text-left px-2 py-1 rounded-lg hover:bg-surface-light transition-colors",
-                !selectedPlayer && "border border-dashed border-surface-dark py-1.5",
+                "flex items-center gap-2 w-full text-left px-2 py-1 rounded-lg hover:bg-card transition-colors",
+                !selectedPlayer && "border border-dashed border-border py-1.5",
               )}
             >
               {selectedPlayer ? (
@@ -79,18 +79,18 @@ function GoalRow({
                 </>
               ) : (
                 <>
-                  <div className="w-7 h-7 rounded-full bg-surface-dark flex items-center justify-center text-[10px] font-black text-text-muted">
+                  <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center text-[10px] font-black text-muted-foreground">
                     ?
                   </div>
-                  <span className="text-sm text-text-muted italic">Seleccionar jugador...</span>
+                  <span className="text-sm text-muted-foreground italic">Seleccionar jugador...</span>
                 </>
               )}
             </button>
           </PopoverTrigger>
-          <PopoverContent align="start" className="w-64 p-0 shadow-xl border-surface-dark">
-            <div className="p-2 border-b border-surface-dark bg-surface-light/50">
+          <PopoverContent align="start" className="w-64 p-0 shadow-xl border-border">
+            <div className="p-2 border-b border-border bg-card/50">
               <div className="relative">
-                <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text-muted" />
+                <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
                 <Input
                   placeholder="Buscar jugador..."
                   value={search}
@@ -116,7 +116,7 @@ function GoalRow({
                   </button>
                 ))
               ) : (
-                <div className="px-3 py-6 text-center text-xs text-text-muted italic">
+                <div className="px-3 py-6 text-center text-xs text-muted-foreground italic">
                   No se encontraron jugadores
                 </div>
               )}
@@ -125,7 +125,7 @@ function GoalRow({
         </Popover>
       </div>
 
-      <div className="flex bg-surface-dark/50 p-0.5 rounded-lg shrink-0">
+      <div className="flex bg-muted/50 p-0.5 rounded-lg shrink-0">
         {GOAL_TYPES.map((type) => (
           <button
             key={type.id}
@@ -144,11 +144,11 @@ function GoalRow({
         ))}
       </div>
 
-      <div className="flex items-center gap-1 bg-surface-light rounded-lg px-1 shrink-0">
+      <div className="flex items-center gap-1 bg-card rounded-lg px-1 shrink-0">
         <button
           disabled={locked || (g.cant || 1) <= 1}
           onClick={() => g.id != null && onUpdate(g.id, "cant", (g.cant || 1) - 1)}
-          className="w-6 h-6 flex items-center justify-center text-text-muted hover:text-red-500 disabled:opacity-30 transition-colors"
+          className="w-6 h-6 flex items-center justify-center text-muted-foreground hover:text-red-500 disabled:opacity-30 transition-colors"
         >
           <Minus className="w-3 h-3" />
         </button>
@@ -158,7 +158,7 @@ function GoalRow({
         <button
           disabled={locked}
           onClick={() => g.id != null && onUpdate(g.id, "cant", (g.cant || 1) + 1)}
-          className="w-6 h-6 flex items-center justify-center text-text-muted hover:text-primary transition-colors"
+          className="w-6 h-6 flex items-center justify-center text-muted-foreground hover:text-primary transition-colors"
         >
           <Plus className="w-3 h-3" />
         </button>
@@ -329,11 +329,11 @@ export function GolesSection() {
                 />
               ))
             ) : (
-              <div className="py-12 flex flex-col items-center justify-center border-2 border-dashed border-surface-dark rounded-2xl bg-surface-light/30">
+              <div className="py-12 flex flex-col items-center justify-center border-2 border-dashed border-border rounded-2xl bg-card/30">
                 <div className="w-12 h-12 rounded-full bg-indigo-50 flex items-center justify-center mb-3">
                   <Plus className="w-6 h-6 text-primary" />
                 </div>
-                <p className="text-sm text-text-muted mb-4">No hay goles registrados</p>
+                <p className="text-sm text-muted-foreground mb-4">No hay goles registrados</p>
                 <Button
                   onClick={add}
                   variant="outline"
@@ -358,22 +358,12 @@ export function GolesSection() {
             )}
           </div>
 
-          <div className="grid grid-cols-3 gap-3">
-            {GOAL_TYPES.map((sport) => {
-              const data = bySport[sport.id];
-              return (
-                <div
-                  key={sport.id}
-                  className="bg-white rounded-2xl p-4 border border-surface-dark shadow-sm"
-                >
-                  <div className="text-[11px] font-black uppercase tracking-wider text-text-muted mb-1">
-                    {sport.label}
-                  </div>
-                  <div className="text-3xl font-black text-primary">{data?.total || 0}</div>
-                  <div className="text-[10px] font-bold text-text-muted mt-1">goles</div>
-                </div>
-              );
-            })}
+          <div className="flex items-center justify-center gap-3 text-xs font-bold text-white/60 mb-4">
+            <span>⚽ {bySport.f?.total || 0}</span>
+            <span>·</span>
+            <span>🤾 {bySport.h?.total || 0}</span>
+            <span>·</span>
+            <span>🏀 {bySport.b?.total || 0}</span>
           </div>
 
           {allPlayersTotal.length > 0 && (
@@ -387,7 +377,7 @@ export function GolesSection() {
                     key={p.pid}
                     className="bg-white/90 rounded-xl p-3 flex items-center gap-3"
                   >
-                    <div className="w-7 h-7 flex items-center justify-center font-bold text-xs text-text-muted">
+                    <div className="w-5 h-5 rounded bg-white/10 flex items-center justify-center text-[10px] font-black text-white/60">
                       {i + 1}
                     </div>
                     {p.participant && <Avatar p={p.participant} size={30} />}

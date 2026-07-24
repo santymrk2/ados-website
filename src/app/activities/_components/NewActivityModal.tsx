@@ -104,7 +104,7 @@ export function NewActivityModal({ open, onOpenChange }: NewActivityModalProps) 
           />
         </div>
 
-        <div className="bg-white rounded-2xl p-4 border border-surface-dark shadow-sm">
+        <div className="bg-white rounded-2xl p-4 border border-border shadow-sm">
           <Label>Equipos</Label>
           <RadioGroup
             value={String(cantEquipos)}
@@ -130,7 +130,7 @@ export function NewActivityModal({ open, onOpenChange }: NewActivityModalProps) 
               </label>
             </div>
           </RadioGroup>
-          <div className="text-[10px] text-text-muted mt-2">
+          <div className="text-[10px] text-muted-foreground mt-2">
             {cantEquipos === 2
               ? "Solo se usarán E1 y E2."
               : cantEquipos === 6

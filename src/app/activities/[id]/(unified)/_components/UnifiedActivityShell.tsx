@@ -7,7 +7,7 @@ import { ACTIVITY_SECTIONS, getSectionDef, type SectionId } from "@/lib/activity
 import { cn, formatDate } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { FloatingNav } from "@/components/ui/FloatingNav";
-import { Check, Loader2, AlertCircle } from "lucide-react";
+import { Check, Loader2, AlertCircle, ChevronLeft } from "lucide-react";
 import type { Activity } from "@/lib/types";
 
 interface UnifiedActivityShellProps {
@@ -65,10 +65,17 @@ function SimpleHeader({
   date?: string;
   asistentes?: number;
 }) {
+  const router = useRouter();
   return (
     <div className="pt-safe bg-primary">
       <div className="text-white p-4">
         <div className="flex items-center gap-3">
+          <button
+            onClick={() => router.push("/activities")}
+            className="min-w-[44px] min-h-[44px] flex items-center justify-center -ml-2 shrink-0"
+          >
+            <ChevronLeft className="w-6 h-6" />
+          </button>
           <div className="flex-1 min-w-0">
             <h1 className="font-black text-lg truncate">
               {title || "Actividad"}
@@ -198,6 +205,12 @@ function ShellInner({
       <div className="pt-safe">
         <div className="text-white p-4">
           <div className="flex items-center gap-3">
+            <button
+              onClick={() => router.push("/activities")}
+              className="min-w-[44px] min-h-[44px] flex items-center justify-center -ml-2 shrink-0"
+            >
+              <ChevronLeft className="w-6 h-6" />
+            </button>
             <div className="flex-1 min-w-0">
               <ActivityTitle />
               <ActivityMeta />

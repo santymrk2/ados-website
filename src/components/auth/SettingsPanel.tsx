@@ -7,9 +7,8 @@ import {
   Save,
   Bell,
   X,
-  ChevronDown,
-  ChevronUp,
   Info,
+  ChevronRight,
 } from "lucide-react";
 import {
   TEAMS,
@@ -56,40 +55,11 @@ function getContrastColor(hex: string) {
   return getLuminance(rgb.r, rgb.g, rgb.b) > 0.5 ? "#000000" : "#ffffff";
 }
 
-function AccordionSection({
-  title,
-  icon: Icon,
-  isOpen,
-  onToggle,
-  children,
-}: {
-  title: string;
-  icon: React.ComponentType<{ className?: string }>;
-  isOpen: boolean;
-  onToggle: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="border border-surface-dark rounded-xl overflow-hidden">
-      <button
-        type="button"
-        onClick={onToggle}
-        className="w-full flex items-center justify-between p-4 hover:bg-surface-dark/30 transition-colors"
-      >
-        <div className="flex items-center gap-2 font-bold text-dark">
-          <Icon className="w-4 h-4 text-primary" />
-          {title}
-        </div>
-        {isOpen ? (
-          <ChevronUp className="w-5 h-5 text-text-muted" />
-        ) : (
-          <ChevronDown className="w-5 h-5 text-text-muted" />
-        )}
-      </button>
-      {isOpen && <div className="p-4 border-t border-surface-dark">{children}</div>}
-    </div>
-  );
-}
+const SECTION_TITLES: Record<string, string> = {
+  colors: "Colores de Equipos",
+  push: "Notificaciones Push",
+  about: "Acerca de",
+};
 
 export function SettingsPanel({
   isOpen,
@@ -106,7 +76,7 @@ export function SettingsPanel({
   const [saved, setSaved] = useState(false);
   const isAdmin = role === "admin";
 
-  const [openSections, setOpenSections] = useState<string[]>([]);
+  const [currentSection, setCurrentSection] = useState<string | null>(null);
 
   const [pushAvailable, setPushAvailable] = useState(false);
   const [pushConfigured, setPushConfigured] = useState(false);
@@ -139,19 +109,11 @@ export function SettingsPanel({
       queueMicrotask(() => {
         setColors(colors);
         setSaved(false);
-        setOpenSections([]);
+        setCurrentSection(null);
       });
       queueMicrotask(() => checkPushStatus());
     }
   }, [isOpen, checkPushStatus]);
-
-  const toggleSection = (section: string) => {
-    setOpenSections((prev) =>
-      prev.includes(section)
-        ? prev.filter((s) => s !== section)
-        : [...prev, section],
-    );
-  };
 
   const handleColorChange = (team: string, color: string) => {
     setColors((prev) => ({ ...prev, [team]: color }));
@@ -227,69 +189,115 @@ export function SettingsPanel({
     setTimeout(() => setSubscriptionSaved(false), 2000);
   };
 
+  const sheetTitle = currentSection ? SECTION_TITLES[currentSection] : "Configuración";
+
   return (
     <DetailSheet
       open={isOpen}
-      onOpenChange={(open) => !open && onClose()}
-      title="Configuración"
+      onOpenChange={(open) => {
+        if (!open) {
+          if (currentSection) {
+            setCurrentSection(null);
+          } else {
+            onClose();
+          }
+        }
+      }}
+      title={sheetTitle}
     >
       <div className="space-y-3">
-        {isAdmin && (
-          <AccordionSection
-            title="Colores de Equipos"
-            icon={Palette}
-            isOpen={openSections.includes("colors")}
-            onToggle={() => toggleSection("colors")}
-          >
-            <div className="space-y-3">
-              {TEAMS.map((team) => (
-                <div key={team} className="flex items-center gap-3">
-                  <div
-                    className="w-10 h-10 rounded-lg flex items-center justify-center font-black text-sm shrink-0"
-                    style={{
-                      backgroundColor: colors[team] || "#cccccc",
-                      color: getContrastColor(colors[team] || "#cccccc"),
-                    }}
-                  >
-                    {team}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <label className="text-xs text-text-muted font-bold block mb-1">
-                      Color {team}
-                    </label>
-                    <div className="flex flex-col gap-2">
-                      <div className="grid grid-cols-6 gap-1.5">
-                        {PRESET_COLORS.map((preset) => (
-                          <button
-                            key={preset}
-                            type="button"
-                            onClick={() => handleColorChange(team, preset)}
-                            className={cn(
-                              "w-7 h-7 rounded-full cursor-pointer border-2 transition-all hover:scale-110",
-                              (colors[team] || "#cccccc").toUpperCase() ===
-                                preset.toUpperCase()
-                                ? "ring-2 ring-primary ring-offset-1 border-primary"
-                                : "border-transparent",
-                            )}
-                            style={{ backgroundColor: preset }}
-                            aria-label={`Seleccionar ${preset}`}
-                          />
-                        ))}
-                      </div>
-                      <Input
-                        type="text"
-                        value={colors[team] || "#cccccc"}
-                        onChange={(e) =>
-                          handleColorChange(team, e.target.value)
-                        }
-                        className="font-mono uppercase text-xs h-8"
-                      />
+        {currentSection === null && (
+          <>
+            {isAdmin && (
+              <button
+                onClick={() => setCurrentSection("colors")}
+                className="w-full flex items-center gap-3 p-4 bg-primary/10 rounded-xl border border-primary/15 text-left transition-colors hover:bg-primary/15"
+              >
+                <Palette className="w-5 h-5 text-primary" />
+                <div className="flex-1">
+                  <div className="font-bold text-sm text-dark">Colores de Equipos</div>
+                  <div className="text-xs text-text-muted">Personalizá los colores de cada equipo</div>
+                </div>
+                <ChevronRight className="w-4 h-4 text-text-muted" />
+              </button>
+            )}
+
+            {pushAvailable && (
+              <button
+                onClick={() => setCurrentSection("push")}
+                className="w-full flex items-center gap-3 p-4 bg-primary/10 rounded-xl border border-primary/15 text-left transition-colors hover:bg-primary/15"
+              >
+                <Bell className="w-5 h-5 text-primary" />
+                <div className="flex-1">
+                  <div className="font-bold text-sm text-dark">Notificaciones Push</div>
+                  <div className="text-xs text-text-muted">Activá alertas para cumpleaños</div>
+                </div>
+                <ChevronRight className="w-4 h-4 text-text-muted" />
+              </button>
+            )}
+
+            <button
+              onClick={() => setCurrentSection("about")}
+              className="w-full flex items-center gap-3 p-4 bg-primary/10 rounded-xl border border-primary/15 text-left transition-colors hover:bg-primary/15"
+            >
+              <Info className="w-5 h-5 text-primary" />
+              <div className="flex-1">
+                <div className="font-bold text-sm text-dark">Acerca de</div>
+                <div className="text-xs text-text-muted">Versión y créditos</div>
+              </div>
+              <ChevronRight className="w-4 h-4 text-text-muted" />
+            </button>
+          </>
+        )}
+
+        {currentSection === "colors" && (
+          <div className="space-y-3">
+            {TEAMS.map((team) => (
+              <div key={team} className="flex items-center gap-3">
+                <div
+                  className="w-10 h-10 rounded-lg flex items-center justify-center font-black text-sm shrink-0"
+                  style={{
+                    backgroundColor: colors[team] || "#cccccc",
+                    color: getContrastColor(colors[team] || "#cccccc"),
+                  }}
+                >
+                  {team}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <label className="text-xs text-text-muted font-bold block mb-1">
+                    Color {team}
+                  </label>
+                  <div className="flex flex-col gap-2">
+                    <div className="grid grid-cols-6 gap-1.5">
+                      {PRESET_COLORS.map((preset) => (
+                        <button
+                          key={preset}
+                          type="button"
+                          onClick={() => handleColorChange(team, preset)}
+                          className={cn(
+                            "w-7 h-7 rounded-full cursor-pointer border-2 transition-all hover:scale-110",
+                            (colors[team] || "#cccccc").toUpperCase() ===
+                              preset.toUpperCase()
+                              ? "ring-2 ring-primary ring-offset-1 border-primary"
+                              : "border-transparent",
+                          )}
+                          style={{ backgroundColor: preset }}
+                          aria-label={`Seleccionar ${preset}`}
+                        />
+                      ))}
                     </div>
+                    <Input
+                      type="text"
+                      value={colors[team] || "#cccccc"}
+                      onChange={(e) =>
+                        handleColorChange(team, e.target.value)
+                      }
+                      className="font-mono uppercase text-xs h-8"
+                    />
                   </div>
                 </div>
-              ))}
-            </div>
-
+              </div>
+            ))}
             <Button
               onClick={handleSave}
               size="lg"
@@ -301,16 +309,11 @@ export function SettingsPanel({
               <Save className="w-4 h-4" />
               {saved ? "¡Guardado!" : "Guardar Colores"}
             </Button>
-          </AccordionSection>
+          </div>
         )}
 
-        {pushAvailable && (
-          <AccordionSection
-            title="Notificaciones Push"
-            icon={Bell}
-            isOpen={openSections.includes("push")}
-            onToggle={() => toggleSection("push")}
-          >
+        {currentSection === "push" && (
+          <>
             {!pushConfigured ? (
               <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
                 <p className="text-sm text-yellow-800">
@@ -359,15 +362,10 @@ export function SettingsPanel({
                 </div>
               </div>
             )}
-          </AccordionSection>
+          </>
         )}
 
-        <AccordionSection
-          title="Acerca de"
-          icon={Info}
-          isOpen={openSections.includes("about")}
-          onToggle={() => toggleSection("about")}
-        >
+        {currentSection === "about" && (
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
               <span className="text-text-muted">Versión</span>
@@ -378,7 +376,7 @@ export function SettingsPanel({
               <span className="font-medium text-dark">ADOS Team</span>
             </div>
           </div>
-        </AccordionSection>
+        )}
       </div>
 
       <div className="border-t border-surface-dark pt-4 mt-4">

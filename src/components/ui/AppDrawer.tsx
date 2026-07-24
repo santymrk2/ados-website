@@ -39,7 +39,7 @@ export function AppDrawer({ open, onOpenChange }: AppDrawerProps) {
 
   const navItems = [
     { href: "/", icon: BarChart3, label: "Dashboard" },
-    { href: "/calendar", icon: PartyPopper, label: "Eventos" },
+    { href: "/calendar", icon: PartyPopper, label: "Cumpleaños" },
     { href: "/activities", icon: Calendar, label: "Actividades" },
     { href: "/participants", icon: Users, label: "Jugadores" },
   ];
@@ -101,24 +101,6 @@ export function AppDrawer({ open, onOpenChange }: AppDrawerProps) {
                 <div>
                   <div className="font-bold text-dark">{userName}</div>
                   <div className="text-sm text-text-muted">{userRole}</div>
-                </div>
-              </div>
-            </div>
-
-            {/* Stats Summary */}
-            <div className="px-5 py-4 border-b border-surface-dark">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <div className="text-2xl font-black text-primary">
-                    {db.activities.length}
-                  </div>
-                  <div className="text-xs text-text-muted">Actividades</div>
-                </div>
-                <div>
-                  <div className="text-2xl font-black text-primary">
-                    {db.participants.length}
-                  </div>
-                  <div className="text-xs text-text-muted">Jugadores</div>
                 </div>
               </div>
             </div>

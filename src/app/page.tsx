@@ -2,13 +2,13 @@
 
 import { useState, useMemo } from "react";
 import { useStore } from "@nanostores/react";
-import { useRouter } from "next/navigation";
 import { useApp } from "@/hooks/useApp";
 import { $role } from "@/store/appStore";
 import {
   ChevronRight,
   Award,
   ClipboardList,
+  Check,
 } from "lucide-react";
 import { Empty } from "@/components/ui/Common";
 import { Avatar } from "@/components/ui/Avatar";
@@ -68,8 +68,8 @@ function RankRow({
   const metricValue = p[metric] || 0;
 
   const className = cn(
-    "bg-white rounded-xl p-3 flex items-center gap-3 border relative overflow-hidden",
-    pos <= 3 ? "border-primary/30" : "border-surface-dark",
+    "bg-primary/10 rounded-xl p-3 flex items-center gap-3 border border-primary/15 relative overflow-hidden",
+    pos <= 3 && "border-primary/40 bg-primary/15",
     isClickable &&
       "w-full text-left cursor-pointer transition-all hover:border-primary/40 active:scale-[0.99]",
   );
@@ -83,19 +83,13 @@ function RankRow({
         />
       )}
       <RankBadge pos={pos} />
-      <Avatar p={p} size={36} />
+      <Avatar p={p} size={32} />
       <div className="flex-1 z-10 min-w-0">
-        <div className="font-bold truncate">
+        <div className="font-bold text-sm truncate">
           {p.nombre} {p.apellido}
         </div>
-        <div className="text-xs mt-1 flex gap-2 flex-wrap">
-          <span className="text-text-muted">{p.acts} act.</span>
-          {p.gf > 0 && <span className="text-text-muted font-bold">{p.gf}</span>}
-          {p.gh > 0 && <span className="text-text-muted font-bold">{p.gh}</span>}
-          {p.gb > 0 && <span className="text-text-muted font-bold">{p.gb}</span>}
-        </div>
       </div>
-      <div className="font-black text-2xl z-10">{metricValue}</div>
+      <div className="font-black text-xl z-10">{metricValue}</div>
     </>
   );
 
@@ -114,8 +108,6 @@ export default function Page() {
   const { db, isLoading } = useApp();
   const { participants, activities, rankings } = db;
   const role = useStore($role);
-  const router = useRouter();
-
   // Sheet states
   const [goleadoresOpen, setGoleadoresOpen] = useState(false);
   const [rankingOpen, setRankingOpen] = useState(false);
@@ -126,10 +118,8 @@ export default function Page() {
     useState<InvitacionRanking | null>(null);
   const [selectedRankingPlayer, setSelectedRankingPlayer] =
     useState<RankingWithStats | null>(null);
-
-  const handleActivityClick = (activityId: number) => {
-    router.push(`/activities/${activityId}`);
-  };
+  const [selectedActivityIds, setSelectedActivityIds] = useState<number[]>([]);
+  const [invFilterOpen, setInvFilterOpen] = useState(false);
 
   const calculatedRankings = useMemo(() => {
     return (participants || [])
@@ -191,23 +181,17 @@ export default function Page() {
     };
   }, [calculatedRankings, participants, activities]);
 
-  const lastActs = useMemo(
-    () =>
-      [...activities]
-        .sort(
-          (a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime(),
-        )
-        .slice(0, 2),
-    [activities],
-  );
-
   const invitacionRanking = useMemo(() => {
     const counts: Record<
       number,
       { total: number; invitaciones: { inv: Invitacion; activity: Activity }[] }
     > = {};
 
-    (activities || []).forEach((act) => {
+    const actsToCount = selectedActivityIds.length > 0
+      ? (activities || []).filter((a) => selectedActivityIds.includes(a.id))
+      : (activities || []);
+
+    actsToCount.forEach((act) => {
       (act.invitaciones || []).forEach((inv) => {
         if (inv.invitador) {
           if (!counts[inv.invitador]) {
@@ -227,7 +211,7 @@ export default function Page() {
       }))
       .filter((p) => p.invitedCount > 0)
       .sort((a, b) => b.invitedCount - a.invitedCount);
-  }, [participants, activities]);
+  }, [participants, activities, selectedActivityIds]);
 
   const getInvitadosDetails = (
     invitaciones: { inv: Invitacion; activity: Activity }[],
@@ -263,27 +247,27 @@ export default function Page() {
       <div className="p-4">
         {/* Stats Cards */}
         <div className="grid grid-cols-3 gap-3 mb-6">
-          <div className="bg-primary rounded-xl p-3 text-center">
-            <div className="text-2xl font-black text-accent">
+          <div className="bg-primary/10 rounded-xl p-3 text-center border border-primary/15">
+            <div className="text-2xl font-black text-primary bg-white/50 rounded-lg py-1">
               {activities.length}
             </div>
-            <div className="text-xs font-bold opacity-60 text-accent">
+            <div className="text-xs font-bold text-text-muted mt-1.5">
               Actividades
             </div>
           </div>
-          <div className="bg-primary rounded-xl p-3 text-center">
-            <div className="text-2xl font-black text-accent">
+          <div className="bg-primary/10 rounded-xl p-3 text-center border border-primary/15">
+            <div className="text-2xl font-black text-primary bg-white/50 rounded-lg py-1">
               {stats.totalPlayers}
             </div>
-            <div className="text-xs font-bold opacity-60 text-accent">
+            <div className="text-xs font-bold text-text-muted mt-1.5">
               Jugadores
             </div>
           </div>
-          <div className="bg-primary rounded-xl p-3 text-center">
-            <div className="text-2xl font-black text-accent">
+          <div className="bg-primary/10 rounded-xl p-3 text-center border border-primary/15">
+            <div className="text-2xl font-black text-primary bg-white/50 rounded-lg py-1">
               {stats.totalGoles}
             </div>
-            <div className="text-xs font-bold opacity-60 text-accent">
+            <div className="text-xs font-bold text-text-muted mt-1.5">
               Total Goles
             </div>
           </div>
@@ -294,7 +278,7 @@ export default function Page() {
           className="flex items-center gap-2 mb-3 cursor-pointer select-none"
           onClick={() => setGoleadoresOpen(true)}
         >
-          <div className="font-bold text-base">Goleadores</div>
+          <div className="font-bold text-lg">Goleadores</div>
           <ChevronRight className="w-4 h-4 text-text-muted" />
         </div>
         {stats.top3Scorers.length === 0 ? (
@@ -306,11 +290,11 @@ export default function Page() {
             {stats.top3Scorers.map((p, i) => (
               <div
                 key={p.id}
-                className="flex items-center gap-3 p-2 bg-surface-dark rounded-xl"
+                className="flex items-center gap-3 p-2 bg-primary/10 rounded-xl border border-primary/15"
               >
                 <PodiumBadge
                   pos={i + 1}
-                  className="w-6 h-6 bg-white border-0 shadow-sm text-primary font-bold"
+                  className="w-6 h-6 bg-white border-0 text-primary font-bold"
                 />
                 <Avatar p={p} size={28} />
                 <div className="flex-1 min-w-0">
@@ -318,9 +302,8 @@ export default function Page() {
                     {p.nombre} {p.apellido}
                   </div>
                 </div>
-                <div className="font-black text-primary bg-white px-2 py-1 rounded-lg text-xs shadow-sm">
-                  {p.goals}{" "}
-                  <span className="text-[10px] opacity-50 font-bold">goles</span>
+                <div className="font-black text-primary text-lg">
+                  {p.goals}
                 </div>
               </div>
             ))}
@@ -332,7 +315,7 @@ export default function Page() {
           className="flex items-center gap-2 mb-3 cursor-pointer select-none"
           onClick={() => setRankingOpen(true)}
         >
-          <div className="font-bold text-base">Ranking Individual</div>
+          <div className="font-bold text-lg">Ranking Individual</div>
           <ChevronRight className="w-4 h-4 text-text-muted" />
         </div>
         {calculatedRankings.length === 0 ? (
@@ -342,7 +325,24 @@ export default function Page() {
         ) : (
           <div className="flex flex-col gap-2 mb-6">
             {calculatedRankings.slice(0, 3).map((p, i) => (
-              <RankRow key={p.id} p={p} pos={i + 1} metric="total" />
+              <div
+                key={p.id}
+                className="flex items-center gap-3 p-2 bg-primary/10 rounded-xl border border-primary/15"
+              >
+                <PodiumBadge
+                  pos={i + 1}
+                  className="w-6 h-6 bg-white border-0 text-primary font-bold"
+                />
+                <Avatar p={p} size={28} />
+                <div className="flex-1 min-w-0">
+                  <div className="font-bold text-xs truncate">
+                    {p.nombre} {p.apellido}
+                  </div>
+                </div>
+                <div className="font-black text-primary text-lg">
+                  {p.total}
+                </div>
+              </div>
             ))}
           </div>
         )}
@@ -352,7 +352,7 @@ export default function Page() {
           className="flex items-center gap-2 mb-3 cursor-pointer select-none"
           onClick={() => setInvitacionesOpen(true)}
         >
-          <div className="font-bold text-base">Invitaciones</div>
+          <div className="font-bold text-lg">Invitaciones</div>
           <ChevronRight className="w-4 h-4 text-text-muted" />
         </div>
         {invitacionRanking.length === 0 ? (
@@ -364,50 +364,25 @@ export default function Page() {
             {invitacionRanking.slice(0, 3).map((p, i) => (
               <div
                 key={p.id}
-                className="flex items-center gap-3 p-2 bg-surface-dark rounded-xl"
+                className="flex items-center gap-3 p-2 bg-primary/10 rounded-xl border border-primary/15"
               >
-                <RankBadge pos={i + 1} />
+                <PodiumBadge
+                  pos={i + 1}
+                  className="w-6 h-6 bg-white border-0 text-primary font-bold"
+                />
                 <Avatar p={p} size={28} />
                 <div className="flex-1 min-w-0">
                   <div className="font-bold text-xs truncate">
                     {p.nombre} {p.apellido}
                   </div>
                 </div>
-                <div className="font-black text-primary text-sm">
-                  {p.invitedCount}{" "}
-                  <span className="text-[10px] opacity-50 font-bold">inv.</span>
+                <div className="font-black text-primary text-lg">
+                  {p.invitedCount}
+                  <span className="text-[10px] opacity-50 font-bold ml-0.5">inv.</span>
                 </div>
               </div>
             ))}
           </div>
-        )}
-
-        {/* ─── ÚLTIMAS ACTIVIDADES ─── */}
-        {lastActs.length > 0 && (
-          <>
-            <div className="font-bold text-base mb-3">Últimas Actividades</div>
-            <div className="flex flex-col gap-2 mb-4">
-              {lastActs.map((a) => (
-                <div
-                  key={a.id}
-                  onClick={() => handleActivityClick(a.id)}
-                  className="bg-white rounded-xl p-4 border border-surface-dark flex justify-between cursor-pointer"
-                >
-                  <div>
-                    <div className="font-bold">
-                      {a.titulo || formatDate(a.fecha)}
-                    </div>
-                    <div className="text-sm text-text-muted mt-1">
-                      {formatDate(a.fecha)} · {a.asistentes.length} presentes
-                    </div>
-                  </div>
-                  <div className="text-sm text-primary font-bold">
-                    {a.juegos.length} juegos
-                  </div>
-                </div>
-              ))}
-            </div>
-          </>
         )}
       </div>
 
@@ -424,11 +399,11 @@ export default function Page() {
             {stats.allScorers.map((p, i) => (
               <div
                 key={p.id}
-                className="flex items-center gap-3 p-3 bg-surface-dark rounded-xl"
+                className="flex items-center gap-3 p-3 bg-primary/10 rounded-xl border border-primary/15"
               >
                 <PodiumBadge
                   pos={i + 1}
-                  className="w-6 h-6 bg-white border-0 shadow-sm text-primary font-bold"
+                  className="w-6 h-6 bg-white border-0 text-primary font-bold"
                 />
                 <Avatar p={p} size={32} />
                 <div className="flex-1 min-w-0">
@@ -436,7 +411,7 @@ export default function Page() {
                     {p.nombre} {p.apellido}
                   </div>
                 </div>
-                <div className="font-black text-primary bg-white px-2 py-1 rounded-lg text-xs shadow-sm">
+                <div className="font-black text-primary bg-white px-2 py-1 rounded-lg text-xs">
                   {p.goals}{" "}
                   <span className="text-[10px] opacity-50 font-bold">goles</span>
                 </div>
@@ -463,7 +438,7 @@ export default function Page() {
                 className={cn(
                   "flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg text-xs font-bold transition-all",
                   rankingMetric === metric.key
-                    ? "bg-primary text-white shadow-md"
+                    ? "bg-primary text-white"
                     : "bg-surface-dark text-text-muted hover:bg-surface-dark/80",
                 )}
               >
@@ -505,6 +480,84 @@ export default function Page() {
         onOpenChange={setInvitacionesOpen}
         title="Invitaciones"
       >
+        {/* Activity filter */}
+        {activities.length > 0 && (
+          <div className="mb-4">
+            <button
+              onClick={() => setInvFilterOpen(!invFilterOpen)}
+              className="flex items-center gap-2 text-xs font-bold text-text-muted hover:text-dark transition-colors"
+            >
+              <span className={cn(
+                "w-4 h-4 rounded border flex items-center justify-center",
+                selectedActivityIds.length === 0
+                  ? "bg-primary border-primary"
+                  : "border-surface-dark"
+              )}>
+                {selectedActivityIds.length === 0 && <Check className="w-3 h-3 text-white" />}
+              </span>
+              {selectedActivityIds.length === 0
+                ? "Todas las actividades"
+                : `${selectedActivityIds.length} actividad${selectedActivityIds.length > 1 ? "es" : ""} seleccionada${selectedActivityIds.length > 1 ? "s" : ""}`}
+            </button>
+            {invFilterOpen && (
+              <div className="mt-2 space-y-1 max-h-40 overflow-y-auto bg-surface-dark/30 rounded-xl p-2">
+                <button
+                  onClick={() => setSelectedActivityIds([])}
+                  className={cn(
+                    "flex items-center gap-2 w-full px-2 py-1.5 rounded-lg text-xs text-left transition-colors",
+                    selectedActivityIds.length === 0
+                      ? "bg-primary/10 text-primary font-bold"
+                      : "text-text-muted hover:bg-surface-dark/50"
+                  )}
+                >
+                  <span className={cn(
+                    "w-4 h-4 rounded border flex items-center justify-center shrink-0",
+                    selectedActivityIds.length === 0
+                      ? "bg-primary border-primary"
+                      : "border-surface-dark"
+                  )}>
+                    {selectedActivityIds.length === 0 && <Check className="w-3 h-3 text-white" />}
+                  </span>
+                  Todas
+                </button>
+                {[...activities]
+                  .sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime())
+                  .map((act) => {
+                    const selected = selectedActivityIds.includes(act.id);
+                    return (
+                      <button
+                        key={act.id}
+                        onClick={() => {
+                          setSelectedActivityIds((prev) =>
+                            selected
+                              ? prev.filter((id) => id !== act.id)
+                              : [...prev, act.id]
+                          );
+                        }}
+                        className={cn(
+                          "flex items-center gap-2 w-full px-2 py-1.5 rounded-lg text-xs text-left transition-colors",
+                          selected
+                            ? "bg-primary/10 text-primary font-bold"
+                            : "text-text-muted hover:bg-surface-dark/50"
+                        )}
+                      >
+                        <span className={cn(
+                          "w-4 h-4 rounded border flex items-center justify-center shrink-0",
+                          selected
+                            ? "bg-primary border-primary"
+                            : "border-surface-dark"
+                        )}>
+                          {selected && <Check className="w-3 h-3 text-white" />}
+                        </span>
+                        <span className="truncate">{act.titulo || formatDate(act.fecha)}</span>
+                      </button>
+                    );
+                  })}
+              </div>
+            )}
+          </div>
+        )}
+
         {invitacionRanking.length === 0 ? (
           <Empty text="No hay invitaciones registradas" />
         ) : (
@@ -517,20 +570,23 @@ export default function Page() {
                   setSelectedInviter(p);
                 }}
                 className={cn(
-                  "bg-white rounded-xl p-3 flex items-center gap-3 border cursor-pointer transition-colors",
-                  i <= 2 ? "border-primary/30" : "border-surface-dark",
+                  "bg-primary/10 rounded-xl p-3 flex items-center gap-3 border border-primary/15 cursor-pointer transition-colors",
+                  i <= 2 && "border-primary/40 bg-primary/15",
                 )}
               >
-                <RankBadge pos={i + 1} />
-                <Avatar p={p} size={36} />
+                <PodiumBadge
+                  pos={i + 1}
+                  className="w-6 h-6 bg-white border-0 text-primary font-bold"
+                />
+                <Avatar p={p} size={32} />
                 <div className="flex-1 z-10 min-w-0">
-                  <div className="font-bold truncate">
+                  <div className="font-bold text-sm truncate">
                     {p.nombre} {p.apellido}
                   </div>
                 </div>
-                <div className="font-black text-2xl z-10">
+                <div className="font-black text-lg z-10">
                   {p.invitedCount}
-                  <span className="text-xs font-bold text-text-muted ml-1">
+                  <span className="text-[10px] font-bold text-text-muted ml-0.5">
                     inv.
                   </span>
                 </div>
@@ -564,7 +620,7 @@ export default function Page() {
               (detail, i) => (
                 <div
                   key={i}
-                  className="flex items-center gap-3 p-2 bg-surface-dark rounded-xl"
+                  className="flex items-center gap-3 p-2 bg-primary/10 rounded-xl border border-primary/15"
                 >
                   <Avatar p={detail.invited} size={28} />
                   <div className="flex-1 min-w-0">

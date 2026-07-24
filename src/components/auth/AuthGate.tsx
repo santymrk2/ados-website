@@ -43,7 +43,7 @@ function DbErrorScreen({ error, onRetry }: DbErrorScreenProps) {
 
 function getPageTitle(pathname: string): string {
   if (pathname === "/") return "Dashboard";
-  if (pathname === "/calendar") return "Eventos";
+  if (pathname === "/calendar") return "Cumpleaños";
   if (pathname === "/activities") return "Actividades";
   if (pathname === "/participants") return "Jugadores";
   if (pathname.startsWith("/activities/")) return "Actividad";
@@ -167,7 +167,7 @@ export function AuthGate({ children, showNav = true }: AuthGateProps) {
             isActivityDetailPage ? "bg-primary" : "bg-background"
           )}
         >
-          {showNav && (
+          {showNav && !isActivityDetailPage && (
             <AppHeader
               title={getPageTitle(pathname || "/")}
               showSettings={false}

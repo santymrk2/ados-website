@@ -38,14 +38,16 @@ export function DetailSheet({
         <Drawer.Title className="sr-only">{title}</Drawer.Title>
 
         {/* Header */}
-        <div className="flex items-center gap-3 p-4 border-b border-surface-dark flex-shrink-0 pt-safe">
-          <button
-            onClick={() => onOpenChange(false)}
-            className="min-w-[44px] min-h-[44px] flex items-center justify-center -ml-2"
-          >
-            <ChevronLeft className="w-6 h-6" />
-          </button>
-          <div className="font-bold text-lg">{title}</div>
+        <div className="flex-shrink-0 pt-safe border-b border-surface-dark">
+          <div className="flex items-center gap-3 px-4 py-3">
+            <button
+              onClick={() => onOpenChange(false)}
+              className="min-w-[44px] min-h-[44px] flex items-center justify-center -ml-2"
+            >
+              <ChevronLeft className="w-6 h-6" />
+            </button>
+            <div className="font-bold text-lg">{title}</div>
+          </div>
         </div>
 
         {/* Content */}

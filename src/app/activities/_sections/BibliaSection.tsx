@@ -3,6 +3,7 @@
 import { useState, useMemo } from "react";
 import { useUnifiedActivity } from "@/lib/activity-context";
 import { getEdad } from "@/lib/constants";
+import { toggleArrayField } from "@/lib/activity-mutates";
 import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/button";
 import { Empty } from "@/components/ui/Common";
@@ -21,6 +22,7 @@ export function BibliaSection() {
     performQuickUpdate,
   } = useUnifiedActivity();
   const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   const canEdit = (isAdmin || canEditBiblia) && !locked;
 
@@ -55,14 +57,20 @@ export function BibliaSection() {
   }, [db.participants, act.asistentes, searchQuery]);
 
   const toggle = async (id: number) => {
+    if (locked || saving) return;
     const isIncluded = (act.biblias || []).includes(id);
+    setSaving(true);
     try {
-      await performQuickUpdate("biblias", {
-        participantId: id,
-        value: !isIncluded,
-      });
+      await performQuickUpdate(
+        "biblias",
+        { participantId: id, value: !isIncluded },
+        undefined,
+        toggleArrayField("biblias", id, !isIncluded),
+      );
     } catch {
       // Error already handled by performQuickUpdate
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -171,10 +179,10 @@ export function BibliaSection() {
                         </div>
                         <button
                           onClick={() => toggle(p.id)}
-                          disabled={locked}
+                          disabled={locked || saving}
                           className={cn(
                             "flex items-center justify-center h-9 min-w-9 px-3 text-base font-semibold transition-colors rounded-2xl border",
-                            locked &&
+                            (locked || saving) &&
                               "opacity-50 cursor-not-allowed pointer-events-none",
                             bib
                               ? "bg-primary text-primary-foreground border-primary"

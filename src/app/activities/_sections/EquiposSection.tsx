@@ -4,6 +4,7 @@ import { useState, useMemo } from "react";
 import { useUnifiedActivity } from "@/lib/activity-context";
 import { TEAMS, TEAM_COLORS } from "@/lib/constants";
 import { actPts } from "@/lib/calc";
+import { setTeamField, setTeamsBulk } from "@/lib/activity-mutates";
 import { SexBadge } from "@/components/ui/Badges";
 import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/button";
@@ -42,6 +43,7 @@ export function EquiposSection() {
     fromTeam: string;
     toTeam: string;
   } | null>(null);
+  const [saving, setSaving] = useState(false);
 
   const canEdit = isAdmin && !locked;
   const activeTeams = useMemo(
@@ -100,16 +102,21 @@ export function EquiposSection() {
   }, [selectedTeam, act, present, searchQuery]);
 
   const setTeam = async (pid: number, team: string) => {
+    if (locked || saving) return;
     const currentTeam = act.equipos?.[pid];
     const finalTeam = currentTeam === team ? null : team;
-
+    setSaving(true);
     try {
-      await performQuickUpdate("team", {
-        participantId: pid,
-        team: finalTeam,
-      });
+      await performQuickUpdate(
+        "team",
+        { participantId: pid, team: finalTeam },
+        undefined,
+        setTeamField(pid, finalTeam),
+      );
     } catch {
       // Error already handled by performQuickUpdate
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -158,12 +165,20 @@ export function EquiposSection() {
   };
 
   const autoBalance = async (resetAll = false) => {
+    if (locked || saving) return;
     const nextEquipos = buildBalancedTeams(resetAll);
-
+    setSaving(true);
     try {
-      await performQuickUpdate("teams_bulk", { equipos: nextEquipos });
+      await performQuickUpdate(
+        "teams_bulk",
+        { equipos: nextEquipos },
+        undefined,
+        setTeamsBulk(nextEquipos),
+      );
     } catch {
       // Error already handled by performQuickUpdate
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -268,7 +283,7 @@ export function EquiposSection() {
               onClick={handleCompletar}
               variant="ghost"
               size="sm"
-              disabled={locked}
+              disabled={locked || saving}
               className="flex-1 sm:flex-none bg-indigo-50 text-primary text-sm"
             >
               <Zap className="w-3 h-3" /> Completar ({unassignedCount})
@@ -278,7 +293,7 @@ export function EquiposSection() {
             onClick={handleRedistribuir}
             variant="ghost"
             size="sm"
-            disabled={locked}
+            disabled={locked || saving}
             className="flex-1 sm:flex-none bg-red-50 text-red-500 text-sm"
           >
             <Shuffle className="w-3 h-3" /> Redistribuir
@@ -438,7 +453,7 @@ export function EquiposSection() {
                                 setTeam(p.id, t);
                               }
                             }}
-                            disabled={locked}
+                            disabled={locked || saving}
                             className="rounded-full px-3 py-1 text-sm font-bold transition border disabled:opacity-50"
                             style={{
                               backgroundColor:

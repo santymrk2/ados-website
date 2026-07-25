@@ -1177,84 +1177,57 @@ export async function PATCH(request: NextRequest) {
             (row) => row.posicion === 0 && row.equipo === INDIVIDUAL_GAME_MARKER,
           );
 
+          // Delete all existing positions first, then bulk insert the new set.
+          // No need for onConflictDoUpdate — rows were just deleted.
           await tx
             .delete(schema.juegoPosiciones)
             .where(eq(schema.juegoPosiciones.juegoId, juegoId));
 
           if (isIndividualGame) {
-            await tx.insert(schema.juegoPosiciones).values({
-              juegoId,
-              equipo: INDIVIDUAL_GAME_MARKER,
-              posicion: 0,
-            });
-
+            const rows: { juegoId: number; participantId?: number; equipo?: string; posicion: number }[] = [
+              { juegoId, equipo: INDIVIDUAL_GAME_MARKER, posicion: 0 },
+            ];
             const seenPIds = new Set<number>();
+
             for (const [posStr, pIds] of Object.entries(pos)) {
               const posicion = Number(posStr);
-              if (posicion < 1) continue;
+              if (posicion < 1 || !Array.isArray(pIds)) continue;
 
-              if (Array.isArray(pIds)) {
-                for (const pidStr of pIds) {
-                  const participantId = Number(pidStr);
-                  if (!Number.isFinite(participantId) || participantId < 1) continue;
-                  if (seenPIds.has(participantId)) continue;
-                  seenPIds.add(participantId);
-
-                  await tx
-                    .insert(schema.juegoPosiciones)
-                    .values({
-                      juegoId,
-                      participantId,
-                      posicion,
-                    })
-                    .onConflictDoUpdate({
-                      target: [
-                        schema.juegoPosiciones.juegoId,
-                        schema.juegoPosiciones.participantId,
-                      ],
-                      set: { posicion },
-                    });
-                }
+              for (const pidStr of pIds) {
+                const participantId = Number(pidStr);
+                if (!Number.isFinite(participantId) || participantId < 1) continue;
+                if (seenPIds.has(participantId)) continue;
+                seenPIds.add(participantId);
+                rows.push({ juegoId, participantId, posicion });
               }
             }
+
+            await tx.insert(schema.juegoPosiciones).values(rows);
           } else {
-            const allTeams: { equipo: string; posicion: number }[] = [];
+            const rows: { juegoId: number; equipo: string; posicion: number }[] = [];
             const seenTeams = new Set<string>();
+
             for (const [posStr, equipos] of Object.entries(pos)) {
               const posicion = Number(posStr);
               if (posicion < 1 || posicion > activeTeams.length) {
                 throw new AppError("Posición inválida para la cantidad de equipos");
               }
+              if (!Array.isArray(equipos)) continue;
 
-              if (Array.isArray(equipos)) {
-                for (const eqName of equipos) {
-                  if (typeof eqName !== "string") continue;
-                  if (!activeTeams.includes(eqName)) {
-                    throw new AppError("Equipo no habilitado para esta actividad");
-                  }
-                  if (!seenTeams.has(eqName)) {
-                    seenTeams.add(eqName);
-                    allTeams.push({ equipo: eqName, posicion });
-                  }
+              for (const eqName of equipos) {
+                if (typeof eqName !== "string") continue;
+                if (!activeTeams.includes(eqName)) {
+                  throw new AppError("Equipo no habilitado para esta actividad");
+                }
+                if (!seenTeams.has(eqName)) {
+                  seenTeams.add(eqName);
+                  rows.push({ juegoId, equipo: eqName, posicion });
                 }
               }
             }
 
-            for (const teamData of allTeams) {
-              await tx
-                .insert(schema.juegoPosiciones)
-                .values({
-                  juegoId,
-                  equipo: teamData.equipo,
-                  posicion: teamData.posicion,
-                })
-                .onConflictDoUpdate({
-                  target: [
-                    schema.juegoPosiciones.juegoId,
-                    schema.juegoPosiciones.equipo,
-                  ],
-                  set: { posicion: teamData.posicion },
-                });
+            if (rows.length > 0) {
+              await tx.insert(schema.juegoPosiciones).values(rows);
             }
           }
 

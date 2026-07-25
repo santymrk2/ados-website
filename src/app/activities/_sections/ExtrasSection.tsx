@@ -8,6 +8,7 @@ import { TEAMS, TEAM_COLORS, getTeamBg } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import { Avatar } from "@/components/ui/Avatar";
 import { cn } from "@/lib/utils";
+import { updateExtra, deleteExtra } from "@/lib/activity-mutates";
 import type { Extra, ParticipantBasic } from "@/lib/types";
 
 type ExtraTipo = "extra" | "descuento";
@@ -188,6 +189,7 @@ export function ExtrasSection() {
   } = useUnifiedActivity();
 
   const isEditing = editingSection === "extras";
+  const [saving, setSaving] = useState(false);
 
   const eligiblePlayers = useMemo(
     () =>
@@ -228,8 +230,8 @@ export function ExtrasSection() {
 
   const addAdjustment = useCallback(
     async (pid: number | null, team: string | null, tipo: ExtraTipo) => {
-      if (locked) return;
-
+      if (locked || saving) return;
+      setSaving(true);
       try {
         await performQuickUpdate(
           "extra_add",
@@ -238,39 +240,51 @@ export function ExtrasSection() {
         );
       } catch {
         // Error already handled by performQuickUpdate
+      } finally {
+        setSaving(false);
       }
     },
-    [locked, performQuickUpdate],
+    [locked, saving, performQuickUpdate],
   );
 
   const updateAdjustment = useCallback(
     async (item: AdjustmentItem, patch: Partial<Pick<AdjustmentItem, "puntos" | "motivo">>) => {
-      if (locked) return;
-
+      if (locked || saving) return;
+      setSaving(true);
       try {
         await performQuickUpdate(
           "extra_update",
           { id: item.id, pid: item.pid, team: item.team, puntos: patch.puntos ?? item.puntos, motivo: patch.motivo ?? item.motivo },
           "extras",
+          updateExtra(item.id, { puntos: patch.puntos ?? item.puntos, motivo: patch.motivo ?? item.motivo }),
         );
       } catch {
         // Error already handled
+      } finally {
+        setSaving(false);
       }
     },
-    [locked, performQuickUpdate],
+    [locked, saving, performQuickUpdate],
   );
 
   const deleteAdjustment = useCallback(
     async (item: AdjustmentItem) => {
-      if (locked) return;
-
+      if (locked || saving) return;
+      setSaving(true);
       try {
-        await performQuickUpdate("extra_delete", { id: item.id }, "extras");
+        await performQuickUpdate(
+          "extra_delete",
+          { id: item.id },
+          "extras",
+          deleteExtra(item.id),
+        );
       } catch {
         // Error already handled
+      } finally {
+        setSaving(false);
       }
     },
-    [locked, performQuickUpdate],
+    [locked, saving, performQuickUpdate],
   );
 
   const startEditing = () => setEditingSection("extras");
@@ -321,7 +335,7 @@ export function ExtrasSection() {
                     <AdjustmentRow
                       key={item.id}
                       item={item}
-                      saving={false}
+                      saving={saving}
                       locked={locked}
                       onUpdatePoints={(v) => updateAdjustment(item, { puntos: v })}
                       onUpdateMotivo={(v) => updateAdjustment(item, { motivo: v })}
@@ -335,7 +349,7 @@ export function ExtrasSection() {
                 <Button
                   onClick={() => addAdjustment(null, t, "descuento")}
                   size="sm"
-                  disabled={locked}
+                  disabled={locked || saving}
                   className="flex-1 h-9 rounded-xl bg-white/50 hover:bg-white/80 border-none text-red-700 font-black disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   <Minus className="w-4 h-4" />
@@ -343,7 +357,7 @@ export function ExtrasSection() {
                 <Button
                   onClick={() => addAdjustment(null, t, "extra")}
                   size="sm"
-                  disabled={locked}
+                  disabled={locked || saving}
                   className="flex-1 h-9 rounded-xl bg-white/50 hover:bg-white/80 border-none text-primary font-black disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   <Plus className="w-4 h-4" />
@@ -404,15 +418,15 @@ export function ExtrasSection() {
                       <AdjustmentRow
                         key={item.id}
                         item={item}
-                        saving={false}
-                        locked={locked}
-                        onUpdatePoints={(v) => updateAdjustment(item, { puntos: v })}
-                        onUpdateMotivo={(v) => updateAdjustment(item, { motivo: v })}
-                        onDelete={() => deleteAdjustment(item)}
-                      />
-                    ))}
-                  </div>
-                )}
+                      saving={saving}
+                      locked={locked}
+                      onUpdatePoints={(v) => updateAdjustment(item, { puntos: v })}
+                      onUpdateMotivo={(v) => updateAdjustment(item, { motivo: v })}
+                      onDelete={() => deleteAdjustment(item)}
+                    />
+                  ))}
+                </div>
+              )}
               </div>
 
               <div className="flex gap-1 shrink-0">
@@ -420,7 +434,7 @@ export function ExtrasSection() {
                   onClick={() => addAdjustment(p.id, null, "descuento")}
                   size="icon"
                   variant="ghost"
-                  disabled={locked}
+                  disabled={locked || saving}
                   className="h-9 w-9 bg-red-50 text-red-600 hover:bg-red-100 rounded-xl disabled:opacity-30 disabled:cursor-not-allowed"
                 >
                   <Minus className="w-5 h-5" />
@@ -429,7 +443,7 @@ export function ExtrasSection() {
                   onClick={() => addAdjustment(p.id, null, "extra")}
                   size="icon"
                   variant="ghost"
-                  disabled={locked}
+                  disabled={locked || saving}
                   className="h-9 w-9 bg-indigo-50 text-primary hover:bg-indigo-100 rounded-xl disabled:opacity-30 disabled:cursor-not-allowed"
                 >
                   <Plus className="w-5 h-5" />

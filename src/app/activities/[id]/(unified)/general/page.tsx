@@ -264,10 +264,10 @@ export default function GeneralPage() {
               <Unlock className="w-5 h-5 text-green-500" />
             )}
             <div>
-              <p className="font-bold text-sm text-slate-700">
+              <p className="font-bold text-base text-slate-700">
                 {locked ? "Bloqueada" : "Desbloqueada"}
               </p>
-              <p className="text-xs text-slate-400">
+              <p className="text-sm text-slate-400">
                 {locked
                   ? "Solo lectura para todos"
                   : "Admins pueden editar"}
@@ -288,9 +288,9 @@ export default function GeneralPage() {
         <div className="rounded-3xl border-2 border-dashed border-red-200 bg-red-50/50 p-6 space-y-3">
           <div className="flex items-center gap-2">
             <Trash2 className="w-5 h-5 text-red-500" />
-            <h3 className="font-bold text-sm text-red-700">Zona de peligro</h3>
+            <h3 className="font-bold text-base text-red-700">Zona de peligro</h3>
           </div>
-          <p className="text-sm text-red-600">
+          <p className="text-base text-red-600">
             Una vez eliminada, la actividad no se puede recuperar.
           </p>
           <Button

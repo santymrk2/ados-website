@@ -159,7 +159,7 @@ function GameDetailModal({
                   onClick={() => setShowPtsPos(showPtsPos === pos ? null : pos)}
                   className="flex items-center gap-2"
                 >
-                  <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-primary text-sm font-black text-white">
+                  <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-primary text-base font-black text-white">
                     {pos}
                   </span>
                   <span className="font-bold">Puesto {pos}</span>
@@ -191,7 +191,7 @@ function GameDetailModal({
                               placeholder="Buscar jugador..."
                               value={search}
                               onChange={(e) => setSearch(e.target.value)}
-                              className="h-8 pl-8 text-xs bg-white"
+                              className="h-8 pl-8 text-sm bg-white"
                               autoFocus
                             />
                           </div>
@@ -206,12 +206,12 @@ function GameDetailModal({
                                 className="flex items-center gap-2 w-full px-3 py-2 text-left transition-colors hover:bg-indigo-50"
                               >
                                 <Avatar p={p} size={24} />
-                                <span className="text-sm font-medium">{p.nombre} {p.apellido}</span>
-                                <span className="text-xs text-muted-foreground ml-auto">{p.team}</span>
+                                <span className="text-base font-medium">{p.nombre} {p.apellido}</span>
+                                <span className="text-sm text-muted-foreground ml-auto">{p.team}</span>
                               </button>
                             ))
                           ) : (
-                            <div className="px-3 py-6 text-center text-xs text-muted-foreground italic">
+                            <div className="px-3 py-6 text-center text-sm text-muted-foreground italic">
                               {search.trim()
                                 ? "No se encontraron jugadores"
                                 : "No hay jugadores disponibles"}
@@ -232,7 +232,7 @@ function GameDetailModal({
                     </Button>
                   </div>
                 ) : (
-                  <span className="text-xs font-bold text-primary">
+                  <span className="text-sm font-bold text-primary">
                     +{PTS.rec[Number(pos)] || 0} pts
                   </span>
                 )}
@@ -246,7 +246,7 @@ function GameDetailModal({
                       return (
                         <div
                           key={value}
-                          className="inline-flex items-center gap-1.5 rounded-full border border-border bg-white px-2.5 py-1 text-xs font-medium shadow-sm"
+                          className="inline-flex items-center gap-1.5 rounded-full border border-border bg-white px-2.5 py-1 text-sm font-medium shadow-sm"
                         >
                           {person ? (
                             <>
@@ -270,7 +270,7 @@ function GameDetailModal({
                     })}
                   </div>
                 ) : (
-                  <p className="text-xs text-muted-foreground italic">Sin asignar</p>
+                  <p className="text-sm text-muted-foreground italic">Sin asignar</p>
                 )
               ) : (
                 <div className="flex flex-wrap gap-2">
@@ -283,7 +283,7 @@ function GameDetailModal({
                         disabled={locked || saving}
                         onClick={() => onToggleItem(game.id, team, pos)}
                         className={cn(
-                          "rounded-full border px-3 py-1.5 text-xs font-bold transition",
+                          "rounded-full border px-3 py-1.5 text-sm font-bold transition",
                           active
                             ? "border-primary bg-primary text-white"
                             : "border-border bg-white hover:border-primary hover:text-primary",
@@ -491,7 +491,7 @@ export function JuegosSection() {
                 {POSITIONS.map((pos) => {
                   const values = (j.pos || {})[pos] || [];
                   return (
-                    <div key={pos} className="flex items-center gap-2 text-xs py-1 px-3">
+                    <div key={pos} className="flex items-center gap-2 text-sm py-1 px-3">
                       <span className="font-bold text-foreground/60 w-6">P{pos}</span>
                       <div className="flex flex-wrap gap-1">
                         {values.length > 0 ? (
@@ -560,7 +560,7 @@ export function JuegosSection() {
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="font-black text-sm truncate">
+                  <span className="font-black text-base truncate">
                     {game.nombre || `Juego ${index + 1}`}
                   </span>
                   <span className="inline-flex items-center gap-1 rounded-full border border-border/60 bg-card px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
@@ -572,7 +572,7 @@ export function JuegosSection() {
                     {gameTypeLabel(game.tipo || "grupal")}
                   </span>
                 </div>
-                <p className="mt-1 text-xs text-muted-foreground">{renderSummary(game)}</p>
+                <p className="mt-1 text-sm text-muted-foreground">{renderSummary(game)}</p>
               </div>
               <Button
                 type="button"
@@ -612,7 +612,7 @@ export function JuegosSection() {
                 <Gamepad2 className="h-4 w-4" />
                 Juego grupal
               </div>
-              <p className="mt-2 text-sm text-muted-foreground">
+              <p className="mt-2 text-base text-muted-foreground">
                 Equipos en posiciones y puntaje por equipo.
               </p>
             </button>
@@ -625,7 +625,7 @@ export function JuegosSection() {
                 <Users className="h-4 w-4" />
                 Juego individual
               </div>
-              <p className="mt-2 text-sm text-muted-foreground">
+              <p className="mt-2 text-base text-muted-foreground">
                 Asigna personas a posiciones y suma puntos por participante.
               </p>
             </button>

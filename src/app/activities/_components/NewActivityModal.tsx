@@ -113,19 +113,19 @@ export function NewActivityModal({ open, onOpenChange }: NewActivityModalProps) 
           >
             <div className="flex items-center gap-2">
               <RadioGroupItem value="2" id="eq-2" />
-              <label htmlFor="eq-2" className="text-sm font-bold cursor-pointer">
+              <label htmlFor="eq-2" className="text-base font-bold cursor-pointer">
                 2 Equipos
               </label>
             </div>
             <div className="flex items-center gap-2">
               <RadioGroupItem value="4" id="eq-4" />
-              <label htmlFor="eq-4" className="text-sm font-bold cursor-pointer">
+              <label htmlFor="eq-4" className="text-base font-bold cursor-pointer">
                 4 Equipos
               </label>
             </div>
             <div className="flex items-center gap-2">
               <RadioGroupItem value="6" id="eq-6" />
-              <label htmlFor="eq-6" className="text-sm font-bold cursor-pointer">
+              <label htmlFor="eq-6" className="text-base font-bold cursor-pointer">
                 6 Equipos
               </label>
             </div>
@@ -142,7 +142,7 @@ export function NewActivityModal({ open, onOpenChange }: NewActivityModalProps) 
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Switch checked={locked} onCheckedChange={setLocked} />
-            <Label style={{ margin: 0 }} className="text-sm">
+            <Label style={{ margin: 0 }} className="text-base">
               {locked ? "Bloqueada" : "Desbloqueada"}
             </Label>
           </div>

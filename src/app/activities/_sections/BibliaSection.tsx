@@ -96,7 +96,7 @@ export function BibliaSection() {
       {!editing && (
         <>
           <div className="flex items-center justify-center mb-5">
-            <span className="text-xs font-bold text-white/60 bg-white/10 px-3 py-1 rounded-full">
+            <span className="text-sm font-bold text-white/60 bg-white/10 px-3 py-1 rounded-full">
               {participantsWithBiblia.length} trajeron biblia
             </span>
           </div>
@@ -117,10 +117,10 @@ export function BibliaSection() {
                     >
                       <Avatar p={p} size={28} />
                       <div className="flex-1">
-                        <div className="font-bold text-sm text-foreground">
+                        <div className="font-bold text-base text-foreground">
                           {p.nombre} {p.apellido}
                         </div>
-                        <div className="text-xs text-foreground/60">
+                        <div className="text-sm text-foreground/60">
                           {getEdad(p.fechaNacimiento)} años
                         </div>
                       </div>
@@ -137,7 +137,7 @@ export function BibliaSection() {
           <h2 className="text-base font-black text-white">
             Biblia
             {searchQuery && (
-              <span className="text-white/60 text-xs font-normal ml-1">
+              <span className="text-white/60 text-sm font-normal ml-1">
                 (filtrado: {sortedParticipants.length})
               </span>
             )}
@@ -159,13 +159,13 @@ export function BibliaSection() {
                         <div className="flex-1">
                           <div
                             className={cn(
-                              "font-bold text-sm",
+                              "font-bold text-base",
                               bib ? "text-foreground" : "text-muted-foreground",
                             )}
                           >
                             {p.nombre} {p.apellido}
                           </div>
-                          <div className="text-xs text-muted-foreground">
+                          <div className="text-sm text-muted-foreground">
                             {getEdad(p.fechaNacimiento)}a
                           </div>
                         </div>
@@ -173,7 +173,7 @@ export function BibliaSection() {
                           onClick={() => toggle(p.id)}
                           disabled={locked}
                           className={cn(
-                            "flex items-center justify-center h-9 min-w-9 px-3 text-sm font-semibold transition-colors rounded-2xl border",
+                            "flex items-center justify-center h-9 min-w-9 px-3 text-base font-semibold transition-colors rounded-2xl border",
                             locked &&
                               "opacity-50 cursor-not-allowed pointer-events-none",
                             bib

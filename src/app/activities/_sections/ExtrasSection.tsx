@@ -280,7 +280,7 @@ export function ExtrasSection() {
     <div className="space-y-4">
       <div className="flex items-center gap-2 px-1">
         <div className="w-1 h-4 bg-primary rounded-full" />
-        <span className="text-xs font-black uppercase tracking-widest text-primary">
+        <span className="text-sm font-black uppercase tracking-widest text-primary">
           Equipos
         </span>
       </div>
@@ -361,7 +361,7 @@ export function ExtrasSection() {
       <div className="flex items-center justify-between px-1">
         <div className="flex items-center gap-2">
           <div className="w-1 h-4 bg-primary rounded-full" />
-          <span className="text-xs font-black uppercase tracking-widest text-primary">
+          <span className="text-sm font-black uppercase tracking-widest text-primary">
             Individuales
           </span>
         </div>
@@ -383,7 +383,7 @@ export function ExtrasSection() {
               <Avatar p={p} size={36} className="mt-1" />
 
               <div className="flex-1 min-w-0">
-                <div className="font-bold text-sm truncate">
+                <div className="font-bold text-base truncate">
                   {p.nombre} {p.apellido}
                 </div>
                 <div className="text-[10px] font-black text-muted-foreground uppercase mb-1">
@@ -519,7 +519,7 @@ export function ExtrasSection() {
     <div className="space-y-4">
       <div className="flex items-center gap-2 px-1">
         <div className="w-1 h-4 bg-primary rounded-full" />
-        <span className="text-xs font-black uppercase tracking-widest text-primary">
+        <span className="text-sm font-black uppercase tracking-widest text-primary">
           Individuales
         </span>
       </div>
@@ -536,7 +536,7 @@ export function ExtrasSection() {
               >
                 <Avatar p={p} size={32} />
                 <div className="flex-1 min-w-0">
-                  <div className="font-bold text-sm truncate">
+                  <div className="font-bold text-base truncate">
                     {p.nombre} {p.apellido}
                   </div>
                   {pItems.length > 0 && (
@@ -560,7 +560,7 @@ export function ExtrasSection() {
                 </div>
                 <div
                   className={cn(
-                    "font-black text-sm",
+                    "font-black text-base",
                     total > 0 ? "text-green-600" : total < 0 ? "text-red-600" : "text-muted-foreground",
                   )}
                 >
@@ -571,7 +571,7 @@ export function ExtrasSection() {
             );
           })
         ) : (
-          <p className="text-sm text-white/60 text-center py-4">
+          <p className="text-base text-white/60 text-center py-4">
             No hay participantes con asistencias
           </p>
         )}

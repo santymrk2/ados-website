@@ -17,7 +17,7 @@ export function EmptyState({ icon: Icon, message, actionLabel, onAction }: Empty
           <Icon className="h-5 w-5 text-white/60" />
         </div>
       )}
-      <p className="text-sm text-white/60 mb-3 text-center">{message}</p>
+      <p className="text-base text-white/60 mb-3 text-center">{message}</p>
       {actionLabel && onAction && (
         <Button
           onClick={onAction}

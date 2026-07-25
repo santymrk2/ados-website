@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
+import { useStore } from "@nanostores/react";
 import { useUnifiedActivity } from "@/lib/activity-context";
 import { useApp } from "@/hooks/useApp";
 import { toast } from "@/hooks/use-toast";
@@ -27,8 +28,31 @@ import {
   Calendar,
   CheckCircle,
 } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DetailSheet } from "@/components/ui/DetailSheet";
 import type { Activity, ParticipantBasic } from "@/lib/types";
+import { VersionConflictError } from "@/lib/errors";
+import { $isSavingAttendance } from "@/store/appStore";
+
+const MONTHS = [
+  { value: "1", label: "Enero" },
+  { value: "2", label: "Febrero" },
+  { value: "3", label: "Marzo" },
+  { value: "4", label: "Abril" },
+  { value: "5", label: "Mayo" },
+  { value: "6", label: "Junio" },
+  { value: "7", label: "Julio" },
+  { value: "8", label: "Agosto" },
+  { value: "9", label: "Septiembre" },
+  { value: "10", label: "Octubre" },
+  { value: "11", label: "Noviembre" },
+  { value: "12", label: "Diciembre" },
+];
+
+function buildDate(day: string, month: string, year: string): string {
+  if (!day || !month || !year) return "";
+  return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
+}
 
 function NewPlayerModal({
   onClose,
@@ -41,8 +65,9 @@ function NewPlayerModal({
     nombre: "",
     apellido: "",
     sexo: "M",
-    fechaNacimiento: "",
   });
+  const [dob, setDob] = useState({ day: "", month: "", year: "" });
+  const fechaNacimiento = buildDate(dob.day, dob.month, dob.year);
   const [invitadorId, setInvitadorId] = useState<number | null>(null);
   const [invitadorOpen, setInvitadorOpen] = useState(false);
   const [invitadorSearch, setInvitadorSearch] = useState("");
@@ -63,9 +88,9 @@ function NewPlayerModal({
   const handleCreate = async () => {
     if (!form.nombre.trim() || !form.apellido.trim())
       return toast.error("Ingresá nombre y apellido");
-    if (!form.fechaNacimiento) return toast.error("Ingresá la fecha de nacimiento");
+    if (!fechaNacimiento) return toast.error("Ingresá la fecha de nacimiento");
 
-    const age = getEdad(form.fechaNacimiento);
+    const age = getEdad(fechaNacimiento);
     if (age !== null && (age < 12 || age > 18)) {
       const ok = await confirmDialog(
         `¿Estás seguro que querés agregar a ${form.nombre} con ${age} años?`,
@@ -77,13 +102,22 @@ function NewPlayerModal({
     if (isSubmitting) return;
     setIsSubmitting(true);
     try {
-      const p = { ...newPart(), ...form, id: db.nextPid };
+      const p = { ...newPart(), ...form, fechaNacimiento, id: db.nextPid };
       await saveParticipant(p, true, invitadorId);
 
       await performQuickUpdate("attendance", {
         participantId: p.id,
         value: true,
       });
+
+      // Also create an invitacion record for this activity so it shows in InvitacionesSection
+      if (invitadorId) {
+        await performQuickUpdate(
+          "invitacion_add",
+          { invitador: invitadorId, invitadoId: p.id },
+          "invitaciones",
+        );
+      }
 
       onClose();
     } catch {
@@ -108,7 +142,7 @@ function NewPlayerModal({
               setForm((p) => ({ ...p, nombre: e.target.value }))
             }
             placeholder="Nombre"
-            className="text-sm"
+            className="text-base"
           />
         </div>
         <div>
@@ -119,18 +153,56 @@ function NewPlayerModal({
               setForm((p) => ({ ...p, apellido: e.target.value }))
             }
             placeholder="Apellido"
-            className="text-sm"
+            className="text-base"
           />
         </div>
       </div>
       <div className="mb-4">
         <Label className="mb-1">Fecha de Nacimiento</Label>
-        <input
-          type="date"
-          value={form.fechaNacimiento}
-          onChange={(e) => setForm((p) => ({ ...p, fechaNacimiento: e.target.value }))}
-          className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm"
-        />
+        <div className="grid grid-cols-3 gap-2">
+          <Select value={dob.day} onValueChange={(v) => {
+            const next = { ...dob, day: v };
+            setDob(next);
+            setForm((p) => ({ ...p, fechaNacimiento: buildDate(next.day, next.month, next.year) }));
+          }}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Día" />
+            </SelectTrigger>
+            <SelectContent>
+              {Array.from({ length: 31 }, (_, i) => String(i + 1)).map((d) => (
+                <SelectItem key={d} value={d}>{d}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={dob.month} onValueChange={(v) => {
+            const next = { ...dob, month: v };
+            setDob(next);
+            setForm((p) => ({ ...p, fechaNacimiento: buildDate(next.day, next.month, next.year) }));
+          }}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Mes" />
+            </SelectTrigger>
+            <SelectContent>
+              {MONTHS.map((m) => (
+                <SelectItem key={m.value} value={m.value}>{m.value}-{m.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={dob.year} onValueChange={(v) => {
+            const next = { ...dob, year: v };
+            setDob(next);
+            setForm((p) => ({ ...p, fechaNacimiento: buildDate(next.day, next.month, next.year) }));
+          }}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Año" />
+            </SelectTrigger>
+            <SelectContent>
+              {Array.from({ length: new Date().getFullYear() - 1949 }, (_, i) => String(new Date().getFullYear() - i)).map((y) => (
+                <SelectItem key={y} value={y}>{y}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
       <div className="mb-4">
         <Label className="mb-1">Sexo</Label>
@@ -164,7 +236,7 @@ function NewPlayerModal({
             <button
               type="button"
               className={cn(
-                "flex items-center gap-2 w-full text-left px-3 py-2 rounded-lg border text-sm transition-colors",
+                "flex items-center gap-2 w-full text-left px-3 py-2 rounded-lg border text-base transition-colors",
                 invitador
                   ? "border-border bg-white hover:bg-muted"
                   : "border-dashed border-border text-muted-foreground hover:border-primary/40",
@@ -188,7 +260,7 @@ function NewPlayerModal({
                   placeholder="Buscar..."
                   value={invitadorSearch}
                   onChange={(e) => setInvitadorSearch(e.target.value)}
-                  className="h-8 pl-8 text-xs bg-white"
+                  className="h-8 pl-8 text-sm bg-white"
                   autoFocus
                 />
               </div>
@@ -198,7 +270,7 @@ function NewPlayerModal({
                 <button
                   type="button"
                   onClick={() => { setInvitadorId(null); setInvitadorOpen(false); setInvitadorSearch(""); }}
-                  className="flex items-center gap-2 w-full px-3 py-2 text-left text-sm text-red-500 hover:bg-red-50 transition-colors"
+                  className="flex items-center gap-2 w-full px-3 py-2 text-left text-base text-red-500 hover:bg-red-50 transition-colors"
                 >
                   Quitar invitador
                 </button>
@@ -214,7 +286,7 @@ function NewPlayerModal({
                   )}
                 >
                   <Avatar p={p} size={20} />
-                  <span className="text-sm truncate">{p.nombre} {p.apellido}</span>
+                  <span className="text-base truncate">{p.nombre} {p.apellido}</span>
                 </button>
               ))}
             </div>
@@ -248,7 +320,7 @@ function GenderGroup({
 }) {
   return (
     <div className="bg-white/20 rounded-xl p-3 border border-white/30">
-      <div className="font-bold text-sm text-white mb-2 flex items-center gap-2">
+      <div className="font-bold text-base text-white mb-2 flex items-center gap-2">
         <span className="w-2 h-2 rounded-full bg-white" />
         {label} ({players.length})
       </div>
@@ -261,10 +333,10 @@ function GenderGroup({
           >
             <Avatar p={p} size={28} />
             <div className="flex-1 min-w-0">
-              <div className="font-bold text-sm text-foreground">
+              <div className="font-bold text-base text-foreground">
                 {p.nombre} {p.apellido}
               </div>
-              <div className="text-xs text-foreground/60">
+              <div className="text-sm text-foreground/60">
                 {p.edad} años · {playerPts[p.id] || 0} pts
               </div>
             </div>
@@ -306,6 +378,7 @@ export function AsistenciaSection() {
   const [genderFilter, setGenderFilter] = useState<"all" | "M" | "F">("all");
   const [sortMode, setSortMode] = useState<"name" | "lastname" | "age" | "punctual">("name");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+  const isSaving = useStore($isSavingAttendance);
 
   const handleSortClick = (mode: typeof sortMode) => {
     if (sortMode === mode) {
@@ -334,7 +407,7 @@ export function AsistenciaSection() {
             <button
               onClick={() => setGenderFilter("all")}
               className={cn(
-                "w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors text-left",
+                "w-full flex items-center gap-2 px-3 py-2 rounded-lg text-base font-medium transition-colors text-left",
                 genderFilter === "all"
                   ? "bg-primary text-white"
                   : "bg-muted hover:bg-muted/80 text-foreground",
@@ -346,7 +419,7 @@ export function AsistenciaSection() {
             <button
               onClick={() => setGenderFilter("M")}
               className={cn(
-                "w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors text-left",
+                "w-full flex items-center gap-2 px-3 py-2 rounded-lg text-base font-medium transition-colors text-left",
                 genderFilter === "M"
                   ? "bg-primary text-white"
                   : "bg-muted hover:bg-muted/80 text-foreground",
@@ -358,7 +431,7 @@ export function AsistenciaSection() {
             <button
               onClick={() => setGenderFilter("F")}
               className={cn(
-                "w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors text-left",
+                "w-full flex items-center gap-2 px-3 py-2 rounded-lg text-base font-medium transition-colors text-left",
                 genderFilter === "F"
                   ? "bg-primary text-white"
                   : "bg-muted hover:bg-muted/80 text-foreground",
@@ -386,7 +459,7 @@ export function AsistenciaSection() {
                 key={mode}
                 onClick={() => handleSortClick(mode)}
                 className={cn(
-                  "w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors text-left",
+                  "w-full flex items-center gap-2 px-3 py-2 rounded-lg text-base font-medium transition-colors text-left",
                   sortMode === mode
                     ? "bg-primary text-white"
                     : "bg-muted hover:bg-muted/80 text-foreground",
@@ -502,8 +575,12 @@ export function AsistenciaSection() {
           value: false,
         });
       }
-    } catch {
-      // Error already handled by performQuickUpdate
+    } catch (error) {
+      if (error instanceof VersionConflictError) {
+        toast.error("Conflicto de edición", {
+          description: "Otra persona modificó esta actividad. Se actualizó la vista.",
+        });
+      }
     }
   };
 
@@ -593,7 +670,7 @@ export function AsistenciaSection() {
 
       {!editing && (
         <>
-      <div className="flex items-center justify-center gap-2 text-xs font-bold text-white/60 flex-wrap mb-5">
+      <div className="flex items-center justify-center gap-2 text-sm font-bold text-white/60 flex-wrap mb-5">
         <span className="bg-white/10 px-2 py-0.5 rounded-full">{stats.total} presentes</span>
         <span className="bg-white/10 px-2 py-0.5 rounded-full">{stats.puntuales} puntuales</span>
         <span className="bg-white/10 px-2 py-0.5 rounded-full">{stats.juegos} juegos</span>
@@ -644,7 +721,7 @@ export function AsistenciaSection() {
                 variant="ghost"
                 size="sm"
                 disabled={locked}
-                className="bg-white/20 text-white hover:bg-white/30 text-xs flex items-center gap-1"
+                className="bg-white/20 text-white hover:bg-white/30 text-sm flex items-center gap-1"
               >
                 <Plus className="w-3 h-3" /> Nuevo Jugador
               </Button>
@@ -664,10 +741,10 @@ export function AsistenciaSection() {
                 <div className="flex gap-0 shrink-0 self-start sm:self-auto">
                   <button
                     onClick={() => toggleAttendance(p.id)}
-                    disabled={locked || !isAdmin}
+                    disabled={locked || !isAdmin || isSaving}
                     className={cn(
-                      "flex items-center justify-center h-9 min-w-9 px-2 text-sm font-semibold transition-colors rounded-l-2xl border",
-                      (locked || !isAdmin) &&
+                      "flex items-center justify-center h-9 min-w-9 px-2 text-base font-semibold transition-colors rounded-l-2xl border",
+                      (locked || !isAdmin || isSaving) &&
                         "opacity-50 cursor-not-allowed pointer-events-none",
                       here
                         ? "bg-primary text-primary-foreground border-primary"
@@ -683,7 +760,7 @@ export function AsistenciaSection() {
                     onClick={() => togglePunctual(p.id)}
                     disabled={locked || !isAdmin}
                     className={cn(
-                      "flex items-center justify-center h-9 min-w-9 px-2 text-sm font-semibold transition-colors rounded-r-2xl border border-l-0",
+                      "flex items-center justify-center h-9 min-w-9 px-2 text-base font-semibold transition-colors rounded-r-2xl border border-l-0",
                       (locked || !isAdmin) &&
                         "opacity-50 cursor-not-allowed pointer-events-none",
                       punct
@@ -702,13 +779,13 @@ export function AsistenciaSection() {
                   <div className="flex-1 min-w-0">
                     <div
                       className={cn(
-                        "font-bold text-sm",
+                        "font-bold text-base",
                         here ? "text-foreground" : "text-muted-foreground",
                       )}
                     >
                       {p.nombre} {p.apellido}
                     </div>
-                    <div className="text-xs text-muted-foreground">
+                    <div className="text-sm text-muted-foreground">
                       {getEdad(p.fechaNacimiento)}a
                     </div>
                   </div>
@@ -719,7 +796,7 @@ export function AsistenciaSection() {
                       onClick={() => toggleSocial(p.id)}
                       disabled={locked || !isAdmin}
                       className={cn(
-                        "flex items-center gap-1 h-9 min-w-9 px-3 text-sm font-semibold transition-colors rounded-2xl border",
+                        "flex items-center gap-1 h-9 min-w-9 px-3 text-base font-semibold transition-colors rounded-2xl border",
                         (locked || !isAdmin) &&
                           "opacity-50 cursor-not-allowed pointer-events-none",
                         (act.socials || []).includes(p.id)
@@ -730,7 +807,7 @@ export function AsistenciaSection() {
                       {(act.socials || []).includes(p.id)
                         ? <Coffee className="w-3.5 h-3.5" />
                         : <Zap className="w-3.5 h-3.5" />}
-                      <span className="text-xs font-medium">
+                      <span className="text-sm font-medium">
                         {(act.socials || []).includes(p.id)
                           ? "Social"
                           : "Juegos"}

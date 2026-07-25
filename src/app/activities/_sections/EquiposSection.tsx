@@ -244,7 +244,7 @@ export function EquiposSection() {
             onClick={() => handleTeamClick(team)}
           >
             <div
-              className="w-8 h-8 rounded-full flex items-center justify-center font-black text-sm shrink-0 text-white"
+              className="w-8 h-8 rounded-full flex items-center justify-center font-black text-base shrink-0 text-white"
               style={{ backgroundColor: TEAM_COLORS[team] }}
             >
               {team}
@@ -269,7 +269,7 @@ export function EquiposSection() {
               variant="ghost"
               size="sm"
               disabled={locked}
-              className="flex-1 sm:flex-none bg-indigo-50 text-primary text-xs"
+              className="flex-1 sm:flex-none bg-indigo-50 text-primary text-sm"
             >
               <Zap className="w-3 h-3" /> Completar ({unassignedCount})
             </Button>
@@ -279,7 +279,7 @@ export function EquiposSection() {
             variant="ghost"
             size="sm"
             disabled={locked}
-            className="flex-1 sm:flex-none bg-red-50 text-red-500 text-xs"
+            className="flex-1 sm:flex-none bg-red-50 text-red-500 text-sm"
           >
             <Shuffle className="w-3 h-3" /> Redistribuir
           </Button>
@@ -299,7 +299,7 @@ export function EquiposSection() {
             <div className="flex flex-col gap-3">
               {selectedTeamData.women.length > 0 && (
                 <div className="bg-white rounded-xl p-3 border border-border">
-              <div className="font-bold text-sm text-muted-foreground mb-2 flex items-center gap-2">
+              <div className="font-bold text-base text-muted-foreground mb-2 flex items-center gap-2">
                     <SexBadge sex="F" size={16} /> Mujer (
                     {selectedTeamData.women.length})
                   </div>
@@ -318,12 +318,12 @@ export function EquiposSection() {
                       >
                         <Avatar p={p} size={24} />
                         <div className="flex-1">
-                          <div className="font-bold text-sm">
+                          <div className="font-bold text-base">
                             {p.nombre} {p.apellido}
                           </div>
                         </div>
                         {!editing && (
-                          <div className="text-xs font-bold text-primary">
+                          <div className="text-sm font-bold text-primary">
                             {actPts(p.id, act, db.participants)} pts
                           </div>
                         )}
@@ -335,7 +335,7 @@ export function EquiposSection() {
 
               {selectedTeamData.men.length > 0 && (
                 <div className="bg-white rounded-xl p-3 border border-border">
-                  <div className="font-bold text-sm text-muted-foreground mb-2 flex items-center gap-2">
+                  <div className="font-bold text-base text-muted-foreground mb-2 flex items-center gap-2">
                     <SexBadge sex="M" size={16} /> Varón (
                     {selectedTeamData.men.length})
                   </div>
@@ -354,12 +354,12 @@ export function EquiposSection() {
                       >
                         <Avatar p={p} size={24} />
                         <div className="flex-1">
-                          <div className="font-bold text-sm">
+                          <div className="font-bold text-base">
                             {p.nombre} {p.apellido}
                           </div>
                         </div>
             {!editing && (
-              <div className="text-xs font-bold text-primary">
+              <div className="text-sm font-bold text-primary">
                 {actPts(p.id, act, db.participants)} pts
               </div>
             )}
@@ -372,7 +372,7 @@ export function EquiposSection() {
 
               {selectedTeamData.women.length === 0 &&
                 selectedTeamData.men.length === 0 && (
-                <div className="text-center text-white/60 text-sm py-4">
+                <div className="text-center text-white/60 text-base py-4">
                   Sin jugadores en este equipo
                 </div>
               )}
@@ -390,7 +390,7 @@ export function EquiposSection() {
         <div className="flex flex-col gap-1">
           {present.length === 0
             ? (
-              <div className="text-center text-white/60 text-sm py-4">
+              <div className="text-center text-white/60 text-base py-4">
                 {searchQuery
                   ? "No hay jugadores que coincidan con la búsqueda"
                   : "No hay jugadores presentes"}
@@ -418,7 +418,7 @@ export function EquiposSection() {
                     >
                       <Avatar p={p} size={32} />
                       <div className="flex-1">
-                        <div className="font-bold text-sm">
+                        <div className="font-bold text-base">
                           {p.nombre} {p.apellido}
                         </div>
                       </div>
@@ -439,7 +439,7 @@ export function EquiposSection() {
                               }
                             }}
                             disabled={locked}
-                            className="rounded-full px-3 py-1 text-xs font-bold transition border disabled:opacity-50"
+                            className="rounded-full px-3 py-1 text-sm font-bold transition border disabled:opacity-50"
                             style={{
                               backgroundColor:
                                 cur === t ? TEAM_COLORS[t] : "transparent",

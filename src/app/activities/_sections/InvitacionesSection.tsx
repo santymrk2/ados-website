@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { cn, normalizeText } from "@/lib/utils";
+import { deleteInvitacion, updateInvitacion } from "@/lib/activity-mutates";
 import type { ParticipantBasic } from "@/lib/types";
 
 interface InvitacionWithId {
@@ -29,6 +30,7 @@ function InvitationRow({
   onUpdate,
   onDelete,
   locked,
+  saving,
   openDropdown,
   setOpenDropdown,
 }: {
@@ -37,6 +39,7 @@ function InvitationRow({
   onUpdate: (id: number, key: string, value: unknown) => void;
   onDelete: (id: number) => void;
   locked: boolean;
+  saving: boolean;
   openDropdown: number | string | null;
   setOpenDropdown: (id: number | string | null) => void;
 }) {
@@ -75,7 +78,7 @@ function InvitationRow({
             open={openDropdown === `${inv.id}_invitador`}
             onOpenChange={(o) => setOpenDropdown(o ? `${inv.id}_invitador` : null)}
           >
-            <PopoverTrigger asChild disabled={locked}>
+            <PopoverTrigger asChild disabled={locked || saving}>
               <button className="flex items-center gap-2 w-full text-left p-1 -m1 rounded-lg hover:bg-card transition-colors truncate">
                 <Avatar p={invitador} size={28} />
                 <span className="text-base font-medium truncate text-foreground">
@@ -114,7 +117,7 @@ function InvitationRow({
             open={openDropdown === `${inv.id}_invitador`}
             onOpenChange={(o) => setOpenDropdown(o ? `${inv.id}_invitador` : null)}
           >
-            <PopoverTrigger asChild disabled={locked}>
+            <PopoverTrigger asChild disabled={locked || saving}>
               <button className="flex items-center gap-2 w-full text-left p-2 rounded-lg border border-dashed border-border hover:border-primary/40 hover:bg-indigo-50/30 transition-colors text-base text-muted-foreground">
                 <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center text-sm font-black text-muted-foreground">
                   ?
@@ -158,7 +161,7 @@ function InvitationRow({
             open={openDropdown === `${inv.id}_invitado`}
             onOpenChange={(o) => setOpenDropdown(o ? `${inv.id}_invitado` : null)}
           >
-            <PopoverTrigger asChild disabled={locked}>
+            <PopoverTrigger asChild disabled={locked || saving}>
               <button className="flex items-center gap-2 w-full text-left p-1 -m1 rounded-lg hover:bg-card transition-colors truncate">
                 <Avatar p={invitado} size={28} />
                 <span className="text-base font-medium truncate text-foreground">
@@ -197,7 +200,7 @@ function InvitationRow({
             open={openDropdown === `${inv.id}_invitado`}
             onOpenChange={(o) => setOpenDropdown(o ? `${inv.id}_invitado` : null)}
           >
-            <PopoverTrigger asChild disabled={locked}>
+            <PopoverTrigger asChild disabled={locked || saving}>
               <button className="flex items-center gap-2 w-full text-left p-2 rounded-lg border border-dashed border-border hover:border-primary/40 hover:bg-indigo-50/30 transition-colors text-base text-muted-foreground">
                 <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center text-sm font-black text-muted-foreground">
                   ?
@@ -235,7 +238,7 @@ function InvitationRow({
         onClick={() => onDelete(inv.id)}
         variant="ghost"
         size="icon"
-        disabled={locked}
+        disabled={locked || saving}
         className="flex-shrink-0 text-red-500 hover:bg-red-50 w-8 h-8"
       >
         <X className="w-4 h-4" />
@@ -260,6 +263,7 @@ export function InvitacionesSection() {
   const [tempIdCounter, setTempIdCounter] = useState(1);
   const [selectedInviter, setSelectedInviter] = useState<number | null>(null);
   const [draftInvitaciones, setDraftInvitaciones] = useState<InvitacionWithId[]>([]);
+  const [saving, setSaving] = useState(false);
 
   const isEditing = editingSection === "invitaciones";
   const participants = db.participants;
@@ -317,14 +321,19 @@ export function InvitacionesSection() {
       setDraftInvitaciones((prev) => prev.filter((inv) => inv.id !== id));
       return;
     }
-
-    const newList = ((activity.invitaciones || []) as InvitacionWithId[]).filter(
-      (i) => i.id !== id,
-    );
+    if (saving) return;
+    setSaving(true);
     try {
-      await performQuickUpdate("invitacion_delete", { id, invitaciones: newList }, "invitaciones");
+      await performQuickUpdate(
+        "invitacion_delete",
+        { id },
+        "invitaciones",
+        deleteInvitacion(id),
+      );
     } catch {
       // Error already handled
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -341,6 +350,8 @@ export function InvitacionesSection() {
       );
 
       if (updatedInv.invitador != null && updatedInv.invitadoId != null) {
+        if (saving) return;
+        setSaving(true);
         try {
           await performQuickUpdate(
             "invitacion_add",
@@ -353,12 +364,16 @@ export function InvitacionesSection() {
           setDraftInvitaciones((prev) => prev.filter((i) => i.id !== id));
         } catch {
           // Error already handled
+        } finally {
+          setSaving(false);
         }
       }
 
       return;
     }
 
+    if (saving) return;
+    setSaving(true);
     try {
       await performQuickUpdate(
         "invitacion_update",
@@ -368,9 +383,15 @@ export function InvitacionesSection() {
           invitadoId: updatedInv.invitadoId,
         },
         "invitaciones",
+        updateInvitacion(id, {
+          invitador: updatedInv.invitador ?? null,
+          invitadoId: updatedInv.invitadoId ?? null,
+        }),
       );
     } catch {
       // Error already handled
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -394,7 +415,7 @@ export function InvitacionesSection() {
                 onClick={add}
                 variant="ghost"
                 size="sm"
-                disabled={locked}
+                disabled={locked || saving}
                 className="bg-white/20 text-white hover:bg-white/30"
               >
                 <Plus className="w-4 h-4" />
@@ -416,6 +437,7 @@ export function InvitacionesSection() {
                   onUpdate={upd}
                   onDelete={del}
                   locked={locked}
+                  saving={saving}
                   openDropdown={openDropdown}
                   setOpenDropdown={setOpenDropdown}
                 />
@@ -431,7 +453,7 @@ export function InvitacionesSection() {
                 onClick={add}
                 variant="outline"
                 size="sm"
-                disabled={locked}
+                disabled={locked || saving}
                 className="border-primary/30 text-primary hover:bg-indigo-50"
               >
                 Agregar primera invitación

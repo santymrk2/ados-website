@@ -86,8 +86,8 @@ export interface Extra {
 
 // Invitación entre participantes
 export interface Invitacion {
+  id?: number; // present in API responses (from DB), absent on draft/temp items
   invitador?: number | null;
-  invitadorId?: number | null;
   invitadoId: number | null;
 }
 

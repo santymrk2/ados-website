@@ -9,6 +9,7 @@ import { Avatar } from "@/components/ui/Avatar";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn, normalizeText } from "@/lib/utils";
+import { removeGoal, updateGoal } from "@/lib/activity-mutates";
 import type { Gol, ParticipantBasic } from "@/lib/types";
 
 const GOAL_TYPES = [
@@ -25,6 +26,7 @@ function GoalRow({
   onDelete,
   onCreate,
   locked,
+  saving,
   openDropdown,
   setOpenDropdown,
 }: {
@@ -34,6 +36,7 @@ function GoalRow({
   onDelete: (id: number) => void;
   onCreate: (tempId: number, goal: Gol) => void;
   locked: boolean;
+  saving: boolean;
   openDropdown: number | string | null;
   setOpenDropdown: (id: number | string | null) => void;
 }) {
@@ -63,7 +66,7 @@ function GoalRow({
           open={openDropdown === g.id}
           onOpenChange={(open) => setOpenDropdown(open ? g.id! : null)}
         >
-          <PopoverTrigger asChild disabled={locked}>
+          <PopoverTrigger asChild disabled={locked || saving}>
             <button
               className={cn(
                 "flex items-center gap-2 w-full text-left px-2 py-1 rounded-lg hover:bg-card transition-colors",
@@ -129,7 +132,7 @@ function GoalRow({
         {GOAL_TYPES.map((type) => (
           <button
             key={type.id}
-            disabled={locked}
+            disabled={locked || saving}
             onClick={() => g.id != null && onUpdate(g.id, "tipo", type.id)}
             className={cn(
               "px-2 py-1 rounded-md text-[10px] font-black transition-all",
@@ -146,7 +149,7 @@ function GoalRow({
 
       <div className="flex items-center gap-1 bg-card rounded-lg px-1 shrink-0">
         <button
-          disabled={locked || (g.cant || 1) <= 1}
+          disabled={locked || saving || (g.cant || 1) <= 1}
           onClick={() => g.id != null && onUpdate(g.id, "cant", (g.cant || 1) - 1)}
           className="w-6 h-6 flex items-center justify-center text-muted-foreground hover:text-red-500 disabled:opacity-30 transition-colors"
         >
@@ -156,7 +159,7 @@ function GoalRow({
           {g.cant || 1}
         </span>
         <button
-          disabled={locked}
+          disabled={locked || saving}
           onClick={() => g.id != null && onUpdate(g.id, "cant", (g.cant || 1) + 1)}
           className="w-6 h-6 flex items-center justify-center text-muted-foreground hover:text-primary transition-colors"
         >
@@ -168,7 +171,7 @@ function GoalRow({
         onClick={() => onDelete(g.id!)}
         variant="ghost"
         size="icon"
-        disabled={locked}
+        disabled={locked || saving}
         className="w-8 h-8 rounded-lg text-red-400 hover:bg-red-50 hover:text-red-500 shrink-0"
       >
         <X className="w-4 h-4" />
@@ -190,6 +193,7 @@ export function GolesSection() {
   } = useUnifiedActivity();
 
   const [openDropdown, setOpenDropdown] = useState<number | string | null>(null);
+  const [saving, setSaving] = useState(false);
 
   const isEditing = editingSection === "goles";
 
@@ -230,46 +234,53 @@ export function GolesSection() {
   }, [goles, db.participants]);
 
   const add = () => {
+    if (locked || saving) return;
     const tempId = -(Date.now());
+    setSaving(true);
     performQuickUpdate(
       "goal_add",
       { id: tempId, pid: null, tipo: "f", cant: 1 },
       "goles",
-    ).catch(() => {
-      // Error already handled by performQuickUpdate
-    });
+    ).catch(() => {}).finally(() => setSaving(false));
   };
 
   const del = async (id: number) => {
+    if (locked || saving) return;
+    setSaving(true);
     try {
       await performQuickUpdate(
         "goal_remove",
-        { id, goles: goles.filter((g: Gol) => g.id !== id) },
+        { id },
         "goles",
+        removeGoal(id),
       );
     } catch {
       // Error already handled
+    } finally {
+      setSaving(false);
     }
   };
 
   const upd = async (id: number, k: string, v: unknown) => {
+    if (locked || saving) return;
+    setSaving(true);
     try {
       await performQuickUpdate(
         "goal_update",
-        {
-          id,
-          [k]: v,
-          goles: goles.map((g: Gol) => (g.id === id ? { ...g, [k]: v } : g)),
-        },
+        { id, [k]: v },
         "goles",
+        updateGoal(id, { [k]: v } as Partial<Pick<Gol, "pid" | "tipo" | "cant">>),
       );
     } catch {
       // Error already handled
+    } finally {
+      setSaving(false);
     }
   };
 
   const createOnServer = async (tempId: number, goal: Gol) => {
     if (!goal.pid) return;
+    setSaving(true);
     try {
       await performQuickUpdate(
         "goal_add",
@@ -278,6 +289,8 @@ export function GolesSection() {
       );
     } catch {
       // Error already handled by performQuickUpdate
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -301,7 +314,7 @@ export function GolesSection() {
                 onClick={add}
                 variant="ghost"
                 size="sm"
-                disabled={locked}
+                disabled={locked || saving}
                 className="bg-white/20 text-white hover:bg-white/30 flex items-center gap-1"
               >
                 <Plus className="w-4 h-4" />
@@ -324,6 +337,7 @@ export function GolesSection() {
                   onDelete={del}
                   onCreate={createOnServer}
                   locked={locked}
+                  saving={saving}
                   openDropdown={openDropdown}
                   setOpenDropdown={setOpenDropdown}
                 />
@@ -338,7 +352,7 @@ export function GolesSection() {
                   onClick={add}
                   variant="outline"
                   size="sm"
-                  disabled={locked}
+                  disabled={locked || saving}
                   className="border-primary/30 text-primary hover:bg-indigo-50"
                 >
                   Registrar primer gol

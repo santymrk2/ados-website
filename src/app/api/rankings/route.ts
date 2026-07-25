@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getRankingsCache, triggerRankingsRebuild } from "@/lib/cache";
+import { getRankings } from "@/lib/cache";
 import { requireAuth } from "@/lib/api-utils";
 
 export const dynamic = 'force-dynamic';
@@ -10,27 +10,25 @@ export async function GET(request: NextRequest) {
     return auth.error;
   }
 
-  const rankings = getRankingsCache();
-
-  if (!rankings) {
-    triggerRankingsRebuild();
+  try {
+    const rankings = await getRankings();
+    return NextResponse.json({
+      success: true,
+      data: rankings,
+    }, {
+      status: 200,
+      headers: {
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
+      },
+    });
+  } catch (e) {
+    console.error('Error computing rankings:', e);
     return NextResponse.json({
       success: false,
-      error: "Calculando clasificaciones temporales, intente en unos segundos...",
-      data: []
-    }, { status: 202 });
+      error: "Error calculando clasificaciones",
+      data: [],
+    }, { status: 500 });
   }
-
-  // Return consistent format
-  return NextResponse.json({
-    success: true,
-    data: rankings
-  }, {
-    status: 200,
-    headers: {
-      'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
-      'Pragma': 'no-cache',
-      'Expires': '0',
-    }
-  });
 }

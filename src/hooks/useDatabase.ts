@@ -71,22 +71,30 @@ export function useDatabase() {
   }, []);
 
   // Quick update (asistencia, equipos, etc)
-  // Skip refresh post-update: el SSE se encargará de sincronizar cambios de otros usuarios
+  // After a successful non-optimistic PATCH, always refresh to reconcile with server truth.
+  // For optimistic types (attendance/socials/game_pos), the store was already updated
+  // by optimisticUpdateActivity — this refresh runs in the background to reconcile,
+  // and pendingOptimistic in appStore prevents overwriting in-flight mutations.
   const quickUpdate = useCallback(async (activityId: number, type: string, data: unknown, version?: number) => {
     const perform = async (currentVersion?: number) => quickUpdateActivity(activityId, type, data, currentVersion);
 
     try {
       const result = await perform(version);
-      // No refresh - el SSE se encargará de sync si hay cambios de otros usuarios
+      // Always refresh after own change — SSE (in-memory EventEmitter) is not
+      // reliable across serverless instances, so we can't depend on it to reflect
+      // our own mutations back to us.
+      await refreshData(false);
       return result;
     } catch (error) {
       const isConflict = error instanceof VersionConflictError;
 
       if (isConflict && RETRYABLE_QUICK_UPDATE_TYPES.has(type)) {
-        // En conflicto, sí refresh para obtener datos frescos antes de reintentar
+        // On conflict: fetch fresh data, grab latest version, retry
         await refreshData(false);
         const freshVersion = $activities.get().find((activity) => activity.id === activityId)?.version;
         const retriedResult = await perform(freshVersion);
+        // Reconcile after successful retry too
+        await refreshData(false);
         return retriedResult;
       }
 

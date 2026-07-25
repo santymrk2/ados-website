@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { TEAM_COLORS, getEdad } from "@/lib/constants";
 import { actRankingPtsDetails } from "@/lib/calc";
 import { confirmDialog } from "@/components/ui/confirm-dialog";
+import { toggleArrayField, setTeamField } from "@/lib/activity-mutates";
 import type { Activity, ParticipantBasic } from "@/lib/types";
 
 interface PlayerPointsModalProps {
@@ -19,7 +20,12 @@ interface PlayerPointsModalProps {
   canEdit?: boolean;
   locked?: boolean;
   fromEditMode?: boolean;
-  performQuickUpdate?: (type: string, data: unknown) => Promise<unknown>;
+  performQuickUpdate?: (
+    type: string,
+    data: unknown,
+    scope?: string,
+    optimisticMutate?: (activity: Activity) => Activity,
+  ) => Promise<unknown>;
   activeTeams?: string[];
 }
 
@@ -64,10 +70,12 @@ export function PlayerPointsModal({
   const handleToggleAttendance = () => {
     if (!performQuickUpdate) return;
     withSaving(async () => {
-      await performQuickUpdate("attendance", {
-        participantId: player.id,
-        value: !isPresent,
-      });
+      await performQuickUpdate(
+        "attendance",
+        { participantId: player.id, value: !isPresent },
+        undefined,
+        toggleArrayField("asistentes", player.id, !isPresent),
+      );
     });
   };
 
@@ -75,19 +83,25 @@ export function PlayerPointsModal({
     if (!performQuickUpdate) return;
     withSaving(async () => {
       if (!isPunctual && !isPresent) {
-        await performQuickUpdate("attendance", {
-          participantId: player.id,
-          value: true,
-        });
-        await performQuickUpdate("puntuales", {
-          participantId: player.id,
-          value: true,
-        });
+        await performQuickUpdate(
+          "attendance",
+          { participantId: player.id, value: true },
+          undefined,
+          toggleArrayField("asistentes", player.id, true),
+        );
+        await performQuickUpdate(
+          "puntuales",
+          { participantId: player.id, value: true },
+          undefined,
+          toggleArrayField("puntuales", player.id, true),
+        );
       } else {
-        await performQuickUpdate("puntuales", {
-          participantId: player.id,
-          value: !isPunctual,
-        });
+        await performQuickUpdate(
+          "puntuales",
+          { participantId: player.id, value: !isPunctual },
+          undefined,
+          toggleArrayField("puntuales", player.id, !isPunctual),
+        );
       }
     });
   };
@@ -108,10 +122,12 @@ export function PlayerPointsModal({
     }
 
     withSaving(async () => {
-      await performQuickUpdate("socials", {
-        participantId: player.id,
-        value: !isSocial,
-      });
+      await performQuickUpdate(
+        "socials",
+        { participantId: player.id, value: !isSocial },
+        undefined,
+        toggleArrayField("socials", player.id, !isSocial),
+      );
     });
   };
 
@@ -132,20 +148,24 @@ export function PlayerPointsModal({
     if (!targetTeam) return;
 
     withSaving(async () => {
-      await performQuickUpdate("team", {
-        participantId: player.id,
-        team: targetTeam,
-      });
+      await performQuickUpdate(
+        "team",
+        { participantId: player.id, team: targetTeam },
+        undefined,
+        setTeamField(player.id, targetTeam),
+      );
     });
   };
 
   const handleSelectTeam = (selectedTeam: string) => {
     if (!performQuickUpdate) return;
     withSaving(async () => {
-      await performQuickUpdate("team", {
-        participantId: player.id,
-        team: selectedTeam,
-      });
+      await performQuickUpdate(
+        "team",
+        { participantId: player.id, team: selectedTeam },
+        undefined,
+        setTeamField(player.id, selectedTeam),
+      );
     });
   };
 

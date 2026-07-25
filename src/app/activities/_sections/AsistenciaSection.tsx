@@ -14,6 +14,7 @@ import { Label } from "@/components/ui/Common";
 import { cn, normalizeText } from "@/lib/utils";
 import { confirmDialog } from "@/components/ui/confirm-dialog";
 import { PlayerPointsModal } from "@/app/activities/_components/PlayerPointsModal";
+import { toggleArrayField } from "@/lib/activity-mutates";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Clock,
@@ -31,7 +32,6 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DetailSheet } from "@/components/ui/DetailSheet";
 import type { Activity, ParticipantBasic } from "@/lib/types";
-import { VersionConflictError } from "@/lib/errors";
 import { $isSavingAttendance } from "@/store/appStore";
 
 const MONTHS = [
@@ -379,6 +379,7 @@ export function AsistenciaSection() {
   const [sortMode, setSortMode] = useState<"name" | "lastname" | "age" | "punctual">("name");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const isSaving = useStore($isSavingAttendance);
+  const [savingAction, setSavingAction] = useState(false);
 
   const handleSortClick = (mode: typeof sortMode) => {
     if (sortMode === mode) {
@@ -564,55 +565,61 @@ export function AsistenciaSection() {
     const isPresent = act.asistentes.includes(id);
 
     try {
-      await performQuickUpdate("attendance", {
-        participantId: id,
-        value: !isPresent,
-      });
+      await performQuickUpdate(
+        "attendance",
+        { participantId: id, value: !isPresent },
+        undefined,
+        toggleArrayField("asistentes", id, !isPresent),
+      );
 
       if (!isPresent) {
-        await performQuickUpdate("socials", {
-          participantId: id,
-          value: false,
-        });
+        await performQuickUpdate(
+          "socials",
+          { participantId: id, value: false },
+          undefined,
+          toggleArrayField("socials", id, false),
+        );
       }
-    } catch (error) {
-      if (error instanceof VersionConflictError) {
-        toast.error("Conflicto de edición", {
-          description: "Otra persona modificó esta actividad. Se actualizó la vista.",
-        });
-      }
+    } catch {
+      // Centralized toast in activity-context.tsx handles error display
     }
   };
 
   const togglePunctual = async (id: number) => {
+    if (savingAction) return;
     const isPunctual = (act.puntuales || []).includes(id);
-
-    if (!isPunctual && !act.asistentes.includes(id)) {
-      try {
-        await performQuickUpdate("attendance", {
-          participantId: id,
-          value: true,
-        });
-        await performQuickUpdate("puntuales", {
-          participantId: id,
-          value: true,
-        });
-      } catch {
-        // Error already handled by performQuickUpdate
+    setSavingAction(true);
+    try {
+      if (!isPunctual && !act.asistentes.includes(id)) {
+        await performQuickUpdate(
+          "attendance",
+          { participantId: id, value: true },
+          undefined,
+          toggleArrayField("asistentes", id, true),
+        );
+        await performQuickUpdate(
+          "puntuales",
+          { participantId: id, value: true },
+          undefined,
+          toggleArrayField("puntuales", id, true),
+        );
+      } else {
+        await performQuickUpdate(
+          "puntuales",
+          { participantId: id, value: !isPunctual },
+          undefined,
+          toggleArrayField("puntuales", id, !isPunctual),
+        );
       }
-    } else {
-      try {
-        await performQuickUpdate("puntuales", {
-          participantId: id,
-          value: !isPunctual,
-        });
-      } catch {
-        // Error already handled by performQuickUpdate
-      }
+    } catch {
+      // Error already handled by performQuickUpdate
+    } finally {
+      setSavingAction(false);
     }
   };
 
   const toggleSocial = async (id: number) => {
+    if (savingAction) return;
     const isSocial = (act.socials || []).includes(id);
 
     if (!isSocial && act.equipos?.[String(id)]) {
@@ -627,13 +634,18 @@ export function AsistenciaSection() {
       if (!ok) return;
     }
 
+    setSavingAction(true);
     try {
-      await performQuickUpdate("socials", {
-        participantId: id,
-        value: !isSocial,
-      });
+      await performQuickUpdate(
+        "socials",
+        { participantId: id, value: !isSocial },
+        undefined,
+        toggleArrayField("socials", id, !isSocial),
+      );
     } catch {
       // Error already handled by performQuickUpdate
+    } finally {
+      setSavingAction(false);
     }
   };
 
@@ -758,7 +770,7 @@ export function AsistenciaSection() {
                   </button>
                   <button
                     onClick={() => togglePunctual(p.id)}
-                    disabled={locked || !isAdmin}
+                    disabled={locked || !isAdmin || savingAction}
                     className={cn(
                       "flex items-center justify-center h-9 min-w-9 px-2 text-base font-semibold transition-colors rounded-r-2xl border border-l-0",
                       (locked || !isAdmin) &&
@@ -794,7 +806,7 @@ export function AsistenciaSection() {
                   <div className="flex flex-wrap gap-1 items-center">
                     <button
                       onClick={() => toggleSocial(p.id)}
-                      disabled={locked || !isAdmin}
+                      disabled={locked || !isAdmin || savingAction}
                       className={cn(
                         "flex items-center gap-1 h-9 min-w-9 px-3 text-base font-semibold transition-colors rounded-2xl border",
                         (locked || !isAdmin) &&

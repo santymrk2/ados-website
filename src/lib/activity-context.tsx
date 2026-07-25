@@ -16,6 +16,7 @@ import type { SyncStatus } from "@/lib/sync-status";
 import { initialSyncStatus } from "@/lib/sync-status";
 import { VersionConflictError } from "@/lib/errors";
 import { optimisticUpdateActivity, type OptimisticResult } from "@/lib/optimisticUpdate";
+import { toast } from "@/hooks/use-toast";
 
 // ── Context shape ────────────────────────────────────────────────────────────
 
@@ -39,11 +40,13 @@ export interface UnifiedActivityContextValue {
   /** Is any section currently in edit mode? */
   editingSection: SectionId | null;
   setEditingSection: (id: SectionId | null) => void;
-  /** Fire-and-forget atomic update — sets syncStatus automatically */
+  /** Fire-and-forget atomic update — sets syncStatus automatically.
+   *  Pass optimisticMutate to get instant UI feedback with automatic revert on error. */
   performQuickUpdate: (
     type: string,
     data: unknown,
     scope?: string,
+    optimisticMutate?: (activity: Activity) => Activity,
   ) => Promise<unknown>;
 }
 
@@ -113,29 +116,61 @@ export function UnifiedActivityProvider({
     activityVersionRef.current = activityVersion ?? activity.version;
   }, [activityVersion, activity.version]);
 
+  // ── Centralized toast for conflict / error states ──────────────────────────
+  const prevStatusRef = useRef(syncStatus);
+  useEffect(() => {
+    const prev = prevStatusRef.current;
+    prevStatusRef.current = syncStatus;
+
+    // Only toast when state *changes into* conflict or error
+    if (prev.state === syncStatus.state) return;
+    if (syncStatus.state === "conflict") {
+      toast.error("Conflicto de edición", {
+        description: "Otra persona modificó esta actividad. Se actualizó la vista.",
+      });
+    } else if (syncStatus.state === "error") {
+      toast.error("Error al guardar", {
+        description: syncStatus.message || "Ocurrió un error inesperado.",
+      });
+    }
+  }, [syncStatus]);
+
   const performQuickUpdate = useCallback(
-    async (type: string, data: unknown, scope?: string) => {
+    async (
+      type: string,
+      data: unknown,
+      scope?: string,
+      optimisticMutate?: (activity: Activity) => Activity,
+    ) => {
       if (!activityId) return;
       setSyncStatus({ state: "saving" });
 
-      // Optimistic path for attendance/socials: instant UI feedback
-      if (type === "attendance" || type === "socials") {
-        const { participantId, value } = data as { participantId: number; value: boolean };
-
-        try {
-          await optimisticUpdateActivity(
-            activityId,
-            (act) => {
+      // Built-in mutations for attendance/socials (backward compat)
+      const builtInMutate =
+        type === "attendance" || type === "socials"
+          ? (act: Activity) => {
+              const { participantId, value } = data as { participantId: number; value: boolean };
               const key = type === "attendance" ? "asistentes" : "socials";
               const arr = [...((act[key] as number[]) || [])];
               if (value && !arr.includes(participantId)) arr.push(participantId);
-              if (!value) arr.splice(arr.indexOf(participantId), 1);
+              if (!value) {
+                const idx = arr.indexOf(participantId);
+                if (idx !== -1) arr.splice(idx, 1);
+              }
               return { ...act, [key]: arr };
-            },
+            }
+          : undefined;
+
+      const mutate = optimisticMutate || builtInMutate;
+
+      // Optimistic path: instant UI feedback with automatic revert on error
+      if (mutate) {
+        try {
+          await optimisticUpdateActivity(
+            activityId,
+            mutate,
             () => quickUpdate(activityId, type, data, activityVersionRef.current) as Promise<OptimisticResult>,
-            // On success: update ref so next sequential call uses fresh version
             (version) => { activityVersionRef.current = version; },
-            // On conflict: syncStatus shows conflict state
             () => setSyncStatus({ state: "conflict", message: "Otro usuario modificó esta actividad." }),
           );
           setSyncStatus({ state: "saved" });
@@ -155,7 +190,7 @@ export function UnifiedActivityProvider({
         }
       }
 
-      // Non-optimistic path for all other types (unchanged)
+      // Non-optimistic path for all other types
       try {
         const result = await quickUpdate(activityId, type, data, activityVersionRef.current);
         if (

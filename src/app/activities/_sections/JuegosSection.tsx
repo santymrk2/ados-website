@@ -14,7 +14,8 @@ import { Avatar } from "@/components/ui/Avatar";
 import { DetailSheet } from "@/components/ui/DetailSheet";
 import { cn, normalizeText } from "@/lib/utils";
 import { confirmDialog } from "@/components/ui/confirm-dialog";
-import type { Juego, ParticipantBasic } from "@/lib/types";
+import { deleteGame, updateGameName } from "@/lib/activity-mutates";
+import type { Juego, ParticipantBasic, Activity } from "@/lib/types";
 
 const POSITIONS = ["1", "2", "3", "4"] as const;
 type JuegoTipo = "grupal" | "individual";
@@ -178,7 +179,7 @@ function GameDetailModal({
                         if (!open) setSearch("");
                       }}
                     >
-                      <PopoverTrigger asChild disabled={locked || saving}>
+                      <PopoverTrigger asChild disabled={locked}>
                         <Button type="button" variant="outline" size="sm" className="w-full sm:w-auto">
                           <Plus className="w-3 h-3 mr-1" /> Agregar
                         </Button>
@@ -225,7 +226,7 @@ function GameDetailModal({
                       variant="outline"
                       size="sm"
                       onClick={() => onFillRemaining(game.id, pos)}
-                      disabled={locked || saving}
+                      disabled={locked}
                       className="w-full sm:w-auto"
                     >
                       Completar resto
@@ -259,7 +260,7 @@ function GameDetailModal({
                           )}
                           <button
                             type="button"
-                            disabled={locked || saving}
+                            disabled={locked}
                             onClick={() => onToggleItem(game.id, value, pos)}
                             className="ml-0.5 rounded-full p-0.5 text-muted-foreground hover:bg-red-50 hover:text-red-500 transition-colors"
                           >
@@ -280,7 +281,7 @@ function GameDetailModal({
                       <button
                         key={team}
                         type="button"
-                        disabled={locked || saving}
+                        disabled={locked}
                         onClick={() => onToggleItem(game.id, team, pos)}
                         className={cn(
                           "rounded-full border px-3 py-1.5 text-sm font-bold transition",
@@ -359,13 +360,17 @@ export function JuegosSection() {
     async (gameId: number | string, nextPos: Record<string, string[]>) => {
       if (typeof gameId === "string" && String(gameId).startsWith("temp")) return;
 
-      setSaving(true);
+      const mutate = (act: Activity) => {
+        const juegos = (act.juegos || []).map((j) =>
+          j.id === gameId ? { ...j, pos: nextPos } : j,
+        );
+        return { ...act, juegos };
+      };
+
       try {
-        await performQuickUpdate("game_pos", { juegoId: gameId, pos: nextPos }, "juegos");
+        await performQuickUpdate("game_pos", { juegoId: gameId, pos: nextPos }, "juegos", mutate);
       } catch {
-        // Error already handled
-      } finally {
-        setSaving(false);
+        // El revert ya lo hace optimisticUpdateActivity
       }
     },
     [performQuickUpdate],
@@ -388,11 +393,16 @@ export function JuegosSection() {
     [locked, performQuickUpdate],
   );
 
-  const deleteGame = useCallback(
+  const handleDeleteGame = useCallback(
     async (gameId: number | string) => {
       setSaving(true);
       try {
-        await performQuickUpdate("game_delete", { id: gameId }, "juegos");
+        await performQuickUpdate(
+          "game_delete",
+          { id: gameId },
+          "juegos",
+          deleteGame(gameId),
+        );
         if (selectedId === gameId) setSelectedId(null);
       } catch {
         // Error already handled
@@ -405,16 +415,25 @@ export function JuegosSection() {
 
   const updateName = useCallback(
     async (gameId: number | string, nombre: string) => {
+      // No-op: don't send if name didn't change
+      const game = gameList.find((g) => g.id === gameId);
+      if (game && game.nombre === nombre) return;
+
       setSaving(true);
       try {
-        await performQuickUpdate("game_update", { id: gameId, nombre }, "juegos");
+        await performQuickUpdate(
+          "game_update",
+          { id: gameId, nombre },
+          "juegos",
+          updateGameName(gameId, nombre),
+        );
       } catch {
         // Error already handled
       } finally {
         setSaving(false);
       }
     },
-    [performQuickUpdate],
+    [performQuickUpdate, gameList],
   );
 
   const togglePositionItem = useCallback(
@@ -585,7 +604,7 @@ export function JuegosSection() {
                     `¿Eliminar "${game.nombre || 'Juego ' + (gameList.indexOf(game) + 1)}"?`,
                     { title: "Eliminar juego", confirmText: "Eliminar", isDestructive: true },
                   );
-                  if (confirmed) await deleteGame(game.id);
+                  if (confirmed) await handleDeleteGame(game.id);
                 }}
               >
                 <X className="h-4 w-4" />
@@ -652,7 +671,7 @@ export function JuegosSection() {
                   `¿Eliminar "${selectedGame.nombre || 'Juego ' + (gameList.indexOf(selectedGame) + 1)}"?`,
                   { title: "Eliminar juego", confirmText: "Eliminar", isDestructive: true },
                 );
-                if (confirmed) await deleteGame(selectedGame.id);
+                if (confirmed) await handleDeleteGame(selectedGame.id);
               }}
               onToggleItem={togglePositionItem}
               onFillRemaining={fillWithRemaining}

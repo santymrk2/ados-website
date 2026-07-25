@@ -72,7 +72,7 @@ export function useDatabase() {
 
   // Quick update (asistencia, equipos, etc)
   // Skip refresh post-update: el SSE se encargará de sincronizar cambios de otros usuarios
-  const quickUpdate = useCallback(async (activityId: number, type: string, data: unknown, version?: number, _skipRefresh = false) => {
+  const quickUpdate = useCallback(async (activityId: number, type: string, data: unknown, version?: number) => {
     const perform = async (currentVersion?: number) => quickUpdateActivity(activityId, type, data, currentVersion);
 
     try {

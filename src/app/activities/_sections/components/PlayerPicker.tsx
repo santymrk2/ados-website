@@ -55,8 +55,8 @@ export function PlayerPicker({
           type="button"
           className={
             selected
-              ? "flex items-center gap-2 rounded-full border border-surface-dark bg-white px-2.5 py-1 text-xs font-medium shadow-sm"
-              : "flex items-center gap-2 rounded-full border border-dashed border-surface-dark px-3 py-1.5 text-xs text-text-muted hover:border-primary/40 transition-colors"
+              ? "flex items-center gap-2 rounded-full border border-surface-dark bg-white px-2.5 py-1 text-sm font-medium shadow-sm"
+              : "flex items-center gap-2 rounded-full border border-dashed border-surface-dark px-3 py-1.5 text-sm text-text-muted hover:border-primary/40 transition-colors"
           }
         >
           {selected ? (
@@ -79,7 +79,7 @@ export function PlayerPicker({
               placeholder="Buscar jugador..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="h-8 pl-8 text-xs bg-white"
+              className="h-8 pl-8 text-sm bg-white"
               autoFocus
             />
           </div>
@@ -94,16 +94,16 @@ export function PlayerPicker({
                 className="flex items-center gap-2 w-full px-3 py-2 text-left transition-colors hover:bg-indigo-50"
               >
                 <Avatar p={p} size={24} />
-                <span className="text-sm font-medium">
+                <span className="text-base font-medium">
                   {p.nombre} {p.apellido}
                 </span>
                 {p.team && (
-                  <span className="text-xs text-text-muted ml-auto">{p.team}</span>
+                  <span className="text-sm text-text-muted ml-auto">{p.team}</span>
                 )}
               </button>
             ))
           ) : (
-            <div className="px-3 py-6 text-center text-xs text-text-muted italic">
+            <div className="px-3 py-6 text-center text-sm text-text-muted italic">
               {search.trim()
                 ? "No se encontraron jugadores"
                 : "No hay jugadores disponibles"}

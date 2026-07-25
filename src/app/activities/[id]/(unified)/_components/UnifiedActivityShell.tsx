@@ -62,7 +62,7 @@ function SyncStatusBadge() {
           syncStatus.state === "conflict" && "text-amber-300",
         )}
       />
-      <span className="text-xs font-medium">{resolved.label}</span>
+      <span className="text-sm font-medium">{resolved.label}</span>
     </Button>
   );
 }
@@ -94,7 +94,7 @@ function SimpleHeader({
               {title || "Actividad"}
             </h1>
             {date && (
-              <div className="text-sm opacity-70 truncate">
+              <div className="text-base opacity-70 truncate">
                 {formatDate(date)} · {asistentes ?? 0} presentes
               </div>
             )}
@@ -312,7 +312,7 @@ function ActivityTitle() {
 function ActivityMeta() {
   const { activity } = useUnifiedActivity();
   return (
-    <div className="text-sm opacity-70 truncate">
+    <div className="text-base opacity-70 truncate">
       {formatDate(activity.fecha)} · {(activity.asistentes || []).length}{" "}
       presentes
     </div>

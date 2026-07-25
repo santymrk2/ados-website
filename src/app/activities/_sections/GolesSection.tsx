@@ -73,7 +73,7 @@ function GoalRow({
               {selectedPlayer ? (
                 <>
                   <Avatar p={selectedPlayer} size={28} />
-                  <span className="text-sm font-medium truncate text-foreground">
+                  <span className="text-base font-medium truncate text-foreground">
                     {selectedPlayer.nombre} {selectedPlayer.apellido}
                   </span>
                 </>
@@ -82,7 +82,7 @@ function GoalRow({
                   <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center text-[10px] font-black text-muted-foreground">
                     ?
                   </div>
-                  <span className="text-sm text-muted-foreground italic">Seleccionar jugador...</span>
+                  <span className="text-base text-muted-foreground italic">Seleccionar jugador...</span>
                 </>
               )}
             </button>
@@ -95,7 +95,7 @@ function GoalRow({
                   placeholder="Buscar jugador..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  className="h-8 pl-8 text-xs bg-white"
+                  className="h-8 pl-8 text-sm bg-white"
                   autoFocus
                 />
               </div>
@@ -112,11 +112,11 @@ function GoalRow({
                     )}
                   >
                     <Avatar p={p} size={24} />
-                    <span className="text-sm font-medium">{p.nombre} {p.apellido}</span>
+                    <span className="text-base font-medium">{p.nombre} {p.apellido}</span>
                   </button>
                 ))
               ) : (
-                <div className="px-3 py-6 text-center text-xs text-muted-foreground italic">
+                <div className="px-3 py-6 text-center text-sm text-muted-foreground italic">
                   No se encontraron jugadores
                 </div>
               )}
@@ -152,7 +152,7 @@ function GoalRow({
         >
           <Minus className="w-3 h-3" />
         </button>
-        <span className="w-4 text-center text-xs font-black text-foreground">
+        <span className="w-4 text-center text-sm font-black text-foreground">
           {g.cant || 1}
         </span>
         <button
@@ -333,7 +333,7 @@ export function GolesSection() {
                 <div className="w-12 h-12 rounded-full bg-indigo-50 flex items-center justify-center mb-3">
                   <Plus className="w-6 h-6 text-primary" />
                 </div>
-                <p className="text-sm text-muted-foreground mb-4">No hay goles registrados</p>
+                <p className="text-base text-muted-foreground mb-4">No hay goles registrados</p>
                 <Button
                   onClick={add}
                   variant="outline"
@@ -358,7 +358,7 @@ export function GolesSection() {
             )}
           </div>
 
-          <div className="flex items-center justify-center gap-3 text-xs font-bold text-white/60 mb-4">
+          <div className="flex items-center justify-center gap-3 text-sm font-bold text-white/60 mb-4">
             <span>⚽ {bySport.f?.total || 0}</span>
             <span>·</span>
             <span>🤾 {bySport.h?.total || 0}</span>
@@ -368,7 +368,7 @@ export function GolesSection() {
 
           {allPlayersTotal.length > 0 && (
             <div className="space-y-2">
-              <h3 className="text-xs font-black uppercase tracking-widest text-white/70">
+              <h3 className="text-sm font-black uppercase tracking-widest text-white/70">
                 Por jugador
               </h3>
               <div className="flex flex-col gap-1">
@@ -382,7 +382,7 @@ export function GolesSection() {
                     </div>
                     {p.participant && <Avatar p={p.participant} size={30} />}
                     <div className="flex-1">
-                      <div className="font-bold text-sm">
+                      <div className="font-bold text-base">
                         {p.participant
                           ? `${p.participant.nombre} ${p.participant.apellido}`
                           : "Desconocido"}
@@ -397,7 +397,7 @@ export function GolesSection() {
 
           {goles.length === 0 && (
             <div className="flex flex-col items-center justify-center py-8 text-center">
-              <p className="text-sm text-white/60">No hay goles registrados</p>
+              <p className="text-base text-white/60">No hay goles registrados</p>
             </div>
           )}
         </>

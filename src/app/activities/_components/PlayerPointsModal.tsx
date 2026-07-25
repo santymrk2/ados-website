@@ -49,11 +49,6 @@ export function PlayerPointsModal({
   const edad = getEdad(player.fechaNacimiento);
   const [saving, setSaving] = useState(false);
 
-  const withClose = (fn: () => Promise<void>) => {
-    onClose();
-    fn().catch(() => {});
-  };
-
   const withSaving = async (fn: () => Promise<void>) => {
     if (saving) return;
     setSaving(true);
@@ -68,7 +63,7 @@ export function PlayerPointsModal({
 
   const handleToggleAttendance = () => {
     if (!performQuickUpdate) return;
-    withClose(async () => {
+    withSaving(async () => {
       await performQuickUpdate("attendance", {
         participantId: player.id,
         value: !isPresent,
@@ -78,7 +73,7 @@ export function PlayerPointsModal({
 
   const handleTogglePunctual = () => {
     if (!performQuickUpdate) return;
-    withClose(async () => {
+    withSaving(async () => {
       if (!isPunctual && !isPresent) {
         await performQuickUpdate("attendance", {
           participantId: player.id,
@@ -112,7 +107,7 @@ export function PlayerPointsModal({
       if (!ok) return;
     }
 
-    withClose(async () => {
+    withSaving(async () => {
       await performQuickUpdate("socials", {
         participantId: player.id,
         value: !isSocial,

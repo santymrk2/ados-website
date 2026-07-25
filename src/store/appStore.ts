@@ -23,6 +23,39 @@ export const $dataVersion = atom<number>(0);
 // UI State
 export const $showSettings = atom<boolean>(false);
 
+// Optimistic update state — tracks in-flight attendance/socials updates
+// so doRefresh() (SSE) doesn't overwrite optimistic data with stale server state
+export const pendingOptimistic = new Set<number>();
+export const $isSavingAttendance = atom<boolean>(false);
+
+export function acquireInflight(id: number): boolean {
+  if (pendingOptimistic.has(id)) return false;
+  pendingOptimistic.add(id);
+  $isSavingAttendance.set(true);
+  return true;
+}
+
+export function releaseInflight(id: number) {
+  pendingOptimistic.delete(id);
+  if (pendingOptimistic.size === 0) {
+    $isSavingAttendance.set(false);
+  }
+}
+
+/**
+ * Merge a single activity into $activities (used after 409 refetch).
+ * Only replaces the matching row, preserving other rows' optimistic state.
+ */
+export function mergeActivityIntoStore(activity: Activity) {
+  const current = $activities.get();
+  const idx = current.findIndex((a) => a.id === activity.id);
+  if (idx === -1) return;
+  const next = [...current];
+  next[idx] = activity;
+  $activities.set(next);
+  $dataVersion.set($dataVersion.get() + 1);
+}
+
 // Promise-based locking to prevent race conditions
 // Using a Promise instead of a boolean prevents race conditions between concurrent calls
 let refreshPromise: Promise<void> | null = null;
@@ -103,7 +136,17 @@ async function doRefresh(): Promise<void> {
 
       // Update all atoms atomically to prevent inconsistent state
       $participants.set(newParticipants);
-      $activities.set(newActivities);
+      // Merge activities: skip rows with in-flight optimistic updates
+      // to avoid overwriting local mutations with stale server data
+      const currentActivities = $activities.get();
+      const mergedActivities = newActivities.map((a) => {
+        if (pendingOptimistic.has(a.id)) {
+          const existing = currentActivities.find((c) => c.id === a.id);
+          return existing ?? a; // preserve optimistic state
+        }
+        return a;
+      });
+      $activities.set(mergedActivities);
       $rankings.set(newRankings);
       $dbError.set(null);
       $dbConnected.set(true);

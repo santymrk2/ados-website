@@ -598,7 +598,7 @@ export function JuegosSection() {
       {gameList.length === 0 && <Empty text="Sin juegos registrados" className="text-white/60" />}
 
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="sm:max-w-lg" aria-describedby={undefined}>
           <DialogHeader>
             <DialogTitle>Agregar juego</DialogTitle>
           </DialogHeader>

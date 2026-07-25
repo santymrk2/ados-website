@@ -15,6 +15,7 @@ import type { SectionId } from "@/lib/activity-sections";
 import type { SyncStatus } from "@/lib/sync-status";
 import { initialSyncStatus } from "@/lib/sync-status";
 import { VersionConflictError } from "@/lib/errors";
+import { optimisticUpdateActivity, type OptimisticResult } from "@/lib/optimisticUpdate";
 
 // ── Context shape ────────────────────────────────────────────────────────────
 
@@ -116,6 +117,45 @@ export function UnifiedActivityProvider({
     async (type: string, data: unknown, scope?: string) => {
       if (!activityId) return;
       setSyncStatus({ state: "saving" });
+
+      // Optimistic path for attendance/socials: instant UI feedback
+      if (type === "attendance" || type === "socials") {
+        const { participantId, value } = data as { participantId: number; value: boolean };
+
+        try {
+          await optimisticUpdateActivity(
+            activityId,
+            (act) => {
+              const key = type === "attendance" ? "asistentes" : "socials";
+              const arr = [...((act[key] as number[]) || [])];
+              if (value && !arr.includes(participantId)) arr.push(participantId);
+              if (!value) arr.splice(arr.indexOf(participantId), 1);
+              return { ...act, [key]: arr };
+            },
+            () => quickUpdate(activityId, type, data, activityVersionRef.current) as Promise<OptimisticResult>,
+            // On success: update ref so next sequential call uses fresh version
+            (version) => { activityVersionRef.current = version; },
+            // On conflict: syncStatus shows conflict state
+            () => setSyncStatus({ state: "conflict", message: "Otro usuario modificó esta actividad." }),
+          );
+          setSyncStatus({ state: "saved" });
+          return;
+        } catch (error) {
+          const message =
+            error instanceof VersionConflictError
+              ? "Otro usuario modificó esta actividad. Se actualizó la vista."
+              : error instanceof Error
+                ? error.message
+                : "Error al guardar";
+          setSyncStatus({
+            state: error instanceof VersionConflictError ? "conflict" : "error",
+            message,
+          });
+          throw error;
+        }
+      }
+
+      // Non-optimistic path for all other types (unchanged)
       try {
         const result = await quickUpdate(activityId, type, data, activityVersionRef.current);
         if (

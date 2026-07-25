@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
+import { useStore } from "@nanostores/react";
 import { useUnifiedActivity } from "@/lib/activity-context";
 import { useApp } from "@/hooks/useApp";
 import { toast } from "@/hooks/use-toast";
@@ -27,8 +28,31 @@ import {
   Calendar,
   CheckCircle,
 } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DetailSheet } from "@/components/ui/DetailSheet";
 import type { Activity, ParticipantBasic } from "@/lib/types";
+import { VersionConflictError } from "@/lib/errors";
+import { $isSavingAttendance } from "@/store/appStore";
+
+const MONTHS = [
+  { value: "1", label: "Enero" },
+  { value: "2", label: "Febrero" },
+  { value: "3", label: "Marzo" },
+  { value: "4", label: "Abril" },
+  { value: "5", label: "Mayo" },
+  { value: "6", label: "Junio" },
+  { value: "7", label: "Julio" },
+  { value: "8", label: "Agosto" },
+  { value: "9", label: "Septiembre" },
+  { value: "10", label: "Octubre" },
+  { value: "11", label: "Noviembre" },
+  { value: "12", label: "Diciembre" },
+];
+
+function buildDate(day: string, month: string, year: string): string {
+  if (!day || !month || !year) return "";
+  return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
+}
 
 function NewPlayerModal({
   onClose,
@@ -41,8 +65,9 @@ function NewPlayerModal({
     nombre: "",
     apellido: "",
     sexo: "M",
-    fechaNacimiento: "",
   });
+  const [dob, setDob] = useState({ day: "", month: "", year: "" });
+  const fechaNacimiento = buildDate(dob.day, dob.month, dob.year);
   const [invitadorId, setInvitadorId] = useState<number | null>(null);
   const [invitadorOpen, setInvitadorOpen] = useState(false);
   const [invitadorSearch, setInvitadorSearch] = useState("");
@@ -63,9 +88,9 @@ function NewPlayerModal({
   const handleCreate = async () => {
     if (!form.nombre.trim() || !form.apellido.trim())
       return toast.error("Ingresá nombre y apellido");
-    if (!form.fechaNacimiento) return toast.error("Ingresá la fecha de nacimiento");
+    if (!fechaNacimiento) return toast.error("Ingresá la fecha de nacimiento");
 
-    const age = getEdad(form.fechaNacimiento);
+    const age = getEdad(fechaNacimiento);
     if (age !== null && (age < 12 || age > 18)) {
       const ok = await confirmDialog(
         `¿Estás seguro que querés agregar a ${form.nombre} con ${age} años?`,
@@ -77,13 +102,22 @@ function NewPlayerModal({
     if (isSubmitting) return;
     setIsSubmitting(true);
     try {
-      const p = { ...newPart(), ...form, id: db.nextPid };
+      const p = { ...newPart(), ...form, fechaNacimiento, id: db.nextPid };
       await saveParticipant(p, true, invitadorId);
 
       await performQuickUpdate("attendance", {
         participantId: p.id,
         value: true,
       });
+
+      // Also create an invitacion record for this activity so it shows in InvitacionesSection
+      if (invitadorId) {
+        await performQuickUpdate(
+          "invitacion_add",
+          { invitador: invitadorId, invitadoId: p.id },
+          "invitaciones",
+        );
+      }
 
       onClose();
     } catch {
@@ -125,12 +159,50 @@ function NewPlayerModal({
       </div>
       <div className="mb-4">
         <Label className="mb-1">Fecha de Nacimiento</Label>
-        <input
-          type="date"
-          value={form.fechaNacimiento}
-          onChange={(e) => setForm((p) => ({ ...p, fechaNacimiento: e.target.value }))}
-          className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm"
-        />
+        <div className="grid grid-cols-3 gap-2">
+          <Select value={dob.day} onValueChange={(v) => {
+            const next = { ...dob, day: v };
+            setDob(next);
+            setForm((p) => ({ ...p, fechaNacimiento: buildDate(next.day, next.month, next.year) }));
+          }}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Día" />
+            </SelectTrigger>
+            <SelectContent>
+              {Array.from({ length: 31 }, (_, i) => String(i + 1)).map((d) => (
+                <SelectItem key={d} value={d}>{d}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={dob.month} onValueChange={(v) => {
+            const next = { ...dob, month: v };
+            setDob(next);
+            setForm((p) => ({ ...p, fechaNacimiento: buildDate(next.day, next.month, next.year) }));
+          }}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Mes" />
+            </SelectTrigger>
+            <SelectContent>
+              {MONTHS.map((m) => (
+                <SelectItem key={m.value} value={m.value}>{m.value}-{m.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={dob.year} onValueChange={(v) => {
+            const next = { ...dob, year: v };
+            setDob(next);
+            setForm((p) => ({ ...p, fechaNacimiento: buildDate(next.day, next.month, next.year) }));
+          }}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Año" />
+            </SelectTrigger>
+            <SelectContent>
+              {Array.from({ length: new Date().getFullYear() - 1949 }, (_, i) => String(new Date().getFullYear() - i)).map((y) => (
+                <SelectItem key={y} value={y}>{y}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
       <div className="mb-4">
         <Label className="mb-1">Sexo</Label>
@@ -306,6 +378,7 @@ export function AsistenciaSection() {
   const [genderFilter, setGenderFilter] = useState<"all" | "M" | "F">("all");
   const [sortMode, setSortMode] = useState<"name" | "lastname" | "age" | "punctual">("name");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+  const isSaving = useStore($isSavingAttendance);
 
   const handleSortClick = (mode: typeof sortMode) => {
     if (sortMode === mode) {
@@ -502,8 +575,12 @@ export function AsistenciaSection() {
           value: false,
         });
       }
-    } catch {
-      // Error already handled by performQuickUpdate
+    } catch (error) {
+      if (error instanceof VersionConflictError) {
+        toast.error("Conflicto de edición", {
+          description: "Otra persona modificó esta actividad. Se actualizó la vista.",
+        });
+      }
     }
   };
 
@@ -664,10 +741,10 @@ export function AsistenciaSection() {
                 <div className="flex gap-0 shrink-0 self-start sm:self-auto">
                   <button
                     onClick={() => toggleAttendance(p.id)}
-                    disabled={locked || !isAdmin}
+                    disabled={locked || !isAdmin || isSaving}
                     className={cn(
                       "flex items-center justify-center h-9 min-w-9 px-2 text-sm font-semibold transition-colors rounded-l-2xl border",
-                      (locked || !isAdmin) &&
+                      (locked || !isAdmin || isSaving) &&
                         "opacity-50 cursor-not-allowed pointer-events-none",
                       here
                         ? "bg-primary text-primary-foreground border-primary"

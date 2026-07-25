@@ -488,7 +488,7 @@ export function InvitacionesSection() {
         open={!!selectedInviter}
         onOpenChange={(open) => !open && setSelectedInviter(null)}
       >
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md" aria-describedby={undefined}>
           <DialogHeader>
             <DialogTitle>
               {selectedInviter

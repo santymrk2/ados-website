@@ -1,6 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import * as schema from "@/lib/schema";
-import { assertTeamEnabled } from "./shared";
+import { assertTeamEnabled, inActivity } from "./shared";
 import type { PatchHandler } from "./types";
 
 export const extra_update: PatchHandler = async ({ tx, activityId, data }) => {
@@ -23,7 +23,7 @@ export const extra_update: PatchHandler = async ({ tx, activityId, data }) => {
   await tx
     .update(schema.extras)
     .set(updateData)
-    .where(eq(schema.extras.id, id));
+    .where(inActivity.extras(id, activityId));
 };
 
 export const extra_toggle: PatchHandler = async ({ tx, activityId, data }) => {
@@ -68,7 +68,7 @@ export const extra_add: PatchHandler = async ({ tx, activityId, data }) => {
   return { ...extra };
 };
 
-export const extra_delete: PatchHandler = async ({ tx, data }) => {
+export const extra_delete: PatchHandler = async ({ tx, activityId, data }) => {
   const { id } = data;
-  await tx.delete(schema.extras).where(eq(schema.extras.id, id));
+  await tx.delete(schema.extras).where(inActivity.extras(id, activityId));
 };

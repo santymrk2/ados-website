@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { useUnifiedActivity } from "@/lib/activity-context";
 
 import { Plus, Minus, X, Search } from "lucide-react";
@@ -196,6 +196,8 @@ export function GolesSection() {
   const [saving, setSaving] = useState(false);
   // Goals without a player yet live only in the client (negative ids) until a player is picked
   const [draftGoles, setDraftGoles] = useState<Gol[]>([]);
+  // Drafts being persisted: guards double submits without dropping a second draft saved meanwhile
+  const persistingDrafts = useRef(new Set<number>());
 
   const isEditing = editingSection === "goles";
 
@@ -287,7 +289,11 @@ export function GolesSection() {
   };
 
   const createOnServer = async (tempId: number, goal: Gol) => {
-    if (!goal.pid || locked || saving) return;
+    if (!goal.pid || locked) return;
+    // Keep the chosen player on the draft so it survives a failed save
+    setDraftGoles((prev) => prev.map((g) => (g.id === tempId ? { ...g, pid: goal.pid } : g)));
+    if (persistingDrafts.current.has(tempId)) return;
+    persistingDrafts.current.add(tempId);
     setSaving(true);
     try {
       await performQuickUpdate(
@@ -299,7 +305,8 @@ export function GolesSection() {
     } catch {
       // Error already handled by performQuickUpdate; the draft stays so the user can retry
     } finally {
-      setSaving(false);
+      persistingDrafts.current.delete(tempId);
+      setSaving(persistingDrafts.current.size > 0);
     }
   };
 

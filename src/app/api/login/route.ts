@@ -30,9 +30,19 @@ const ATTEMPT_WINDOW_MS = 15 * 60 * 1000;
 
 // In-memory (per instance) failed-attempt counter keyed by client IP
 const failedAttempts = new Map<string, { count: number; resetAt: number }>();
+const MAX_TRACKED_CLIENTS = 5000;
 
+// The reverse proxy (Traefik in Dokploy) APPENDS the real client IP to X-Forwarded-For,
+// so the last entry is trustworthy; earlier entries are whatever the client sent.
 function getClientKey(request: NextRequest) {
-  return request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+  const forwarded = request.headers.get("x-forwarded-for")?.split(",").map((ip) => ip.trim()).filter(Boolean);
+  return forwarded?.at(-1) || request.headers.get("x-real-ip")?.trim() || "unknown";
+}
+
+function pruneExpired(now: number) {
+  for (const [key, entry] of failedAttempts) {
+    if (entry.resetAt <= now) failedAttempts.delete(key);
+  }
 }
 
 function isRateLimited(key: string) {
@@ -49,6 +59,7 @@ function registerFailure(key: string) {
   const now = Date.now();
   const entry = failedAttempts.get(key);
   if (!entry || entry.resetAt <= now) {
+    if (failedAttempts.size >= MAX_TRACKED_CLIENTS) pruneExpired(now);
     failedAttempts.set(key, { count: 1, resetAt: now + ATTEMPT_WINDOW_MS });
   } else {
     entry.count += 1;
@@ -110,6 +121,8 @@ export async function POST(request: NextRequest) {
       registerFailure(clientKey);
       throw new UnauthorizedError("Contraseña incorrecta");
     }
+
+    failedAttempts.delete(clientKey);
 
     const response = NextResponse.json({ success: true, role: authenticatedRole });
     response.cookies.set(AUTH_COOKIE_NAME, createAuthCookieValue(authenticatedRole), AUTH_COOKIE_OPTIONS);

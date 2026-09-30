@@ -1,7 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { AppError } from "@/lib/errors";
 import * as schema from "@/lib/schema";
-import { assertTeamEnabled } from "./shared";
+import { assertTeamEnabled, inActivity } from "./shared";
 import type { PatchHandler } from "./types";
 
 export const goal_add: PatchHandler = async ({ tx, activityId, data }) => {
@@ -26,7 +26,7 @@ export const goal_add: PatchHandler = async ({ tx, activityId, data }) => {
 
 export const goal_remove: PatchHandler = async ({ tx, activityId, data }) => {
   if (data.id) {
-    await tx.delete(schema.goles).where(eq(schema.goles.id, data.id));
+    await tx.delete(schema.goles).where(inActivity.goles(data.id, activityId));
     return;
   }
 
@@ -49,7 +49,7 @@ export const goal_remove: PatchHandler = async ({ tx, activityId, data }) => {
   }
 };
 
-export const goal_update: PatchHandler = async ({ tx, data }) => {
+export const goal_update: PatchHandler = async ({ tx, activityId, data }) => {
   const { id, pid, tipo, cant } = data;
   const updateData: Partial<{
     participantId: number | null;
@@ -63,5 +63,5 @@ export const goal_update: PatchHandler = async ({ tx, data }) => {
   await tx
     .update(schema.goles)
     .set(updateData)
-    .where(eq(schema.goles.id, id));
+    .where(inActivity.goles(id, activityId));
 };

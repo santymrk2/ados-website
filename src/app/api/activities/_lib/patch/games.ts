@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import { AppError } from "@/lib/errors";
 import * as schema from "@/lib/schema";
 import { INDIVIDUAL_GAME_MARKER, getActiveTeams } from "../helpers";
+import { assertGameInActivity, inActivity } from "./shared";
 import type { PatchHandler } from "./types";
 
 export const game_add: PatchHandler = async ({ tx, activityId, data }) => {
@@ -25,15 +26,16 @@ export const game_add: PatchHandler = async ({ tx, activityId, data }) => {
   return { id: game.id };
 };
 
-export const game_update: PatchHandler = async ({ tx, data }) => {
+export const game_update: PatchHandler = async ({ tx, activityId, data }) => {
   const { id, nombre } = data;
   await tx
     .update(schema.juegos)
     .set({ nombre })
-    .where(eq(schema.juegos.id, id));
+    .where(inActivity.juegos(id, activityId));
 };
 
-export const game_delete: PatchHandler = async ({ tx, data }) => {
+export const game_delete: PatchHandler = async ({ tx, activityId, data }) => {
+  await assertGameInActivity(tx, activityId, data.id);
   await tx
     .delete(schema.juegoPosiciones)
     .where(eq(schema.juegoPosiciones.juegoId, data.id));
@@ -43,6 +45,7 @@ export const game_delete: PatchHandler = async ({ tx, data }) => {
 export const game_pos: PatchHandler = async ({ tx, activityId, data }) => {
   const { juegoId, pos } = data;
   if (!juegoId || !pos) throw new AppError("Datos inválidos: juegoId y pos son requeridos");
+  await assertGameInActivity(tx, activityId, juegoId);
 
   const [activity] = await tx
     .select({ cantEquipos: schema.activities.cantEquipos })

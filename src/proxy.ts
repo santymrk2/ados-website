@@ -13,5 +13,6 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/api/:path*"],
+  // login/logout set the cookie themselves; re-issuing it there would undo a logout
+  matcher: ["/api/((?!login|logout).*)"],
 };

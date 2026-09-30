@@ -1,5 +1,7 @@
 import { eq } from "drizzle-orm";
 import * as schema from "@/lib/schema";
+import { AppError } from "@/lib/errors";
+import { inActivity } from "./shared";
 import type { PatchHandler } from "./types";
 
 export const partido_add: PatchHandler = async ({ tx, activityId, data }) => {
@@ -13,7 +15,7 @@ export const partido_add: PatchHandler = async ({ tx, activityId, data }) => {
   });
 };
 
-export const partido_update: PatchHandler = async ({ tx, data }) => {
+export const partido_update: PatchHandler = async ({ tx, activityId, data }) => {
   await tx
     .update(schema.partidos)
     .set({
@@ -23,10 +25,12 @@ export const partido_update: PatchHandler = async ({ tx, data }) => {
       deporte: data.deporte,
       genero: data.genero,
     })
-    .where(eq(schema.partidos.id, data.id));
+    .where(inActivity.partidos(data.id, activityId));
 };
 
-export const partido_delete: PatchHandler = async ({ tx, data }) => {
+export const partido_delete: PatchHandler = async ({ tx, activityId, data }) => {
+  const [partido] = await tx.select({ id: schema.partidos.id }).from(schema.partidos).where(inActivity.partidos(data.id, activityId));
+  if (!partido) throw new AppError("Partido no encontrado en esta actividad", 404);
   await tx.delete(schema.goles).where(eq(schema.goles.matchId, data.id));
   await tx.delete(schema.partidos).where(eq(schema.partidos.id, data.id));
 };

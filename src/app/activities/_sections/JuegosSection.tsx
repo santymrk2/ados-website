@@ -20,9 +20,11 @@ import type { Juego, ParticipantBasic, Activity } from "@/lib/types";
 const MIN_POSITIONS = 4;
 type JuegoTipo = "grupal" | "individual";
 
-// One position per team, with at least the classic podium of 4 (activities can have up to 6 teams)
-function getPositions(teamCount: number) {
-  return Array.from({ length: Math.max(MIN_POSITIONS, teamCount) }, (_, i) => String(i + 1));
+// Team games: exactly one position per active team (the server rejects more).
+// Individual games: at least the classic podium of 4.
+function getPositions(teamCount: number, tipo: string | undefined) {
+  const count = tipo === "individual" ? Math.max(MIN_POSITIONS, teamCount) : teamCount;
+  return Array.from({ length: count }, (_, i) => String(i + 1));
 }
 
 function gameTypeLabel(tipo: string | undefined) {
@@ -97,7 +99,7 @@ function GameDetailModal({
   const [localName, setLocalName] = useState(game.nombre || "");
   const [openPopover, setOpenPopover] = useState<string | null>(null);
   const [search, setSearch] = useState("");
-  const positions = getPositions(activeTeams.length);
+  const positions = getPositions(activeTeams.length, game.tipo);
 
   const assignedIds = useMemo(() => {
     if (game.tipo !== "individual") return new Set<string>();
@@ -509,7 +511,7 @@ export function JuegosSection() {
               </div>
 
               <div className="flex flex-col divide-y divide-border/40">
-                {getPositions(activeTeams.length).map((pos) => {
+                {getPositions(activeTeams.length, j.tipo).map((pos) => {
                   const values = (j.pos || {})[pos] || [];
                   return (
                     <div key={pos} className="flex items-center gap-2 text-sm py-1 px-3">

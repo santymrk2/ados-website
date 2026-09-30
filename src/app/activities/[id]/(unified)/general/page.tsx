@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils";
 import { FileText, Lock, Unlock, Trash2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { confirmDialog } from "@/components/ui/confirm-dialog";
+import { ActivityTeamsCard } from "../_components/ActivityTeamsCard";
 
 import {
   AlertDialog,
@@ -260,6 +261,9 @@ export default function GeneralPage() {
             </div>
           )}
         </div>
+
+        {/* Team names/colors for this activity */}
+        <ActivityTeamsCard />
 
         {/* Lock toggle */}
         <div className="flex items-center justify-between pt-2 border-t border-slate-100">

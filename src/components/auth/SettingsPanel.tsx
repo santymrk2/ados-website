@@ -10,15 +10,12 @@ import {
   Info,
   ChevronRight,
 } from "lucide-react";
-import {
-  TEAMS,
-  getTeamColors,
-  saveTeamColors,
-  syncTeamConstants,
-} from "@/lib/constants";
+import { TEAMS } from "@/lib/constants";
+import { $teamDefaults } from "@/store/appStore";
+import type { TeamDisplaySettings } from "@/lib/team-display";
+import { TeamSettingsEditor, cleanTeamSettings } from "@/components/teams/TeamSettingsEditor";
 import { cn } from "@/lib/utils";
 import { Button } from "../ui/button";
-import { Input } from "../ui/input";
 import { DetailSheet } from "../ui/DetailSheet";
 import {
   subscribeToPush,
@@ -29,34 +26,8 @@ import {
 } from "@/services/web-push-client";
 import { toast } from "@/hooks/use-toast";
 
-const PRESET_COLORS = [
-  "#EF4444", "#F97316", "#EAB308", "#22C55E", "#06B6D4", "#3B82F6",
-  "#8B5CF6", "#EC4899", "#6B7280", "#14B8A6", "#F59E0B", "#10B981",
-];
-
-function hexToRgb(hex: string) {
-  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-  return result
-    ? {
-        r: parseInt(result[1], 16),
-        g: parseInt(result[2], 16),
-        b: parseInt(result[3], 16),
-      }
-    : null;
-}
-
-function getLuminance(r: number, g: number, b: number) {
-  return (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-}
-
-function getContrastColor(hex: string) {
-  const rgb = hexToRgb(hex);
-  if (!rgb) return "#000000";
-  return getLuminance(rgb.r, rgb.g, rgb.b) > 0.5 ? "#000000" : "#ffffff";
-}
-
 const SECTION_TITLES: Record<string, string> = {
-  colors: "Colores de Equipos",
+  colors: "Equipos por defecto",
   push: "Notificaciones Push",
   about: "Acerca de",
 };
@@ -72,7 +43,8 @@ export function SettingsPanel({
   onLogout: () => void;
   role?: string;
 }) {
-  const [colors, setColors] = useState<Record<string, string>>({});
+  const [teamDraft, setTeamDraft] = useState<TeamDisplaySettings>({});
+  const [savingTeams, setSavingTeams] = useState(false);
   const [saved, setSaved] = useState(false);
   const isAdmin = role === "admin";
 
@@ -105,9 +77,8 @@ export function SettingsPanel({
 
   useEffect(() => {
     if (isOpen) {
-      const colors = getTeamColors();
       queueMicrotask(() => {
-        setColors(colors);
+        setTeamDraft($teamDefaults.get());
         setSaved(false);
         setCurrentSection(null);
       });
@@ -115,19 +86,30 @@ export function SettingsPanel({
     }
   }, [isOpen, checkPushStatus]);
 
-  const handleColorChange = (team: string, color: string) => {
-    setColors((prev) => ({ ...prev, [team]: color }));
-    setSaved(false);
-  };
-
-  const handleSave = () => {
-    saveTeamColors(colors);
-    syncTeamConstants();
-    setSaved(true);
-    toast.success("Colores de equipos guardados", {
-      description: "Los colores se aplicarán en todas las actividades",
-    });
-    setTimeout(() => setSaved(false), 2000);
+  // Shared defaults for every activity (stored in the DB, not per device)
+  const handleSaveTeams = async () => {
+    const teams = cleanTeamSettings(teamDraft);
+    setSavingTeams(true);
+    try {
+      const res = await fetch("/api/settings/teams", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ teams }),
+      });
+      const json = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(json?.error || "No se pudieron guardar los equipos");
+      $teamDefaults.set(teams);
+      setTeamDraft(teams);
+      setSaved(true);
+      toast.success("Equipos por defecto guardados", {
+        description: "Se aplican a todas las actividades que no tengan los suyos",
+      });
+      setTimeout(() => setSaved(false), 2000);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "No se pudieron guardar los equipos");
+    } finally {
+      setSavingTeams(false);
+    }
   };
 
   const handlePushSubscription = async () => {
@@ -221,7 +203,7 @@ export function SettingsPanel({
               >
                 <Palette className="w-5 h-5 text-primary" />
                 <div className="flex-1">
-                  <div className="font-bold text-sm text-dark">Colores de Equipos</div>
+                  <div className="font-bold text-sm text-dark">Equipos por defecto</div>
                 </div>
                 <ChevronRight className="w-4 h-4 text-text-muted" />
               </button>
@@ -270,54 +252,21 @@ export function SettingsPanel({
 
         {currentSection === "colors" && (
           <div className="space-y-3">
-            {TEAMS.map((team) => (
-              <div key={team} className="flex items-center gap-3">
-                <div
-                  className="w-10 h-10 rounded-lg flex items-center justify-center font-black text-sm shrink-0"
-                  style={{
-                    backgroundColor: colors[team] || "#cccccc",
-                    color: getContrastColor(colors[team] || "#cccccc"),
-                  }}
-                >
-                  {team}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <label className="text-xs text-text-muted font-bold block mb-1">
-                    Color {team}
-                  </label>
-                  <div className="flex flex-col gap-2">
-                    <div className="grid grid-cols-6 gap-1.5">
-                      {PRESET_COLORS.map((preset) => (
-                        <button
-                          key={preset}
-                          type="button"
-                          onClick={() => handleColorChange(team, preset)}
-                          className={cn(
-                            "w-7 h-7 rounded-full cursor-pointer border-2 transition-all hover:scale-110",
-                            (colors[team] || "#cccccc").toUpperCase() ===
-                              preset.toUpperCase()
-                              ? "ring-2 ring-primary ring-offset-1 border-primary"
-                              : "border-transparent",
-                          )}
-                          style={{ backgroundColor: preset }}
-                          aria-label={`Seleccionar ${preset}`}
-                        />
-                      ))}
-                    </div>
-                    <Input
-                      type="text"
-                      value={colors[team] || "#cccccc"}
-                      onChange={(e) =>
-                        handleColorChange(team, e.target.value)
-                      }
-                      className="font-mono uppercase text-xs h-8"
-                    />
-                  </div>
-                </div>
-              </div>
-            ))}
+            <p className="text-sm text-text-muted">
+              Nombres y colores que usan todas las actividades. Cada actividad puede cambiarlos desde General.
+            </p>
+            <TeamSettingsEditor
+              teams={TEAMS}
+              value={teamDraft}
+              onChange={(next) => {
+                setTeamDraft(next);
+                setSaved(false);
+              }}
+              disabled={savingTeams}
+            />
             <Button
-              onClick={handleSave}
+              onClick={handleSaveTeams}
+              disabled={savingTeams}
               size="lg"
               className={cn(
                 "w-full gap-2 mt-4",
@@ -325,7 +274,7 @@ export function SettingsPanel({
               )}
             >
               <Save className="w-4 h-4" />
-              {saved ? "¡Guardado!" : "Guardar Colores"}
+              {saved ? "¡Guardado!" : savingTeams ? "Guardando..." : "Guardar equipos"}
             </Button>
           </div>
         )}

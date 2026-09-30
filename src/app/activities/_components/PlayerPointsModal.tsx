@@ -356,7 +356,7 @@ export function PlayerPointsModal({
         <>
           <div className="bg-primary text-white rounded-2xl p-4 text-center mb-5">
             <div className="text-4xl font-black tabular-nums">{total}</div>
-            <div className="text-[10px] font-black uppercase tracking-widest opacity-80 mt-1">
+            <div className="text-xs font-black uppercase tracking-widest opacity-80 mt-1">
               Puntos Totales
             </div>
           </div>

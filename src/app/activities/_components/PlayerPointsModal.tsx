@@ -2,7 +2,6 @@
 
 import { useMemo, useState } from "react";
 import { DetailSheet } from "@/components/ui/DetailSheet";
-import { Button } from "@/components/ui/button";
 import { CalendarCheck, CalendarX, Clock, Coffee, Zap, Check, Loader2 } from "lucide-react";
 import { Avatar } from "@/components/ui/Avatar";
 import { cn } from "@/lib/utils";

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { useUnifiedActivity } from "@/lib/activity-context";
 
 import { Mail, Users, X, Plus, ArrowRight } from "lucide-react";
@@ -67,6 +67,8 @@ function InvitationRow({
     } else {
       onUpdate(inv.id, "invitadoId", participantId);
     }
+    setSearchFilter("");
+    setSearchFilterInvitado("");
     setOpenDropdown(null);
   };
 
@@ -79,7 +81,7 @@ function InvitationRow({
             onOpenChange={(o) => setOpenDropdown(o ? `${inv.id}_invitador` : null)}
           >
             <PopoverTrigger asChild disabled={locked || saving}>
-              <button className="flex items-center gap-2 w-full text-left p-1 -m1 rounded-lg hover:bg-card transition-colors truncate">
+              <button className="flex items-center gap-2 w-full text-left p-1 -m-1 rounded-lg hover:bg-card transition-colors truncate">
                 <Avatar p={invitador} size={28} />
                 <span className="text-base font-medium truncate text-foreground">
                   {invitador.nombre} {invitador.apellido}
@@ -162,7 +164,7 @@ function InvitationRow({
             onOpenChange={(o) => setOpenDropdown(o ? `${inv.id}_invitado` : null)}
           >
             <PopoverTrigger asChild disabled={locked || saving}>
-              <button className="flex items-center gap-2 w-full text-left p-1 -m1 rounded-lg hover:bg-card transition-colors truncate">
+              <button className="flex items-center gap-2 w-full text-left p-1 -m-1 rounded-lg hover:bg-card transition-colors truncate">
                 <Avatar p={invitado} size={28} />
                 <span className="text-base font-medium truncate text-foreground">
                   {invitado.nombre} {invitado.apellido}
@@ -264,6 +266,8 @@ export function InvitacionesSection() {
   const [selectedInviter, setSelectedInviter] = useState<number | null>(null);
   const [draftInvitaciones, setDraftInvitaciones] = useState<InvitacionWithId[]>([]);
   const [saving, setSaving] = useState(false);
+  // Drafts currently being persisted, so a completed draft is never sent twice
+  const persistingDrafts = useRef(new Set<number>());
 
   const isEditing = editingSection === "invitaciones";
   const participants = db.participants;
@@ -350,7 +354,9 @@ export function InvitacionesSection() {
       );
 
       if (updatedInv.invitador != null && updatedInv.invitadoId != null) {
-        if (saving) return;
+        // Don't bail on `saving`: the draft is already complete on screen and would never be sent
+        if (persistingDrafts.current.has(id)) return;
+        persistingDrafts.current.add(id);
         setSaving(true);
         try {
           await performQuickUpdate(
@@ -365,6 +371,7 @@ export function InvitacionesSection() {
         } catch {
           // Error already handled
         } finally {
+          persistingDrafts.current.delete(id);
           setSaving(false);
         }
       }

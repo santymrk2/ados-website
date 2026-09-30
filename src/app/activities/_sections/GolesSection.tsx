@@ -138,7 +138,7 @@ function GoalRow({
               "px-2 py-1 rounded-md text-[10px] font-black transition-all",
               g.tipo === type.id
               ? "bg-white text-primary shadow-sm"
-                : "text-white/70 hover:text-white",
+                : "text-muted-foreground hover:text-foreground",
             )}
           >
             <span className="hidden sm:inline">{type.label}</span>
@@ -194,6 +194,8 @@ export function GolesSection() {
 
   const [openDropdown, setOpenDropdown] = useState<number | string | null>(null);
   const [saving, setSaving] = useState(false);
+  // Goals without a player yet live only in the client (negative ids) until a player is picked
+  const [draftGoles, setDraftGoles] = useState<Gol[]>([]);
 
   const isEditing = editingSection === "goles";
 
@@ -203,7 +205,10 @@ export function GolesSection() {
   );
 
   const goles = useMemo(() => activity.goles || [], [activity.goles]);
-  const golesManuales = useMemo(() => goles.filter((g: Gol) => !g.matchId), [goles]);
+  const golesManuales = useMemo(
+    () => [...goles.filter((g: Gol) => !g.matchId), ...draftGoles],
+    [goles, draftGoles],
+  );
 
   const bySport = useMemo(() => {
     const sportTotals: Record<string, { total: number; players: Record<number, number> }> = {};
@@ -236,15 +241,14 @@ export function GolesSection() {
   const add = () => {
     if (locked || saving) return;
     const tempId = -(Date.now());
-    setSaving(true);
-    performQuickUpdate(
-      "goal_add",
-      { id: tempId, pid: null, tipo: "f", cant: 1 },
-      "goles",
-    ).catch(() => {}).finally(() => setSaving(false));
+    setDraftGoles((prev) => [...prev, { id: tempId, pid: null, tipo: "f", cant: 1 } as Gol]);
   };
 
   const del = async (id: number) => {
+    if (id < 0) {
+      setDraftGoles((prev) => prev.filter((g) => g.id !== id));
+      return;
+    }
     if (locked || saving) return;
     setSaving(true);
     try {
@@ -262,6 +266,10 @@ export function GolesSection() {
   };
 
   const upd = async (id: number, k: string, v: unknown) => {
+    if (id < 0) {
+      setDraftGoles((prev) => prev.map((g) => (g.id === id ? { ...g, [k]: v } : g)));
+      return;
+    }
     if (locked || saving) return;
     setSaving(true);
     try {
@@ -279,23 +287,27 @@ export function GolesSection() {
   };
 
   const createOnServer = async (tempId: number, goal: Gol) => {
-    if (!goal.pid) return;
+    if (!goal.pid || locked || saving) return;
     setSaving(true);
     try {
       await performQuickUpdate(
         "goal_add",
-        { pid: goal.pid, tipo: goal.tipo, cant: goal.cant, goles: [...goles, goal] },
+        { pid: goal.pid, tipo: goal.tipo, cant: goal.cant },
         "goles",
       );
+      setDraftGoles((prev) => prev.filter((g) => g.id !== tempId));
     } catch {
-      // Error already handled by performQuickUpdate
+      // Error already handled by performQuickUpdate; the draft stays so the user can retry
     } finally {
       setSaving(false);
     }
   };
 
   const startEditing = () => setEditingSection("goles");
-  const stopEditing = () => setEditingSection(null);
+  const stopEditing = () => {
+    setDraftGoles([]);
+    setEditingSection(null);
+  };
 
   return (
     <div className="space-y-4">

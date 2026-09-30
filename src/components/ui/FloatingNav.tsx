@@ -87,7 +87,7 @@ export function FloatingNav({
   const filterHeight = Math.min(Math.max(120, FILTER_HEIGHT), 320);
   const rows = Math.ceil(items.length / 3);
   const gridHeight = rows * 72 + 16;
-  const useCallback = !!onValueChange;
+  const isControlled = !!onValueChange;
 
   const activeMode: "search" | "filter" | "grid" | null = isExpandedMenuOpen
     ? "grid"
@@ -169,7 +169,7 @@ export function FloatingNav({
       if (index >= 0 && index < items.length) {
         const settledItem = items[index];
         if (settledItem && settledItem.value !== value) {
-          if (useCallback && onValueChange) {
+          if (isControlled && onValueChange) {
             onValueChange(settledItem.value);
           }
         }
@@ -203,7 +203,7 @@ export function FloatingNav({
     }
     setActiveIndex(index);
 
-    if (useCallback && onValueChange) {
+    if (isControlled && onValueChange) {
       onValueChange(item.value);
     }
     setIsExpandedMenuOpen(false);
@@ -260,7 +260,7 @@ export function FloatingNav({
         const Icon = item.icon;
         const isActive = item.value === value;
         const isLocked = lockedValues.includes(item.value);
-        const href = useCallback ? undefined : item.href || `/${item.value}`;
+        const href = isControlled ? undefined : item.href || `/${item.value}`;
         const commonClasses = cn(
           "flex flex-col items-center justify-center gap-1 rounded-2xl border border-border py-2 px-3 text-sm font-medium transition-colors",
           isActive
@@ -286,7 +286,7 @@ export function FloatingNav({
           );
         }
 
-        return useCallback ? (
+        return isControlled ? (
           <button
             key={item.value}
             onClick={(e) => handleItemClick(e, items.indexOf(item), item)}
@@ -400,7 +400,7 @@ export function FloatingNav({
                     const isSelected = i === activeIndex;
                     const isItemLocked = lockedValues.includes(item.value);
                     const ItemIcon = item.icon;
-                    const href = useCallback
+                    const href = isControlled
                       ? undefined
                       : item.href || `/${item.value}`;
 
@@ -448,7 +448,7 @@ export function FloatingNav({
                       },
                     };
 
-                    if (useCallback)
+                    if (isControlled)
                       return (
                         <button key={item.value} {...commonProps}>
                           {innerContent}

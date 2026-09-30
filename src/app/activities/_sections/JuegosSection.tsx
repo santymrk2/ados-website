@@ -17,8 +17,13 @@ import { confirmDialog } from "@/components/ui/confirm-dialog";
 import { deleteGame, updateGameName } from "@/lib/activity-mutates";
 import type { Juego, ParticipantBasic, Activity } from "@/lib/types";
 
-const POSITIONS = ["1", "2", "3", "4"] as const;
+const MIN_POSITIONS = 4;
 type JuegoTipo = "grupal" | "individual";
+
+// One position per team, with at least the classic podium of 4 (activities can have up to 6 teams)
+function getPositions(teamCount: number) {
+  return Array.from({ length: Math.max(MIN_POSITIONS, teamCount) }, (_, i) => String(i + 1));
+}
 
 function gameTypeLabel(tipo: string | undefined) {
   return tipo === "individual" ? "Individual" : "Grupal";
@@ -74,7 +79,6 @@ function GameDetailModal({
   players,
   locked,
   saving,
-  onClose,
   onRename,
   onDelete,
   onToggleItem,
@@ -85,7 +89,6 @@ function GameDetailModal({
   players: ParticipantOption[];
   locked: boolean;
   saving: boolean;
-  onClose: () => void;
   onRename: (value: string) => void;
   onDelete: () => Promise<void>;
   onToggleItem: (gameId: number | string, itemId: string, pos: string) => void;
@@ -95,6 +98,7 @@ function GameDetailModal({
   const [openPopover, setOpenPopover] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [showPtsPos, setShowPtsPos] = useState<string | null>(null);
+  const positions = getPositions(activeTeams.length);
 
   const assignedIds = useMemo(() => {
     if (game.tipo !== "individual") return new Set<string>();
@@ -147,7 +151,7 @@ function GameDetailModal({
       </div>
 
       <div className="grid gap-3 lg:grid-cols-2">
-        {POSITIONS.map((pos) => {
+        {positions.map((pos) => {
           const selected = (game.pos || {})[pos] || [];
           return (
             <div
@@ -507,7 +511,7 @@ export function JuegosSection() {
               </div>
 
               <div className="flex flex-col divide-y divide-border/40">
-                {POSITIONS.map((pos) => {
+                {getPositions(activeTeams.length).map((pos) => {
                   const values = (j.pos || {})[pos] || [];
                   return (
                     <div key={pos} className="flex items-center gap-2 text-sm py-1 px-3">
@@ -664,7 +668,6 @@ export function JuegosSection() {
               players={eligiblePlayers}
               locked={locked}
               saving={saving}
-              onClose={() => setSelectedId(null)}
               onRename={(nombre) => updateName(selectedGame.id, nombre)}
               onDelete={async () => {
                 const confirmed = await confirmDialog(

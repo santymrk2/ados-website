@@ -54,9 +54,10 @@ export interface PaginatedResponse<T> {
 export function getPagination(request: NextRequest): { page: number; limit: number } {
   const page = parseInt(request.nextUrl.searchParams.get("page") || "1", 10);
   const limit = parseInt(request.nextUrl.searchParams.get("limit") || "50", 10);
+  // parseInt yields NaN for junk like ?page=abc, and Math.max/min would propagate it
   return {
-    page: Math.max(1, page),
-    limit: Math.min(100, Math.max(1, limit)),
+    page: Number.isFinite(page) ? Math.max(1, page) : 1,
+    limit: Number.isFinite(limit) ? Math.min(100, Math.max(1, limit)) : 50,
   };
 }
 

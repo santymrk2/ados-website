@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useEffect, use } from "react";
+import { useMemo, useState, useEffect, useRef, use } from "react";
 import { useRouter } from "next/navigation";
 import { useApp } from "@/hooks/useApp";
 import { useStore } from "@nanostores/react";
@@ -46,6 +46,11 @@ export default function Page({
     return db.participants.find((p) => p.id === Number(id)) || null;
   }, [id, db?.participants]);
 
+  const initialParticipantRef = useRef(initialParticipant);
+  useEffect(() => {
+    initialParticipantRef.current = initialParticipant;
+  }, [initialParticipant]);
+
   const [expandedImage, setExpandedImage] = useState<string | null>(null);
   const [player, setPlayer] = useState(initialParticipant);
   const [isLoadingFull, setIsLoadingFull] = useState(false);
@@ -60,6 +65,10 @@ export default function Page({
       getParticipant(initialParticipant.id)
         .then((fullData) => {
           queueMicrotask(() => setPlayer(fullData));
+        })
+        .catch(() => {
+          // Full data failed to load: fall back to the basic data we already have
+          queueMicrotask(() => setPlayer((prev) => prev ?? initialParticipantRef.current));
         })
         .finally(() => {
           queueMicrotask(() => setIsLoadingFull(false));

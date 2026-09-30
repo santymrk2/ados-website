@@ -1,11 +1,22 @@
 import type { Activity, Participant } from './types';
-import { VersionConflictError } from './errors';
+import { AppError, VersionConflictError } from './errors';
 
 const API_BASE = '/api';
 
 type ActivityDraft = Omit<Activity, 'id'> & {
   id?: number | null;
 };
+
+async function throwResponseError(res: Response, fallback: string): Promise<never> {
+  let message = fallback;
+  try {
+    const data = await res.json();
+    if (typeof data?.error === 'string') message = data.error;
+  } catch {
+    // Non-JSON body: keep the fallback message
+  }
+  throw new Error(message);
+}
 
 export async function checkDatabaseConnection() {
   const res = await fetch(`${API_BASE}/health`);
@@ -25,7 +36,7 @@ export async function checkDatabaseConnection() {
 
 export async function getParticipants() {
   const res = await fetch(`${API_BASE}/participants?t=${Date.now()}`, { cache: 'no-store' });
-  if (!res.ok) throw new Error('Failed to fetch participants');
+  if (!res.ok) throw new AppError('Failed to fetch participants', res.status);
   const json = await res.json();
   // Handle both old format (array) and new format ({ success, data })
   return Array.isArray(json) ? json : (json.data ?? []);
@@ -40,7 +51,7 @@ export async function getParticipant(id: number) {
 
 export async function getActivities() {
   const res = await fetch(`${API_BASE}/activities?t=${Date.now()}`, { cache: 'no-store' });
-  if (!res.ok) throw new Error('Failed to fetch activities');
+  if (!res.ok) throw new AppError('Failed to fetch activities', res.status);
   const json = await res.json();
   // Handle both old format (array) and new format ({ success, data })
   return Array.isArray(json) ? json : (json.data ?? []);
@@ -64,7 +75,7 @@ export async function saveActivity(activity: ActivityDraft, isNewProvided?: bool
     const errorData = await res.json();
     throw new VersionConflictError(errorData.currentVersion);
   }
-  if (!res.ok) throw new Error('Failed to save activity');
+  if (!res.ok) return throwResponseError(res, 'Error al guardar la actividad');
   const result = await res.json();
   return isNew ? result.id : activity.id;
 }
@@ -79,7 +90,7 @@ export async function quickUpdateActivity(activityId: number, type: string, data
     const errorData = await res.json();
     throw new VersionConflictError(errorData.currentVersion);
   }
-  if (!res.ok) throw new Error('Failed to quick update activity');
+  if (!res.ok) return throwResponseError(res, 'Error al actualizar la actividad');
   return res.json();
 }
 
@@ -89,7 +100,7 @@ export async function deleteActivity(id: number) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ id }),
   });
-  if (!res.ok) throw new Error('Failed to delete activity');
+  if (!res.ok) return throwResponseError(res, 'Error al eliminar la actividad');
 }
 
 export async function saveParticipant(participant: Participant, isNew: boolean, invitadorId: number | null = null) {
@@ -98,7 +109,7 @@ export async function saveParticipant(participant: Participant, isNew: boolean, 
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ data: participant, isNew, invitadorId }),
   });
-  if (!res.ok) throw new Error('Failed to save participant');
+  if (!res.ok) return throwResponseError(res, 'Error al guardar el participante');
   const result = await res.json();
   return isNew ? result.id : participant.id;
 }
@@ -109,5 +120,5 @@ export async function deleteParticipant(id: number) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ id }),
   });
-  if (!res.ok) throw new Error('Failed to delete participant');
+  if (!res.ok) return throwResponseError(res, 'Error al eliminar el participante');
 }

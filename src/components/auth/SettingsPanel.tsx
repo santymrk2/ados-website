@@ -151,21 +151,27 @@ export function SettingsPanel({
       } else {
         const subscriptionData = await subscribeToPush();
 
-        if (subscriptionData) {
-          const response = await fetch("/api/push-subscribe", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(subscriptionData),
-          });
-
-          if (response.ok) {
-            localStorage.setItem(
-              "push_subscription",
-              JSON.stringify(subscriptionData),
-            );
-            setIsSubscribed(true);
-          }
+        if (!subscriptionData) {
+          throw new Error("No se pudo crear la suscripción push");
         }
+
+        const response = await fetch("/api/push-subscribe", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(subscriptionData),
+        });
+
+        if (!response.ok) {
+          // Don't leave a browser subscription the server doesn't know about
+          await unsubscribeFromPush();
+          throw new Error("El servidor rechazó la suscripción push");
+        }
+
+        localStorage.setItem(
+          "push_subscription",
+          JSON.stringify(subscriptionData),
+        );
+        setIsSubscribed(true);
       }
       toast.success(
         isSubscribed

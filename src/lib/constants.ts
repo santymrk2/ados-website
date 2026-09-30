@@ -1,3 +1,4 @@
+import { getTodayDateString } from "./utils";
 export const TEAMS = ["E1", "E2", "E3", "E4", "E5", "E6"];
 
 const DEFAULT_TEAM_COLORS: Record<string, string> = {
@@ -211,7 +212,7 @@ export const SEED_PARTICIPANTS = [
 export function newAct() {
   return {
     id: null,
-    fecha: new Date().toISOString().slice(0, 10),
+    fecha: getTodayDateString(),
     titulo: "",
     cantEquipos: 4,
     locked: false,

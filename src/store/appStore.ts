@@ -1,6 +1,7 @@
 import { atom } from 'nanostores';
 import { getParticipants, getActivities, checkDatabaseConnection } from "@/lib/api-client";
 import { syncTeamConstants } from '@/lib/constants';
+import { AppError } from '@/lib/errors';
 import type { ParticipantBasic, Activity, Ranking } from '@/lib/types';
 
 // Auth State
@@ -82,7 +83,7 @@ export const checkDbConnection = async () => {
 const MAX_RETRIES = 3;
 const RETRY_DELAY = 1000;
 
-const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 export const refreshData = async (forceLoader = false) => {
   // If a refresh is already in progress, wait for it instead of starting another
@@ -123,11 +124,16 @@ async function doRefresh(): Promise<void> {
         fetch(`/api/rankings?t=${Date.now()}`, { cache: 'no-store' })
       ]);
 
+      if (rReq.status === 401) throw new AppError('No autorizado', 401);
+
       // Handle both response formats: direct array or { success, data }
       const pData = p || [];
       const aData = a || [];
-      const rJson = rReq.ok ? await rReq.json() : [];
-      const rData = Array.isArray(rJson) ? rJson : (rJson.data || []);
+      // Keep the current rankings if the request failed instead of wiping them
+      const rJson = rReq.ok ? await rReq.json() : null;
+      const rData = rJson === null
+        ? $rankings.get()
+        : Array.isArray(rJson) ? rJson : (rJson.data || []);
 
       // Force new array reference to ensure React re-renders
       const newParticipants = [...pData];
@@ -159,6 +165,12 @@ async function doRefresh(): Promise<void> {
 
       return;
     } catch (e) {
+      // Session expired: send the user back to the login instead of the "no DB connection" screen
+      if (e instanceof AppError && e.status === 401) {
+        $isAuthenticated.set(false);
+        $dbLoading.set(false);
+        return;
+      }
       lastError = e instanceof Error ? e : new Error(String(e));
       console.warn(`Error loading DB (attempt ${attempt}/${MAX_RETRIES}):`, lastError.message);
       if (attempt < MAX_RETRIES) {
@@ -169,13 +181,8 @@ async function doRefresh(): Promise<void> {
 
   // All retries exhausted — verify if the DB is truly unreachable
   console.error('All retries exhausted loading data. Checking DB connection...');
-  const stillConnected = await checkDbConnection();
-  if (!stillConnected) {
-    $dbError.set(lastError);
-  } else {
-    // DB is reachable but data loading failed — keep connected, show a softer error
-    $dbError.set(lastError);
-  }
+  await checkDbConnection();
+  $dbError.set(lastError);
 
   $dbLoading.set(false);
 }

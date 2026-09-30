@@ -12,9 +12,7 @@ import {
   Plus,
   Settings,
   LogOut,
-  ChevronLeft,
 } from "lucide-react";
-import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useApp } from "@/hooks/useApp";
@@ -29,7 +27,7 @@ interface AppDrawerProps {
 
 export function AppDrawer({ open, onOpenChange }: AppDrawerProps) {
   const router = useRouter();
-  const { db, logout } = useApp();
+  const { logout } = useApp();
   const role = useStore($role);
   const isAdmin = role === "admin";
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { useStore } from "@nanostores/react";
 import { useUnifiedActivity } from "@/lib/activity-context";
 import { useApp } from "@/hooks/useApp";
@@ -89,6 +89,7 @@ function NewPlayerModal({
     if (!form.nombre.trim() || !form.apellido.trim())
       return toast.error("Ingresá nombre y apellido");
     if (!fechaNacimiento) return toast.error("Ingresá la fecha de nacimiento");
+    if (isSubmitting) return;
 
     const age = getEdad(fechaNacimiento);
     if (age !== null && (age < 12 || age > 18)) {
@@ -99,14 +100,20 @@ function NewPlayerModal({
       if (!ok) return;
     }
 
-    if (isSubmitting) return;
     setIsSubmitting(true);
     try {
+      // The server assigns the real id; db.nextPid is only a client-side guess
       const p = { ...newPart(), ...form, fechaNacimiento, id: db.nextPid };
-      await saveParticipant(p, true, invitadorId);
+      let participantId: number;
+      try {
+        participantId = await saveParticipant(p, true, invitadorId);
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Error al crear el jugador");
+        return;
+      }
 
       await performQuickUpdate("attendance", {
-        participantId: p.id,
+        participantId,
         value: true,
       });
 
@@ -114,7 +121,7 @@ function NewPlayerModal({
       if (invitadorId) {
         await performQuickUpdate(
           "invitacion_add",
-          { invitador: invitadorId, invitadoId: p.id },
+          { invitador: invitadorId, invitadoId: participantId },
           "invitaciones",
         );
       }
@@ -381,14 +388,17 @@ export function AsistenciaSection() {
   const isSaving = useStore($isSavingAttendance);
   const [savingAction, setSavingAction] = useState(false);
 
-  const handleSortClick = (mode: typeof sortMode) => {
-    if (sortMode === mode) {
-      setSortDirection((d) => (d === "asc" ? "desc" : "asc"));
-    } else {
-      setSortMode(mode);
-      setSortDirection("asc");
-    }
-  };
+  const handleSortClick = useCallback(
+    (mode: typeof sortMode) => {
+      if (sortMode === mode) {
+        setSortDirection((d) => (d === "asc" ? "desc" : "asc"));
+      } else {
+        setSortMode(mode);
+        setSortDirection("asc");
+      }
+    },
+    [sortMode],
+  );
 
   const canEdit = isAdmin && !locked;
   const activeTeams = TEAMS.slice(0, act.cantEquipos || 0);
@@ -475,7 +485,7 @@ export function AsistenciaSection() {
       </div>,
     );
     return () => setFilterContent(null);
-  }, [genderFilter, sortMode, sortDirection, setFilterContent, setFiltersActive]);
+  }, [genderFilter, sortMode, sortDirection, handleSortClick, setFilterContent, setFiltersActive]);
 
   const stats = useMemo(() => {
     if (!act) {

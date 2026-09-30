@@ -3,6 +3,7 @@ import {
   AUTH_COOKIE_MAX_AGE_SECONDS,
   AUTH_ROLES,
   REQUIRED_AUTH_ENV_VARS,
+  apiRateLimited,
   createAuthCookieValue,
   getMissingEnvVars,
   handleApiError,
@@ -23,8 +24,43 @@ function passwordsMatch(input: string, expected: string): boolean {
   );
 }
 
+const MAX_FAILED_ATTEMPTS = 5;
+const ATTEMPT_WINDOW_MS = 15 * 60 * 1000;
+
+// In-memory (per instance) failed-attempt counter keyed by client IP
+const failedAttempts = new Map<string, { count: number; resetAt: number }>();
+
+function getClientKey(request: NextRequest) {
+  return request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+}
+
+function isRateLimited(key: string) {
+  const entry = failedAttempts.get(key);
+  if (!entry) return false;
+  if (entry.resetAt <= Date.now()) {
+    failedAttempts.delete(key);
+    return false;
+  }
+  return entry.count >= MAX_FAILED_ATTEMPTS;
+}
+
+function registerFailure(key: string) {
+  const now = Date.now();
+  const entry = failedAttempts.get(key);
+  if (!entry || entry.resetAt <= now) {
+    failedAttempts.set(key, { count: 1, resetAt: now + ATTEMPT_WINDOW_MS });
+  } else {
+    entry.count += 1;
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
+    const clientKey = getClientKey(request);
+    if (isRateLimited(clientKey)) {
+      return apiRateLimited("Demasiados intentos. Probá de nuevo en unos minutos.");
+    }
+
     const parsed = await parseBody(request, loginSchema);
     if (!parsed.success) {
       return parsed.error;
@@ -70,6 +106,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (!authenticatedRole) {
+      registerFailure(clientKey);
       throw new UnauthorizedError("Contraseña incorrecta");
     }
 

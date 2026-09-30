@@ -29,14 +29,32 @@ function getAge(fechaNacimiento: string | null | undefined) {
   return age;
 }
 
-function daysUntilBirthday(fechaNacimiento: string): number {
-  const today = new Date();
-  const [year, month, day] = fechaNacimiento.split("-").map(Number);
-  const thisYear = new Date(today.getFullYear(), month - 1, day);
-  if (thisYear < today) {
-    thisYear.setFullYear(today.getFullYear() + 1);
-  }
-  return Math.ceil((thisYear.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+const MS_PER_DAY = 1000 * 60 * 60 * 24;
+
+/** Signed days from today (at midnight) to this year's birthday: negative once it has passed. */
+function daysToThisYearBirthday(fechaNacimiento: string): number {
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const [, month, day] = fechaNacimiento.split("-").map(Number);
+  const thisYear = new Date(now.getFullYear(), month - 1, day);
+  return Math.round((thisYear.getTime() - today.getTime()) / MS_PER_DAY);
+}
+
+function pluralDays(n: number) {
+  return `${n} ${n === 1 ? "día" : "días"}`;
+}
+
+/** "hace N días" for birthdays in the last 30 days, otherwise days until the next one. */
+function birthdayCountdownLabel(fechaNacimiento: string): string {
+  const diff = daysToThisYearBirthday(fechaNacimiento);
+  if (diff >= 0) return `en ${pluralDays(diff)}`;
+  if (diff >= -30) return `hace ${pluralDays(-diff)}`;
+
+  const [, month, day] = fechaNacimiento.split("-").map(Number);
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const next = new Date(now.getFullYear() + 1, month - 1, day);
+  return `en ${pluralDays(Math.round((next.getTime() - today.getTime()) / MS_PER_DAY))}`;
 }
 
 function PlayerDetailModal({
@@ -180,13 +198,12 @@ export default function Page() {
 
   const today = new Date();
   const todayDay = today.getDate();
+  const todayMonth = today.getMonth();
 
-  const birthdaysToday = useMemo(() => {
-    return birthdaysByMonth[today.getMonth()].filter((p) => {
-      const day = parseInt(p.fechaNacimiento!.split("-")[2]);
-      return day === todayDay;
-    });
-  }, [birthdaysByMonth, todayDay]);
+  const birthdaysToday = birthdaysByMonth[todayMonth].filter((p) => {
+    const day = parseInt(p.fechaNacimiento!.split("-")[2]);
+    return day === todayDay;
+  });
 
   if (isLoading) {
     return <CalendarSkeleton />;
@@ -245,7 +262,6 @@ export default function Page() {
             const edad = getAge(p.fechaNacimiento);
             const isToday =
               today.getMonth() === selectedMonth && day === todayDay;
-            const diff = daysUntilBirthday(p.fechaNacimiento!);
 
             return (
               <div
@@ -262,10 +278,10 @@ export default function Page() {
                 </div>
                 {isToday ? (
                   <span className="text-xs font-bold text-primary">¡Hoy!</span>
-                ) : diff <= 365 - 30 ? (
-                  <span className="text-xs text-text-muted">en {diff} días</span>
                 ) : (
-                  <span className="text-xs text-text-muted">hace {365 - diff} días</span>
+                  <span className="text-xs text-text-muted">
+                    {birthdayCountdownLabel(p.fechaNacimiento!)}
+                  </span>
                 )}
               </div>
             );

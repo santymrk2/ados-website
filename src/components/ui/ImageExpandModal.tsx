@@ -42,6 +42,7 @@ export function ImageExpandModal({ image, playerName, onClose }) {
             </div>
           )}
           
+          {/* eslint-disable-next-line @next/next/no-img-element -- base64 / auth-proxied image, next/image can't optimize it */}
           <img
             src={image}
             alt={playerName}

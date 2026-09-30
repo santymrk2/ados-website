@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 
 import { NewActivityModal } from "./_components/NewActivityModal";
-import { formatDate, cn } from "@/lib/utils";
+import { formatDate, normalizeText, parseLocalDate } from "@/lib/utils";
 import { $role } from "@/store/appStore";
 import { useApp } from "@/hooks/useApp";
 import type { Activity } from "@/lib/types";
@@ -78,11 +78,11 @@ export default function ActivitiesPage() {
       (a, b) => b.fecha.localeCompare(a.fecha),
     );
     if (!search.trim()) return sorted;
-    const q = search.toLowerCase();
+    const q = normalizeText(search);
     return sorted.filter(
       (a) =>
-        (a.titulo || "").toLowerCase().includes(q) ||
-        formatDate(a.fecha).toLowerCase().includes(q),
+        normalizeText(a.titulo || "").includes(q) ||
+        normalizeText(formatDate(a.fecha)).includes(q),
     );
   }, [db.activities, search]);
 
@@ -91,7 +91,9 @@ export default function ActivitiesPage() {
     let currentLabel = "";
 
     filtered.forEach((a) => {
-      const d = new Date(a.fecha);
+      // parseLocalDate avoids the UTC shift of new Date("YYYY-MM-DD") that moves day 1 to the previous month
+      const d = parseLocalDate(a.fecha);
+      if (!d) return;
       const label = `${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
       if (label !== currentLabel) {
         currentLabel = label;

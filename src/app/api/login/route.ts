@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
-  AUTH_COOKIE_MAX_AGE_SECONDS,
+  AUTH_COOKIE_NAME,
+  AUTH_COOKIE_OPTIONS,
   AUTH_ROLES,
   REQUIRED_AUTH_ENV_VARS,
   apiRateLimited,
@@ -110,16 +111,8 @@ export async function POST(request: NextRequest) {
       throw new UnauthorizedError("Contraseña incorrecta");
     }
 
-    const cookieOptions = {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax" as const,
-      path: "/",
-      maxAge: AUTH_COOKIE_MAX_AGE_SECONDS,
-    };
-
     const response = NextResponse.json({ success: true, role: authenticatedRole });
-    response.cookies.set("activados_auth", createAuthCookieValue(authenticatedRole), cookieOptions);
+    response.cookies.set(AUTH_COOKIE_NAME, createAuthCookieValue(authenticatedRole), AUTH_COOKIE_OPTIONS);
     return response;
   } catch (e) {
     return handleApiError(e);

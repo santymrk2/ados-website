@@ -3,20 +3,20 @@
  * Run via `bun run test:concurrency` (spins a throwaway container). It writes data:
  * never point TEST_DATABASE_URL at a real database.
  */
-const root = process.cwd();
+// Env must be set before the app modules load, so they are imported dynamically below
 if (!process.env.TEST_DATABASE_URL) {
   console.error("TEST_DATABASE_URL is required (throwaway database only)");
   process.exit(1);
 }
 process.env.DATABASE_URL = process.env.TEST_DATABASE_URL;
 process.env.AUTH_SECRET = "x".repeat(40); process.env.ADMIN_PASSWORD = "a"; process.env.VIEWER_PASSWORD = "v";
-const { NextRequest } = await import(root + "/node_modules/next/server.js");
-const { createAuthCookieValue } = await import(root + "/src/lib/api-utils.ts");
-const route = await import(root + "/src/app/api/activities/route.ts");
-const { db } = await import(root + "/src/lib/db.ts");
-const schema = await import(root + "/src/lib/schema.ts");
-const { getActiveTeams } = await import(root + "/src/app/api/activities/_lib/helpers.ts");
-const { eq } = await import(root + "/node_modules/drizzle-orm/index.js");
+const { NextRequest } = await import("next/server");
+const { eq } = await import("drizzle-orm");
+const { createAuthCookieValue } = await import("@/lib/api-utils");
+const route = await import("@/app/api/activities/route");
+const { db } = await import("@/lib/db");
+const schema = await import("@/lib/schema");
+const { getActiveTeams } = await import("@/app/api/activities/_lib/helpers");
 const cookie = `activados_auth=${createAuthCookieValue("admin")}`;
 const patch = (body: unknown) => route.PATCH(new NextRequest("http://x/api/activities", { method: "PATCH", headers: { cookie, "content-type": "application/json" }, body: JSON.stringify(body) }));
 
@@ -54,3 +54,5 @@ console.log(`game_pos statuses=${gpStatus.join(",")} savedTeams=${savedTeams} ma
 const pass = count(409) === 0 && count(200) === ops.length && unionOk && after.version === stale + ops.length && gpStatus.sort().join(",") === "200,409" && noOverwrite;
 console.log(pass ? "PASS" : "FAIL");
 process.exit(pass ? 0 : 1);
+
+export {};

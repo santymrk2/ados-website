@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useUnifiedActivity } from "@/lib/activity-context";
+import { $activities } from "@/store/appStore";
 import { useApp } from "@/hooks/useApp";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -60,7 +61,7 @@ export default function GeneralPage() {
     setEditing(true);
   };
 
-  const saveDrafts = useCallback(async (showSuccessToast = false) => {
+  const flushDrafts = useCallback(async (showSuccessToast = false) => {
     const nextTitle = draftTitle.trim();
     if (!nextTitle) {
       toast.error("El título no puede estar vacío");
@@ -75,19 +76,16 @@ export default function GeneralPage() {
 
     if (!dirty) return;
 
+    const next = { titulo: nextTitle, fecha: draftDate, cantEquipos: draftTeams };
     try {
-      // prev = values this edit started from; 409 if someone else changed them
-      await performQuickUpdate("config_bulk", {
-        titulo: nextTitle,
-        fecha: draftDate,
-        cantEquipos: draftTeams,
-        prev: { ...snapshot },
+      // Autosave and "Listo" may overlap: same-key saves are queued. prev = the
+      // last saved values, read when this request is sent; the ref advances then
+      // so a queued follow-up compares against these values.
+      await performQuickUpdate("config_bulk", next, undefined, undefined, () => {
+        const prev = { ...lastSavedRef.current };
+        lastSavedRef.current = next;
+        return { prev };
       });
-      lastSavedRef.current = {
-        titulo: nextTitle,
-        fecha: draftDate,
-        cantEquipos: draftTeams,
-      };
       if (draftTitle !== nextTitle) {
         setDraftTitle(nextTitle);
       }
@@ -95,19 +93,16 @@ export default function GeneralPage() {
         toast.success("Guardado");
       }
     } catch (error) {
+      // Rebase on the server values (refetched on conflict) and keep the drafts:
+      // the next save goes through, or surfaces a real conflict once more
+      const fresh = $activities.get().find((a) => a.id === activity.id);
+      if (fresh) {
+        lastSavedRef.current = { titulo: fresh.titulo, fecha: fresh.fecha, cantEquipos: fresh.cantEquipos };
+      }
       toast.error("Error al guardar");
       throw error;
     }
-  }, [draftTitle, draftDate, draftTeams, performQuickUpdate]);
-
-  // Autosave and "finish editing" may overlap: run flushes one at a time so each
-  // one compares against the values the previous one saved
-  const flushChainRef = useRef<Promise<unknown>>(Promise.resolve());
-  const flushDrafts = useCallback((showSuccessToast = false) => {
-    const run = flushChainRef.current.then(() => saveDrafts(showSuccessToast));
-    flushChainRef.current = run.catch(() => undefined);
-    return run;
-  }, [saveDrafts]);
+  }, [activity.id, draftTitle, draftDate, draftTeams, performQuickUpdate]);
 
   const handleFinishEditing = async () => {
     try {

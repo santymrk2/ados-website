@@ -1,7 +1,7 @@
 import {
+  $activities,
   addOptimistic,
   commitOptimistic,
-  committedBase,
   dropOptimistic,
   refreshData,
   runSerialized,
@@ -16,6 +16,13 @@ export interface OptimisticResult {
 }
 
 // ── Core ───────────────────────────────────────────────────────────────────
+
+interface BaseTicket {
+  base: Activity;
+  failed: boolean;
+}
+// Last request enqueued per key, so the next one can inherit its base on failure
+const lastTicketByKey = new Map<string, BaseTicket>();
 
 /**
  * Applies a local mutation immediately, fires a server call, and reconciles.
@@ -34,8 +41,11 @@ export interface OptimisticResult {
  * @param mutate      - Pure function: takes current row, returns patched row.
  *                      Must only touch the fields it needs (idempotent patch).
  * @param serverCall  - The async PATCH call, sent when its turn comes. Receives the
- *                      base it applies to (server row + committed mutations) to
- *                      build compare-and-set fields. Must return { version }.
+ *                      base the edit was computed from (the displayed row when it
+ *                      was enqueued) to build compare-and-set prev* fields, so a
+ *                      change by someone else in between yields a 409 instead of
+ *                      being overwritten. If the same-key predecessor failed, it
+ *                      gets that predecessor's base instead. Must return { version }.
  * @param onSuccess   - Called with the server-returned version on success.
  * @param onConflict  - Called on VersionConflictError (409) after revert+refetch.
  */
@@ -47,17 +57,25 @@ export async function optimisticUpdateActivity(
   onSuccess: (version: number) => void,
   onConflict?: () => void,
 ): Promise<void> {
+  // Base the caller computed this edit from: the row on screen before it
+  const captured = $activities.get().find((a) => a.id === activityId);
+  if (!captured) throw new AppError("No se encontró la actividad", 404);
+  const predecessor = lastTicketByKey.get(key);
+  const ticket: BaseTicket = { base: captured, failed: false };
+  lastTicketByKey.set(key, ticket);
   const seq = addOptimistic(activityId, key, mutate);
 
   try {
     const result = await runSerialized(key, () => {
-      const base = committedBase(activityId);
-      if (!base) throw new AppError("No se encontró la actividad", 404);
-      return serverCall(base);
+      // captured already holds the predecessor's optimistic result; if that one
+      // was rejected, fall back to the base it was built on
+      if (predecessor?.failed) ticket.base = predecessor.base;
+      return serverCall(ticket.base);
     });
     commitOptimistic(seq, result.version);
     onSuccess(result.version);
   } catch (error) {
+    ticket.failed = true;
     dropOptimistic(seq);
 
     // Refetch server truth (remaining mutations are re-applied by the store)
@@ -65,5 +83,7 @@ export async function optimisticUpdateActivity(
 
     if (error instanceof VersionConflictError) onConflict?.();
     throw error;
+  } finally {
+    if (lastTicketByKey.get(key) === ticket) lastTicketByKey.delete(key);
   }
 }

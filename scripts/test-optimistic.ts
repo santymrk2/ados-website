@@ -5,6 +5,7 @@
 import { $activities, inflightKey, refreshData } from "@/store/appStore";
 import { optimisticUpdateActivity } from "@/lib/optimisticUpdate";
 import { VersionConflictError } from "@/lib/errors";
+import { setTeamField, toggleArrayField } from "@/lib/activity-mutates";
 import type { Activity } from "@/lib/types";
 
 type Row = { id: number; version: number; titulo: string; asistentes: number[]; juegos: { id: number; pos: Record<string, string[]> }[] };
@@ -110,6 +111,67 @@ $activities.set([asAct(structuredClone(server))]);
   await pending;
   check("version never decreases across refreshes", row().version === 12, `version=${row().version}`);
   check("sibling still shown after refreshes", row().asistentes.includes(5) && !row().asistentes.includes(4));
+}
+
+// 4. prev* comes from the row the edit was computed from; a failed predecessor hands
+//    down its own base, so another user's change fetched meanwhile yields a 409
+{
+  const key = inflightKey(1, "game_pos", 7);
+  const setPos = (pos: Record<string, string[]>) => (a: Activity) =>
+    ({ ...a, juegos: a.juegos.map((j) => (j.id === 7 ? { ...j, pos } : j)) }) as Activity;
+  const original = JSON.stringify(row().juegos[0].pos);
+  const prevs: string[] = [];
+  const aReply = deferred<{ version: number }>();
+  const A = { "1": ["E3"] }, B = { "1": ["E4"] }, other = { "2": ["E1"] };
+  const pA = optimisticUpdateActivity(1, key, setPos(A), (base) => { prevs.push(JSON.stringify(base.juegos[0].pos)); return aReply.promise; }, () => {});
+  const pB = optimisticUpdateActivity(1, key, setPos(B), async (base) => { prevs.push(JSON.stringify(base.juegos[0].pos)); return { version: 20 }; }, () => {});
+  // another user's positions arrive through a refresh while A is in flight
+  const refresh = refreshData(false);
+  await tick();
+  activityResponses.shift()!.resolve([{ ...structuredClone(server), version: 13, juegos: [{ id: 7, pos: other }] }]);
+  await refresh;
+  aReply.reject(new VersionConflictError(13));
+  await pA.catch(() => {});
+  await pB;
+  check("A sent with the row it was computed from", prevs[0] === original, prevs[0]);
+  check("B inherits A's base after A failed (not the refreshed value)", prevs[1] === original, prevs[1]);
+  // drain the refreshes triggered by the failure
+  await tick();
+  while (activityResponses.length > 0) {
+    activityResponses.shift()!.resolve([{ ...structuredClone(server), version: 20, juegos: [{ id: 7, pos: B }] }]);
+    await tick();
+  }
+}
+
+// 1/2. Client mutates mirror the server side effects used by prevEquipos / prevPos
+{
+  const base = {
+    ...structuredClone(server),
+    asistentes: [9], puntuales: [9], biblias: [9], socials: [], equipos: { "9": "E1", "8": "E2" },
+    goles: [{ id: 1, pid: 9 }, { id: 2, pid: 8 }], extras: [{ id: 1, pid: 9 }], descuentos: [{ id: 2, pid: 9 }],
+    juegos: [{ id: 7, tipo: "individual", pos: { "1": ["9", "8"], "2": ["9"] } }, { id: 8, tipo: "grupal", pos: { "1": ["E1"] } }],
+  } as unknown as Activity;
+  const absent = toggleArrayField("asistentes", 9, false)(base);
+  check("attendance=false clears team, flags, goals, extras",
+    !absent.equipos["9"] && absent.equipos["8"] === "E2" && !absent.puntuales.includes(9) && !absent.biblias.includes(9) &&
+    absent.goles.length === 1 && absent.extras.length === 0 && absent.descuentos.length === 0);
+  const social = toggleArrayField("socials", 9, true)(base);
+  check("socials=true clears team and individual positions",
+    !social.equipos["9"] && JSON.stringify(social.juegos[0].pos) === JSON.stringify({ "1": ["8"] }) &&
+    JSON.stringify(social.juegos[1].pos) === JSON.stringify({ "1": ["E1"] }));
+  check("socials=false clears team too", !toggleArrayField("socials", 9, false)(base).equipos["9"]);
+  check("puntual/team on an absent player marks them present",
+    toggleArrayField("puntuales", 5, true)(base).asistentes.includes(5) && setTeamField(6, "E1")(base).asistentes.includes(6));
+}
+
+// 8. Committed entries are bounded: without refreshes, enough commits force one
+{
+  const before = activityResponses.length;
+  for (let i = 0; i < 20; i++) {
+    await optimisticUpdateActivity(1, inflightKey(1, "biblias", 100 + i), toggleArrayField("biblias", 100 + i, true), async () => ({ version: 30 + i }), () => {});
+  }
+  await tick();
+  check("too many committed entries trigger a refresh", activityResponses.length > before, `pending GETs=${activityResponses.length}`);
 }
 
 console.log(failures === 0 ? "PASS" : `FAIL (${failures})`);

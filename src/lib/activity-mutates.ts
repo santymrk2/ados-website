@@ -14,20 +14,64 @@
 import type { Activity, Gol, Extra } from "@/lib/types";
 
 // ── Toggle generico para arrays de IDs ────────────────────────────────────────
-// Reutilizable para: asistentes, puntuales, biblias, socials
+// Reutilizable para: asistentes, puntuales, biblias, socials.
+// Mirrors the server side effects of each PATCH type so the optimistic row (and
+// the prevEquipos/prevPos bases built from it) matches what the server stores:
+// - any `true` creates the participant row → the player becomes present
+// - attendance `false` deletes the row and the player's goals/extras
+// - socials clears the team and, when `true`, the player's individual positions
 
 type ArrayField = "asistentes" | "puntuales" | "biblias" | "socials";
+
+const withId = (arr: number[] | undefined, id: number, value: boolean) => {
+  const list = (arr || []).filter((x) => x !== id);
+  if (value) list.push(id);
+  return list;
+};
+
+const withoutTeam = (equipos: Record<string, string> | undefined, id: number) => {
+  const next = { ...equipos };
+  delete next[String(id)];
+  return next;
+};
 
 export const toggleArrayField =
   (field: ArrayField, id: number, value: boolean) =>
   (act: Activity): Activity => {
-    const arr = [...((act[field] as number[]) || [])];
-    if (value && !arr.includes(id)) arr.push(id);
-    if (!value) {
-      const idx = arr.indexOf(id);
-      if (idx !== -1) arr.splice(idx, 1);
+    let next: Activity = { ...act, [field]: withId(act[field] as number[], id, value) };
+    if (value && !(act.asistentes || []).includes(id)) {
+      next.asistentes = [...(act.asistentes || []), id];
     }
-    return { ...act, [field]: arr };
+    if (field === "asistentes" && !value) {
+      next = {
+        ...next,
+        puntuales: withId(act.puntuales, id, false),
+        biblias: withId(act.biblias, id, false),
+        socials: withId(act.socials, id, false),
+        equipos: withoutTeam(act.equipos, id),
+        goles: (act.goles || []).filter((g) => g.pid !== id),
+        extras: (act.extras || []).filter((e) => e.pid !== id),
+        descuentos: (act.descuentos || []).filter((e) => e.pid !== id),
+      };
+    }
+    if (field === "socials") {
+      next.equipos = withoutTeam(act.equipos, id);
+      if (value) {
+        next.juegos = (act.juegos || []).map((j) =>
+          j.tipo === "individual"
+            ? {
+                ...j,
+                pos: Object.fromEntries(
+                  Object.entries(j.pos || {})
+                    .map(([k, ids]) => [k, ids.filter((x) => x !== String(id))] as const)
+                    .filter(([, ids]) => ids.length > 0),
+                ),
+              }
+            : j,
+        );
+      }
+    }
+    return next;
   };
 
 // ── Equipos ──────────────────────────────────────────────────────────────────
@@ -38,10 +82,12 @@ export const setTeamField =
     const next = { ...act.equipos };
     if (team === null) {
       delete next[String(pid)];
-    } else {
-      next[String(pid)] = team;
+      return { ...act, equipos: next };
     }
-    return { ...act, equipos: next };
+    next[String(pid)] = team;
+    // Assigning a team creates the participant row on the server
+    const asistentes = (act.asistentes || []).includes(pid) ? act.asistentes : [...(act.asistentes || []), pid];
+    return { ...act, equipos: next, asistentes };
   };
 
 export const setTeamsBulk =

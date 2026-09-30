@@ -16,7 +16,8 @@ export const dynamic = 'force-dynamic';
 // PATCH never rejects on the activity version: it is only a change counter
 // (bumped and returned). Whole-state types (config, config_bulk, teams_bulk,
 // game_pos) do per-resource compare-and-set inside their handlers against the
-// prev* base the client sends, so unrelated edits never conflict. The version
+// prev* base the client sends, so unrelated edits never conflict (requests
+// without prev*, from older clients, fall back to the activity-version check). The version
 // bump also takes the activity row lock, serializing PATCHes of one activity.
 
 const NO_STORE_HEADERS = {
@@ -110,7 +111,7 @@ export async function PATCH(request: NextRequest) {
       return parsed.error;
     }
 
-    const { activityId, type } = parsed.data;
+    const { activityId, type, version } = parsed.data;
     const data = parsed.data.data as ActivityPatchPayload;
 
     if (auth.role !== "admin" && type !== "biblias") {
@@ -138,7 +139,13 @@ export async function PATCH(request: NextRequest) {
       const handler = getPatchHandler(type);
       if (!handler) throw new AppError("Invalid update type");
 
-      const extra = await handler({ tx, activityId, data, version: versionClaim.version });
+      const extra = await handler({
+        tx,
+        activityId,
+        data,
+        version: versionClaim.version,
+        clientVersion: Number(version || 1),
+      });
       return { success: true, ...(extra ?? {}), version: versionClaim.version };
     });
 

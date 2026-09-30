@@ -4,7 +4,7 @@ import * as schema from "@/lib/schema";
 import { configPrevSchema, configUpdateSchema, validate } from "@/lib/validation";
 import { normalizeInactiveTeamData } from "../helpers";
 import { ALLOWED_CONFIG_KEYS, type AllowedConfigKey } from "../types";
-import { staleConflict } from "./shared";
+import { assertClientVersion, staleConflict } from "./shared";
 import type { PatchContext, PatchHandler } from "./types";
 
 type ConfigField = "locked" | "titulo" | "cantEquipos" | "fecha";
@@ -43,7 +43,8 @@ export const config: PatchHandler = async (ctx) => {
     console.warn(`[SECURITY] Blocked attempt to set disallowed config key: ${k}`);
     throw new AppError("Clave de configuración no permitida");
   }
-  if (prev !== undefined) await assertConfigUnchanged(ctx, { [k]: prev });
+  if (prev === undefined) assertClientVersion(ctx);
+  else await assertConfigUnchanged(ctx, { [k]: prev });
 
   await tx
     .update(schema.activities)
@@ -76,7 +77,8 @@ export const config_bulk: PatchHandler = async (ctx) => {
   }
 
   if (Object.keys(updates).length === 0) throw new AppError("No hay cambios de configuración");
-  if (prev.data) await assertConfigUnchanged(ctx, prev.data);
+  if (!prev.data) assertClientVersion(ctx);
+  else await assertConfigUnchanged(ctx, prev.data);
 
   await tx
     .update(schema.activities)

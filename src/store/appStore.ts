@@ -40,6 +40,7 @@ interface OptimisticEntry {
   /** Value of refreshStarts when the server confirmed it; undefined while pending. */
   committedAt?: number;
 }
+const MAX_COMMITTED_ENTRIES = 20;
 let optimisticSeq = 0;
 let refreshStarts = 0;
 const optimisticEntries: OptimisticEntry[] = [];
@@ -112,12 +113,6 @@ export function addOptimistic(activityId: number, key: string, mutate: (activity
   return seq;
 }
 
-/** Base a request is built on: server row + already-committed entries (not other pending ones). */
-export function committedBase(activityId: number): Activity | undefined {
-  const serverRow = serverRows.get(activityId) ?? $activities.get().find((a) => a.id === activityId);
-  return serverRow && applyEntries(serverRow, (e) => e.committedAt !== undefined);
-}
-
 export function commitOptimistic(seq: number, version: number) {
   const entry = optimisticEntries.find((e) => e.seq === seq);
   if (!entry) return;
@@ -125,6 +120,10 @@ export function commitOptimistic(seq: number, version: number) {
   bumpKnownVersion(entry.activityId, version);
   publishInflight();
   rebuildActivity(entry.activityId);
+  // Committed entries are only pruned by a refresh started after them; if none
+  // comes (no SSE), force one so they don't pile up and slow every rebuild
+  const committed = optimisticEntries.filter((e) => e.committedAt !== undefined).length;
+  if (committed >= MAX_COMMITTED_ENTRIES) void refreshData(false);
 }
 
 /** Drops only this mutation and rebuilds the row from the server row + the rest. */

@@ -69,16 +69,27 @@ const good = await patch({ activityId: act.id, type: "game_pos", version: stale,
 console.log(`(c) mismatched prevPos=${bad.status} matching prevPos=${good.status} saved=${await posOf(g3)}`);
 const passC = bad.status === 409 && good.status === 200;
 
-// (d) teams_bulk / config_bulk compare-and-set; old clients without prev* are accepted
+// (d) teams_bulk / config_bulk compare-and-set
 const pid = parts[0].id;
 const tb1 = await patch({ activityId: act.id, type: "teams_bulk", version: stale, data: { equipos: { [pid]: teams[0] }, prevEquipos: {} } });
 const tb2 = await patch({ activityId: act.id, type: "teams_bulk", version: stale, data: { equipos: { [pid]: teams[1] }, prevEquipos: {} } });
 const cb = await patch({ activityId: act.id, type: "config_bulk", version: stale, data: { titulo: "x", prev: { titulo: "t" } } });
-const legacy = await patch({ activityId: act.id, type: "game_pos", version: stale, data: { juegoId: g3, pos: B } });
-console.log(`(d) teams_bulk ok=${tb1.status} stale=${tb2.status} config_bulk stale=${cb.status} legacy game_pos=${legacy.status}`);
-const passD = tb1.status === 200 && tb2.status === 409 && cb.status === 409 && legacy.status === 200;
+console.log(`(d) teams_bulk ok=${tb1.status} stale=${tb2.status} config_bulk stale=${cb.status}`);
+const passD = tb1.status === 200 && tb2.status === 409 && cb.status === 409;
 
-const pass = passA && passB && passC && passD;
+// (e) legacy clients without prev* fall back to the activity-version check
+const legacyStale = await Promise.all([
+  patch({ activityId: act.id, type: "game_pos", version: stale, data: { juegoId: g3, pos: B } }),
+  patch({ activityId: act.id, type: "teams_bulk", version: stale, data: { equipos: {} } }),
+  patch({ activityId: act.id, type: "config", version: stale, data: { k: "titulo", v: "y" } }),
+  patch({ activityId: act.id, type: "config_bulk", version: stale, data: { titulo: "y" } }),
+]);
+const [curAct] = await db.select().from(schema.activities).where(eq(schema.activities.id, act.id));
+const legacyFresh = await patch({ activityId: act.id, type: "game_pos", version: curAct.version, data: { juegoId: g3, pos: B } });
+console.log(`(e) legacy stale=${legacyStale.map((r) => r.status).join(",")} legacy current version=${legacyFresh.status}`);
+const passE = legacyStale.every((r) => r.status === 409) && legacyFresh.status === 200;
+
+const pass = passA && passB && passC && passD && passE;
 console.log(pass ? "PASS" : "FAIL");
 process.exit(pass ? 0 : 1);
 

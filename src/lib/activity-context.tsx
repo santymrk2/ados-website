@@ -17,22 +17,14 @@ import { initialSyncStatus } from "@/lib/sync-status";
 import { VersionConflictError } from "@/lib/errors";
 import { optimisticUpdateActivity, type OptimisticResult } from "@/lib/optimisticUpdate";
 import { toast } from "@/hooks/use-toast";
-import { committedBase, inflightKey, runSerialized } from "@/store/appStore";
+import { toggleArrayField } from "@/lib/activity-mutates";
+import { $activities, inflightKey, runSerialized } from "@/store/appStore";
 
 // Built-in mutations for attendance/socials (backward compat)
 function builtInMutate(type: string, data: unknown): ((act: Activity) => Activity) | undefined {
   if (type !== "attendance" && type !== "socials") return undefined;
-  return (act: Activity) => {
-    const { participantId, value } = data as { participantId: number; value: boolean };
-    const key = type === "attendance" ? "asistentes" : "socials";
-    const arr = [...((act[key] as number[]) || [])];
-    if (value && !arr.includes(participantId)) arr.push(participantId);
-    if (!value) {
-      const idx = arr.indexOf(participantId);
-      if (idx !== -1) arr.splice(idx, 1);
-    }
-    return { ...act, [key]: arr };
-  };
+  const { participantId, value } = data as { participantId: number; value: boolean };
+  return toggleArrayField(type === "attendance" ? "asistentes" : "socials", participantId, value);
 }
 
 // ── Context shape ────────────────────────────────────────────────────────────
@@ -59,9 +51,10 @@ export interface UnifiedActivityContextValue {
   setEditingSection: (id: SectionId | null) => void;
   /** Fire-and-forget atomic update — sets syncStatus automatically.
    *  Pass optimisticMutate to get instant UI feedback with automatic revert on error.
-   *  Pass buildPrev for compare-and-set types (game_pos, teams_bulk, config*): it
-   *  receives the base the request applies to, runs when the request is sent
-   *  (same-key requests are queued), and its fields are merged into `data`. */
+   *  Pass buildPrev for compare-and-set types (game_pos, teams_bulk, config*): its
+   *  fields are merged into `data` when the request is sent, and same-key
+   *  requests are queued. Optimistic: it receives the row the edit was computed
+   *  from. Non-optimistic: the row on screen at send time. */
   performQuickUpdate: (
     type: string,
     data: unknown,
@@ -210,7 +203,8 @@ export function UnifiedActivityProvider({
       try {
         // Compare-and-set requests on the same key are queued so each one is
         // built on the previous one's result instead of self-conflicting
-        const send = () => quickUpdate(activityId, type, withPrev(committedBase(activityId)), activityVersionRef.current);
+        const send = () =>
+          quickUpdate(activityId, type, withPrev($activities.get().find((a) => a.id === activityId)), activityVersionRef.current);
         const result = buildPrev ? await runSerialized(key, send) : await send();
         if (
           result &&

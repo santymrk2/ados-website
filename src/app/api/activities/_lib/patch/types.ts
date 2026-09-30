@@ -6,6 +6,8 @@ export interface PatchContext {
   data: ActivityPatchPayload;
   /** Activity version after this PATCH's bump (reported on 409). */
   version: number;
+  /** Version the client says it edited (only used for requests without prev*). */
+  clientVersion: number;
 }
 
 /** Returns extra fields to merge into the response; `success` and `version` are added by the dispatcher. */

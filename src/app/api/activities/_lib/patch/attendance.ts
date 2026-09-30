@@ -3,7 +3,7 @@ import { AppError } from "@/lib/errors";
 import { prevEquiposSchema, validate } from "@/lib/validation";
 import * as schema from "@/lib/schema";
 import { ensureSingleActivityParticipant, getActiveTeams, isActiveTeam } from "../helpers";
-import { canonicalTeams, staleConflict } from "./shared";
+import { assertClientVersion, canonicalTeams, staleConflict } from "./shared";
 import type { PatchHandler } from "./types";
 
 export const attendance: PatchHandler = async ({ tx, activityId, data }) => {
@@ -124,7 +124,8 @@ export const socials: PatchHandler = async ({ tx, activityId, data }) => {
     );
 };
 
-export const teams_bulk: PatchHandler = async ({ tx, activityId, data, version }) => {
+export const teams_bulk: PatchHandler = async (ctx) => {
+  const { tx, activityId, data, version } = ctx;
   const prevEquipos = validate(prevEquiposSchema, data.prevEquipos);
   if (!prevEquipos.success) throw new AppError(prevEquipos.error, 400);
 
@@ -136,8 +137,9 @@ export const teams_bulk: PatchHandler = async ({ tx, activityId, data, version }
   if (!activity) throw new AppError("Actividad no encontrada");
 
   // Compare-and-set against the current assignments (activity row already locked
-  // by the version bump). Clients without prevEquipos skip the check.
-  if (prevEquipos.data) {
+  // by the version bump). Clients without prevEquipos use the version check.
+  if (!prevEquipos.data) assertClientVersion(ctx);
+  else {
     const rows = await tx
       .select({ participantId: schema.activityParticipants.participantId, equipo: schema.activityParticipants.equipo })
       .from(schema.activityParticipants)

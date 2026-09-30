@@ -3,6 +3,7 @@ import { AppError } from "@/lib/errors";
 import * as schema from "@/lib/schema";
 import { isActiveTeam } from "../helpers";
 import type { Tx } from "../types";
+import type { PatchContext } from "./types";
 
 // Row-level edits must only touch rows of the activity whose lock/version was checked
 export const inActivity = {
@@ -14,9 +15,14 @@ export const inActivity = {
     and(eq(schema.invitaciones.id, id), eq(schema.invitaciones.activityId, activityId)),
 };
 
-export async function assertGameInActivity(tx: Tx, activityId: number, juegoId: number) {
-  const [game] = await tx.select({ id: schema.juegos.id }).from(schema.juegos).where(inActivity.juegos(juegoId, activityId));
+export async function assertGameInActivity(tx: Tx, activityId: number, juegoId: number, { forUpdate = false } = {}) {
+  const query = tx
+    .select({ id: schema.juegos.id, tipo: schema.juegos.tipo })
+    .from(schema.juegos)
+    .where(inActivity.juegos(juegoId, activityId));
+  const [game] = forUpdate ? await query.for("update") : await query;
   if (!game) throw new AppError("Juego no encontrado en esta actividad", 404);
+  return game;
 }
 
 export async function assertTeamEnabled(tx: Tx, activityId: number, team: string) {
@@ -34,6 +40,11 @@ export async function assertTeamEnabled(tx: Tx, activityId: number, team: string
 export function staleConflict(bumpedVersion: number): never {
   // Throwing rolls back this PATCH's bump, so the stored version is the previous one
   throw new AppError("Otro usuario modificó este dato. Se actualizó la vista.", 409, { currentVersion: bumpedVersion - 1 });
+}
+
+/** Requests without prev* (older clients) keep the old activity-version lock. */
+export function assertClientVersion({ version, clientVersion }: PatchContext) {
+  if (clientVersion !== version - 1) staleConflict(version);
 }
 
 /** Order-insensitive fingerprint of a positions map (position -> teams/participant ids). */

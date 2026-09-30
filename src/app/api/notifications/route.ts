@@ -87,14 +87,11 @@ async function sendBirthdayNotifications(clientDate: string | null = null) {
 }
 
 function hasValidCronSecret(request: NextRequest) {
-  // Vercel cron: x-vercel-cron header (added automatically by Vercel)
-  if (request.headers.get("x-vercel-cron") === "1") {
-    return true;
-  }
-
-  // Custom cron (Dokploy, etc.): x-cron-secret header
+  // x-vercel-cron is spoofable, so only a shared secret is trusted.
+  // Vercel cron sends "Authorization: Bearer $CRON_SECRET"; Dokploy/custom cron sends x-cron-secret.
   const secret = process.env.CRON_SECRET;
-  const provided = request.headers.get("x-cron-secret");
+  const bearer = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
+  const provided = request.headers.get("x-cron-secret") ?? bearer;
 
   if (!secret || !provided) return false;
 

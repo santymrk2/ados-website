@@ -89,8 +89,18 @@ export const configUpdateSchema = z.object({
   data: z.object({
     k: configKeysSchema,
     v: z.union([z.boolean(), z.string(), z.number()]),
+    // Compare-and-set base: value of `k` the edit was based on (optional for older clients)
+    prev: z.union([z.boolean(), z.string(), z.number()]).optional(),
   }),
 });
+
+/** Compare-and-set bases sent with whole-state PATCH types (optional for older clients). */
+export const configPrevSchema = z
+  .object({ locked: z.boolean(), titulo: z.string(), fecha: z.string(), cantEquipos: z.number() })
+  .partial()
+  .optional();
+export const prevPosSchema = z.record(z.string(), z.array(z.union([z.string(), z.number()]))).optional();
+export const prevEquiposSchema = z.record(z.string(), z.string().nullable()).optional();
 
 /**
  * Login schema
@@ -156,3 +166,17 @@ export function validate<T>(schema: z.ZodSchema<T>, data: unknown): { success: t
     error: firstError ? `${firstError.path.join(".")}: ${firstError.message}` : "Datos inválidos",
   };
 }
+
+/**
+ * Team display settings (name + color per team id E1..E6).
+ * Team ids never change: names/colors are display-only.
+ */
+const teamIdSchema = z.enum(["E1", "E2", "E3", "E4", "E5", "E6"], { error: "Equipo inválido" });
+export const teamDisplayEntrySchema = z.object({
+  name: z.string().trim().min(1, { error: "El nombre no puede estar vacío" }).max(24).optional(),
+  color: z.string().regex(/^#[0-9a-fA-F]{6}$/, { error: "Color inválido" }).optional(),
+});
+export const teamDisplaySettingsSchema = z.partialRecord(teamIdSchema, teamDisplayEntrySchema, {
+  error: (issue) => (issue.code === "invalid_key" ? "Equipo inválido" : undefined),
+});
+export const teamDefaultsUpdateSchema = z.object({ teams: teamDisplaySettingsSchema });

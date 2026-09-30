@@ -13,12 +13,20 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Avatar } from "@/components/ui/Avatar";
 import { DetailSheet } from "@/components/ui/DetailSheet";
 import { cn, normalizeText } from "@/lib/utils";
+import { useTeamStyles } from "@/hooks/useTeamStyles";
 import { confirmDialog } from "@/components/ui/confirm-dialog";
 import { deleteGame, updateGameName } from "@/lib/activity-mutates";
 import type { Juego, ParticipantBasic, Activity } from "@/lib/types";
 
-const POSITIONS = ["1", "2", "3", "4"] as const;
+const MIN_POSITIONS = 4;
 type JuegoTipo = "grupal" | "individual";
+
+// Team games: exactly one position per active team (the server rejects more).
+// Individual games: at least the classic podium of 4.
+function getPositions(teamCount: number, tipo: string | undefined) {
+  const count = tipo === "individual" ? Math.max(MIN_POSITIONS, teamCount) : teamCount;
+  return Array.from({ length: count }, (_, i) => String(i + 1));
+}
 
 function gameTypeLabel(tipo: string | undefined) {
   return tipo === "individual" ? "Individual" : "Grupal";
@@ -74,7 +82,6 @@ function GameDetailModal({
   players,
   locked,
   saving,
-  onClose,
   onRename,
   onDelete,
   onToggleItem,
@@ -85,16 +92,17 @@ function GameDetailModal({
   players: ParticipantOption[];
   locked: boolean;
   saving: boolean;
-  onClose: () => void;
   onRename: (value: string) => void;
   onDelete: () => Promise<void>;
   onToggleItem: (gameId: number | string, itemId: string, pos: string) => void;
   onFillRemaining: (gameId: number | string, pos: string) => void;
 }) {
+  const { activity } = useUnifiedActivity();
+  const teams = useTeamStyles(activity.teamSettings);
   const [localName, setLocalName] = useState(game.nombre || "");
   const [openPopover, setOpenPopover] = useState<string | null>(null);
   const [search, setSearch] = useState("");
-  const [showPtsPos, setShowPtsPos] = useState<string | null>(null);
+  const positions = getPositions(activeTeams.length, game.tipo);
 
   const assignedIds = useMemo(() => {
     if (game.tipo !== "individual") return new Set<string>();
@@ -128,7 +136,7 @@ function GameDetailModal({
           <Trash2 className="h-4 w-4" /> Eliminar
         </Button>
         <div className="flex items-center gap-2">
-          <span className="inline-flex items-center gap-1 rounded-full border border-border/60 bg-card px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+          <span className="inline-flex items-center gap-1 rounded-full border border-border/60 bg-card px-2 py-0.5 text-xs font-bold uppercase tracking-wide text-muted-foreground">
             {game.tipo === "individual" ? <Users className="h-3 w-3" /> : <Gamepad2 className="h-3 w-3" />}
             {gameTypeLabel(game.tipo || "grupal")}
           </span>
@@ -147,7 +155,7 @@ function GameDetailModal({
       </div>
 
       <div className="grid gap-3 lg:grid-cols-2">
-        {POSITIONS.map((pos) => {
+        {positions.map((pos) => {
           const selected = (game.pos || {})[pos] || [];
           return (
             <div
@@ -155,22 +163,17 @@ function GameDetailModal({
               className="rounded-2xl border border-border bg-card/20 p-3 space-y-3"
             >
               <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                <button
-                  type="button"
-                  onClick={() => setShowPtsPos(showPtsPos === pos ? null : pos)}
-                  className="flex items-center gap-2"
-                >
+                <div className="flex items-center gap-2">
                   <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-primary text-base font-black text-white">
                     {pos}
                   </span>
                   <span className="font-bold">Puesto {pos}</span>
-                  {showPtsPos === pos && (
-                    <span className="text-[10px] font-black text-primary bg-primary/10 rounded-full px-2 py-0.5">
+                  <span className="text-xs font-black text-primary bg-primary/10 rounded-full px-2 py-0.5">
                       {PTS.rec[Number(pos)] || 0} pts
                     </span>
-                  )}
-                </button>
+                </div>
                 {game.tipo === "individual" ? (
+                  <div className="flex flex-col gap-1 sm:items-end">
                   <div className="flex flex-wrap items-center gap-1 sm:justify-end">
                     <Popover
                       open={openPopover === pos}
@@ -208,7 +211,7 @@ function GameDetailModal({
                               >
                                 <Avatar p={p} size={24} />
                                 <span className="text-base font-medium">{p.nombre} {p.apellido}</span>
-                                <span className="text-sm text-muted-foreground ml-auto">{p.team}</span>
+                                <span className="text-sm text-muted-foreground ml-auto">{teams.name(p.team)}</span>
                               </button>
                             ))
                           ) : (
@@ -229,8 +232,12 @@ function GameDetailModal({
                       disabled={locked}
                       className="w-full sm:w-auto"
                     >
-                      Completar resto
+                      Asignar sin puesto aquí
                     </Button>
+                    </div>
+                    <p className="text-xs text-muted-foreground sm:text-right">
+                      Pone en este puesto a todos los jugadores elegibles que todavía no tienen puesto.
+                    </p>
                   </div>
                 ) : (
                   <span className="text-sm font-bold text-primary">
@@ -253,7 +260,7 @@ function GameDetailModal({
                             <>
                               <Avatar p={person} size={18} />
                               <span>{person.nombre} {person.apellido}</span>
-                              <span className="text-muted-foreground">· {person.team}</span>
+                              <span className="text-muted-foreground">· {teams.name(person.team)}</span>
                             </>
                           ) : (
                             <span>{value}</span>
@@ -290,7 +297,7 @@ function GameDetailModal({
                             : "border-border bg-white hover:border-primary hover:text-primary",
                         )}
                       >
-                        {team}
+                        {teams.name(team)}
                       </button>
                     );
                   })}
@@ -324,6 +331,7 @@ export function JuegosSection() {
 
   const isEditing = editingSection === "juegos";
   const participants = db.participants;
+  const teams = useTeamStyles(activity.teamSettings);
   const activeTeams = useMemo(
     () => TEAMS.slice(0, activity.cantEquipos || 4),
     [activity.cantEquipos],
@@ -368,7 +376,9 @@ export function JuegosSection() {
       };
 
       try {
-        await performQuickUpdate("game_pos", { juegoId: gameId, pos: nextPos }, "juegos", mutate);
+        await performQuickUpdate("game_pos", { juegoId: gameId, pos: nextPos }, "juegos", mutate, (base) => ({
+          prevPos: base.juegos?.find((j) => j.id === gameId)?.pos ?? {},
+        }));
       } catch {
         // El revert ya lo hace optimisticUpdateActivity
       }
@@ -469,12 +479,12 @@ export function JuegosSection() {
       const p = participantById.get(Number(value));
       return p ? `${p.nombre} ${p.apellido}` : value;
     }
-    return value;
+    return teams.name(value);
   };
 
   const renderReadMode = () => {
     if (gameList.length === 0) {
-      return <Empty text="Sin juegos registrados" className="text-white/60" />;
+      return <Empty text="Sin juegos registrados" className="text-white/90" />;
     }
 
     return (
@@ -507,7 +517,7 @@ export function JuegosSection() {
               </div>
 
               <div className="flex flex-col divide-y divide-border/40">
-                {POSITIONS.map((pos) => {
+                {getPositions(activeTeams.length, j.tipo).map((pos) => {
                   const values = (j.pos || {})[pos] || [];
                   return (
                     <div key={pos} className="flex items-center gap-2 text-sm py-1 px-3">
@@ -517,16 +527,16 @@ export function JuegosSection() {
                           values.map((value) => (
                             <span
                               key={`${pos}-${value}`}
-                              className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-foreground"
+                              className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-foreground"
                             >
                               {labelFor(j, value)}
                             </span>
                           ))
                         ) : (
-                          <span className="text-[10px] text-muted-foreground italic">—</span>
+                          <span className="text-xs text-muted-foreground italic">—</span>
                         )}
                       </div>
-                      <span className="text-[10px] text-muted-foreground ml-auto">{values.length}</span>
+                      <span className="text-xs text-muted-foreground ml-auto">{values.length}</span>
                     </div>
                   );
                 })}
@@ -544,10 +554,10 @@ export function JuegosSection() {
         <h2 className="text-base font-black text-white">Juegos</h2>
         <div className="flex flex-wrap items-center gap-2 sm:justify-end">
           {syncStatus.state === "saving" && (
-            <span className="text-[10px] text-white/60 animate-pulse">Guardando...</span>
+            <span className="text-xs text-white/90 animate-pulse">Guardando...</span>
           )}
           {syncStatus.state === "error" && syncStatus.message && (
-            <span className="text-[10px] text-red-300">{syncStatus.message}</span>
+            <span className="text-xs text-red-300">{syncStatus.message}</span>
           )}
           <Button
             onClick={() => setCreateOpen(true)}
@@ -582,7 +592,7 @@ export function JuegosSection() {
                   <span className="font-black text-base truncate">
                     {game.nombre || `Juego ${index + 1}`}
                   </span>
-                  <span className="inline-flex items-center gap-1 rounded-full border border-border/60 bg-card px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+                  <span className="inline-flex items-center gap-1 rounded-full border border-border/60 bg-card px-2 py-0.5 text-xs font-bold uppercase tracking-wide text-muted-foreground">
                     {game.tipo === "individual" ? (
                       <Users className="h-3 w-3" />
                     ) : (
@@ -614,7 +624,7 @@ export function JuegosSection() {
         ))}
       </div>
 
-      {gameList.length === 0 && <Empty text="Sin juegos registrados" className="text-white/60" />}
+      {gameList.length === 0 && <Empty text="Sin juegos registrados" className="text-white/90" />}
 
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent className="sm:max-w-lg" aria-describedby={undefined}>
@@ -664,7 +674,6 @@ export function JuegosSection() {
               players={eligiblePlayers}
               locked={locked}
               saving={saving}
-              onClose={() => setSelectedId(null)}
               onRename={(nombre) => updateName(selectedGame.id, nombre)}
               onDelete={async () => {
                 const confirmed = await confirmDialog(

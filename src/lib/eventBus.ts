@@ -11,5 +11,5 @@ export const eventBus = globalForEvents.__activadosEmitter || new EventEmitter()
 // Always save to globalThis to persist across requests
 globalForEvents.__activadosEmitter = eventBus;
 
-// Allow infinite listeners for SSE connections
-eventBus.setMaxListeners(100);
+// Each SSE connection registers 2 listeners; 0 = unlimited so we never hit Node's leak warning
+eventBus.setMaxListeners(0);

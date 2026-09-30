@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react";
 import { useStore } from "@nanostores/react";
 import { useRouter } from "next/navigation";
-import { Plus, Search } from "lucide-react";
+import { Search } from "lucide-react";
 import { Empty } from "@/components/ui/Common";
 import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useApp } from "@/hooks/useApp";
 import { $role } from "@/store/appStore";
+import { normalizeText } from "@/lib/utils";
 import type { ParticipantBasic } from "@/lib/types";
 
 interface ParticipantWithStats extends ParticipantBasic {
@@ -65,9 +66,9 @@ export default function Page() {
         `${a.nombre} ${a.apellido}`.localeCompare(`${b.nombre} ${b.apellido}`),
       );
     }
-    const q = search.toLowerCase();
+    const q = normalizeText(search);
     return (participants || [])
-      .filter((p) => `${p.nombre} ${p.apellido}`.toLowerCase().includes(q))
+      .filter((p) => normalizeText(`${p.nombre} ${p.apellido}`).includes(q))
       .sort((a, b) =>
         `${a.nombre} ${a.apellido}`.localeCompare(`${b.nombre} ${b.apellido}`),
       );

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useUnifiedActivity } from "@/lib/activity-context";
+import { $activities } from "@/store/appStore";
 import { useApp } from "@/hooks/useApp";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +14,7 @@ import { cn } from "@/lib/utils";
 import { FileText, Lock, Unlock, Trash2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { confirmDialog } from "@/components/ui/confirm-dialog";
+import { ActivityTeamsCard } from "../_components/ActivityTeamsCard";
 
 import {
   AlertDialog,
@@ -75,17 +77,16 @@ export default function GeneralPage() {
 
     if (!dirty) return;
 
+    const next = { titulo: nextTitle, fecha: draftDate, cantEquipos: draftTeams };
     try {
-      await performQuickUpdate("config_bulk", {
-        titulo: nextTitle,
-        fecha: draftDate,
-        cantEquipos: draftTeams,
+      // Autosave and "Listo" may overlap: same-key saves are queued. prev = the
+      // last saved values, read when this request is sent; the ref advances then
+      // so a queued follow-up compares against these values.
+      await performQuickUpdate("config_bulk", next, undefined, undefined, () => {
+        const prev = { ...lastSavedRef.current };
+        lastSavedRef.current = next;
+        return { prev };
       });
-      lastSavedRef.current = {
-        titulo: nextTitle,
-        fecha: draftDate,
-        cantEquipos: draftTeams,
-      };
       if (draftTitle !== nextTitle) {
         setDraftTitle(nextTitle);
       }
@@ -93,10 +94,16 @@ export default function GeneralPage() {
         toast.success("Guardado");
       }
     } catch (error) {
-      toast.error("Error al guardar");
+      // Rebase on the server values (refetched on conflict) and keep the drafts:
+      // the next save goes through, or surfaces a real conflict once more
+      const fresh = $activities.get().find((a) => a.id === activity.id);
+      if (fresh) {
+        lastSavedRef.current = { titulo: fresh.titulo, fecha: fresh.fecha, cantEquipos: fresh.cantEquipos };
+      }
+      // No toast here: activity-context already reports conflicts/errors of performQuickUpdate
       throw error;
     }
-  }, [draftTitle, draftDate, draftTeams, performQuickUpdate]);
+  }, [activity.id, draftTitle, draftDate, draftTeams, performQuickUpdate]);
 
   const handleFinishEditing = async () => {
     try {
@@ -113,10 +120,10 @@ export default function GeneralPage() {
     if (!newLocked && !(await confirmDialog("¿Desbloquear actividad? Se habilitará la edición."))) return;
 
     try {
-      await performQuickUpdate("config", { k: "locked", v: newLocked });
+      await performQuickUpdate("config", { k: "locked", v: newLocked, prev: locked });
       toast.success(newLocked ? "Actividad bloqueada" : "Actividad desbloqueada");
     } catch {
-      toast.error("Error al cambiar estado de bloqueo");
+      // activity-context already reports the error
     }
   };
 
@@ -254,6 +261,9 @@ export default function GeneralPage() {
             </div>
           )}
         </div>
+
+        {/* Team names/colors for this activity */}
+        <ActivityTeamsCard />
 
         {/* Lock toggle */}
         <div className="flex items-center justify-between pt-2 border-t border-slate-100">

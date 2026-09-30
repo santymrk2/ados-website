@@ -1,149 +1,8 @@
+import { getTodayDateString } from "./utils";
 export const TEAMS = ["E1", "E2", "E3", "E4", "E5", "E6"];
 
-const DEFAULT_TEAM_COLORS: Record<string, string> = {
-  E1: "#FF6B6B",
-  E2: "#4ECDC4", 
-  E3: "#FFD93D",
-  E4: "#A78BFA",
-  E5: "#FB923C",
-  E6: "#2DD4BF"
-};
+// Team names/colors live in src/lib/team-display.ts (shared defaults + per-activity overrides).
 
-const DEFAULT_TEAM_BG_LIGHT: Record<string, string> = {
-  E1: "#FFECEC",
-  E2: "#E8F5F3", 
-  E3: "#FFF8E1",
-  E4: "#F3EEFC",
-  E5: "#FFF1E6",
-  E6: "#E2FBF9"
-};
-
-const DEFAULT_TEAM_BG: Record<string, string> = {
-  E1: "#2A1010",
-  E2: "#0A2220",
-  E3: "#2A2200",
-  E4: "#1A1230",
-  E5: "#2E1B0A",
-  E6: "#0A2A26"
-};
-
-function getStoredTeamColors() {
-  if (typeof window === 'undefined') return DEFAULT_TEAM_COLORS;
-  const stored = localStorage.getItem('teamColors');
-  if (stored) {
-    try {
-      return JSON.parse(stored);
-    } catch {
-      return DEFAULT_TEAM_COLORS;
-    }
-  }
-  return DEFAULT_TEAM_COLORS;
-}
-
-function getStoredTeamBgLight() {
-  if (typeof window === 'undefined') return DEFAULT_TEAM_BG_LIGHT;
-  const stored = localStorage.getItem('teamBgLight');
-  if (stored) {
-    try {
-      return JSON.parse(stored);
-    } catch {
-      return DEFAULT_TEAM_BG_LIGHT;
-    }
-  }
-  return DEFAULT_TEAM_BG_LIGHT;
-}
-
-function getStoredTeamBg() {
-  if (typeof window === 'undefined') return DEFAULT_TEAM_BG;
-  const stored = localStorage.getItem('teamBg');
-  if (stored) {
-    try {
-      return JSON.parse(stored);
-    } catch {
-      return DEFAULT_TEAM_BG;
-    }
-  }
-  return DEFAULT_TEAM_BG;
-}
-
-export function getTeamColors() {
-  return getStoredTeamColors();
-}
-
-export function getTeamBgLight() {
-  return getStoredTeamBgLight();
-}
-
-export function getTeamBgDark() {
-  return getStoredTeamBg();
-}
-
-export function getTeamColor(team: string): string {
-  return getStoredTeamColors()[team] || DEFAULT_TEAM_COLORS[team] || '#cccccc';
-}
-
-export function getTeamBg(team: string): string {
-  return getStoredTeamBgLight()[team] || DEFAULT_TEAM_BG_LIGHT[team] || '#f5f5f5';
-}
-
-export function getTeamBgDarkColor(team: string): string {
-  return getStoredTeamBg()[team] || DEFAULT_TEAM_BG[team] || '#1a1a1a';
-}
-
-export function getTeamBgLightColor(team: string): string {
-  return getStoredTeamBgLight()[team] || DEFAULT_TEAM_BG_LIGHT[team] || '#f5f5f5';
-}
-
-// Constantes con valores por defecto - se actualizan en runtime via syncTeamConstants()
-export const TEAM_COLORS: Record<string, string> = { ...DEFAULT_TEAM_COLORS };
-export const TEAM_BG_LIGHT: Record<string, string> = { ...DEFAULT_TEAM_BG_LIGHT };
-export const TEAM_BG: Record<string, string> = { ...DEFAULT_TEAM_BG };
-
-export function syncTeamConstants() {
-  const colors = getStoredTeamColors();
-  const bgLight = getStoredTeamBgLight();
-  const bgDark = getStoredTeamBg();
-
-  TEAMS.forEach(team => {
-    TEAM_COLORS[team] = colors[team] || DEFAULT_TEAM_COLORS[team];
-    TEAM_BG_LIGHT[team] = bgLight[team] || DEFAULT_TEAM_BG_LIGHT[team];
-    TEAM_BG[team] = bgDark[team] || DEFAULT_TEAM_BG[team];
-  });
-}
-
-export function saveTeamColors(colors: Record<string, string>) {
-  if (typeof window === 'undefined') return;
-  
-  const lightColors: Record<string, string> = {};
-  const darkColors: Record<string, string> = {};
-  
-  Object.entries(colors).forEach(([team, color]) => {
-    lightColors[team] = lightenColor(color, 85);
-    darkColors[team] = darkenColor(color, 60);
-  });
-  
-  localStorage.setItem('teamColors', JSON.stringify(colors));
-  localStorage.setItem('teamBgLight', JSON.stringify(lightColors));
-  localStorage.setItem('teamBg', JSON.stringify(darkColors));
-}
-
-function lightenColor(hex: string, percent: number): string {
-  const num = parseInt(hex.replace('#', ''), 16);
-  const amt = Math.round(2.55 * percent);
-  const R = Math.min(255, (num >> 16) + amt);
-  const G = Math.min(255, ((num >> 8) & 0x00FF) + amt);
-  const B = Math.min(255, (num & 0x0000FF) + amt);
-  return '#' + (0x1000000 + R * 0x10000 + G * 0x100 + B).toString(16).slice(1);
-}
-
-function darkenColor(hex: string, percent: number): string {
-  const num = parseInt(hex.replace('#', ''), 16);
-  const amt = Math.round(2.55 * percent);
-  const R = Math.max(0, (num >> 16) - amt);
-  const G = Math.max(0, ((num >> 8) & 0x00FF) - amt);
-  const B = Math.max(0, (num & 0x0000FF) - amt);
-  return '#' + (0x1000000 + R * 0x10000 + G * 0x100 + B).toString(16).slice(1);
-}
 export const MEDALS = ["1°", "2°", "3°", "4°", "5°", "6°", "7°", "8°", "9°", "10°"];
 export const DEPORTES = ["Fútbol", "Handball", "Básquet", "Vóley", "Otro"];
 export const GENEROS = [
@@ -211,7 +70,7 @@ export const SEED_PARTICIPANTS = [
 export function newAct() {
   return {
     id: null,
-    fecha: new Date().toISOString().slice(0, 10),
+    fecha: getTodayDateString(),
     titulo: "",
     cantEquipos: 4,
     locked: false,

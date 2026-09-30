@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { TEAMS, TEAM_COLORS, getTeamBg } from "@/lib/constants";
+import { TEAMS } from "@/lib/constants";
+import { useTeamStyles } from "@/hooks/useTeamStyles";
 import { SexBadge } from "./Badges";
 import { Avatar } from "./Avatar";
 import { Empty } from "./Common";
@@ -14,6 +15,7 @@ export function TeamTable({
   onTeamChange,
   readOnly = false,
 }) {
+  const teams = useTeamStyles(act.teamSettings);
   const [selectedPlayer, setSelectedPlayer] = useState(null);
 
   const present = useMemo(
@@ -89,12 +91,12 @@ export function TeamTable({
                   key={team}
                   className="p-2 text-center font-black text-xs border-b border-surface-dark"
                   style={{
-                    backgroundColor: getTeamBg(team),
-                    color: TEAM_COLORS[team],
-                    borderRight: `2px solid ${TEAM_COLORS[team]}33`,
+                    backgroundColor: teams.bg(team),
+                    color: teams.color(team),
+                    borderRight: `2px solid ${teams.color(team)}33`,
                   }}
                 >
-                  {team}
+                  {teams.name(team)}
                 </th>
               ))}
             </tr>
@@ -106,7 +108,7 @@ export function TeamTable({
                   key={team}
                   className="px-1 pt-2 pb-0.5 text-center"
                   style={{
-                    borderRight: `2px solid ${TEAM_COLORS[team]}22`,
+                    borderRight: `2px solid ${teams.color(team)}22`,
                     backgroundColor: "#F8F8F8",
                   }}
                 >
@@ -133,7 +135,7 @@ export function TeamTable({
                         rowIdx % 2 === 0 ? "bg-surface-light/10" : "bg-surface-dark/10",
                       )}
                       style={{
-                        borderRight: `2px solid ${TEAM_COLORS[team]}22`,
+                        borderRight: `2px solid ${teams.color(team)}22`,
                       }}
                       onClick={() => handleTeamClick(p, team)}
                     >
@@ -156,7 +158,7 @@ export function TeamTable({
                   key={team}
                   className="px-1 pt-2 pb-0.5 text-center"
                   style={{
-                    borderRight: `2px solid ${TEAM_COLORS[team]}22`,
+                    borderRight: `2px solid ${teams.color(team)}22`,
                     backgroundColor: "#F8F8F8",
                   }}
                 >
@@ -183,7 +185,7 @@ export function TeamTable({
                         rowIdx % 2 === 0 ? "bg-surface-light/10" : "bg-surface-dark/10",
                       )}
                       style={{
-                        borderRight: `2px solid ${TEAM_COLORS[team]}22`,
+                        borderRight: `2px solid ${teams.color(team)}22`,
                       }}
                       onClick={() => handleTeamClick(p, team)}
                     >
@@ -206,13 +208,13 @@ export function TeamTable({
                   key={team}
                   className="p-1.5 text-center border-t border-surface-dark"
                   style={{
-                    backgroundColor: getTeamBg(team),
-                    borderRight: `2px solid ${TEAM_COLORS[team]}33`,
+                    backgroundColor: teams.bg(team),
+                    borderRight: `2px solid ${teams.color(team)}33`,
                   }}
                 >
                   <div
                     className="font-black text-base"
-                    style={{ color: TEAM_COLORS[team] }}
+                    style={{ color: teams.color(team) }}
                   >
                     {women.length + men.length}
                   </div>

@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
-  AUTH_COOKIE_MAX_AGE_SECONDS,
+  AUTH_COOKIE_NAME,
+  AUTH_COOKIE_OPTIONS,
   AUTH_ROLES,
   REQUIRED_AUTH_ENV_VARS,
+  apiRateLimited,
   createAuthCookieValue,
   getMissingEnvVars,
   handleApiError,
@@ -23,8 +25,54 @@ function passwordsMatch(input: string, expected: string): boolean {
   );
 }
 
+const MAX_FAILED_ATTEMPTS = 5;
+const ATTEMPT_WINDOW_MS = 15 * 60 * 1000;
+
+// In-memory (per instance) failed-attempt counter keyed by client IP
+const failedAttempts = new Map<string, { count: number; resetAt: number }>();
+const MAX_TRACKED_CLIENTS = 5000;
+
+// The reverse proxy (Traefik in Dokploy) APPENDS the real client IP to X-Forwarded-For,
+// so the last entry is trustworthy; earlier entries are whatever the client sent.
+function getClientKey(request: NextRequest) {
+  const forwarded = request.headers.get("x-forwarded-for")?.split(",").map((ip) => ip.trim()).filter(Boolean);
+  return forwarded?.at(-1) || request.headers.get("x-real-ip")?.trim() || "unknown";
+}
+
+function pruneExpired(now: number) {
+  for (const [key, entry] of failedAttempts) {
+    if (entry.resetAt <= now) failedAttempts.delete(key);
+  }
+}
+
+function isRateLimited(key: string) {
+  const entry = failedAttempts.get(key);
+  if (!entry) return false;
+  if (entry.resetAt <= Date.now()) {
+    failedAttempts.delete(key);
+    return false;
+  }
+  return entry.count >= MAX_FAILED_ATTEMPTS;
+}
+
+function registerFailure(key: string) {
+  const now = Date.now();
+  const entry = failedAttempts.get(key);
+  if (!entry || entry.resetAt <= now) {
+    if (failedAttempts.size >= MAX_TRACKED_CLIENTS) pruneExpired(now);
+    failedAttempts.set(key, { count: 1, resetAt: now + ATTEMPT_WINDOW_MS });
+  } else {
+    entry.count += 1;
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
+    const clientKey = getClientKey(request);
+    if (isRateLimited(clientKey)) {
+      return apiRateLimited("Demasiados intentos. Probá de nuevo en unos minutos.");
+    }
+
     const parsed = await parseBody(request, loginSchema);
     if (!parsed.success) {
       return parsed.error;
@@ -70,19 +118,14 @@ export async function POST(request: NextRequest) {
     }
 
     if (!authenticatedRole) {
+      registerFailure(clientKey);
       throw new UnauthorizedError("Contraseña incorrecta");
     }
 
-    const cookieOptions = {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax" as const,
-      path: "/",
-      maxAge: AUTH_COOKIE_MAX_AGE_SECONDS,
-    };
+    failedAttempts.delete(clientKey);
 
     const response = NextResponse.json({ success: true, role: authenticatedRole });
-    response.cookies.set("activados_auth", createAuthCookieValue(authenticatedRole), cookieOptions);
+    response.cookies.set(AUTH_COOKIE_NAME, createAuthCookieValue(authenticatedRole), AUTH_COOKIE_OPTIONS);
     return response;
   } catch (e) {
     return handleApiError(e);

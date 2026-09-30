@@ -14,6 +14,9 @@ import { checkDbConnection, refreshData } from "@/store/appStore";
 
 // Debounce delay para agrupar múltiples cambios SSE rápidos
 const SSE_DEBOUNCE_MS = 500;
+// Fallback resync: SSE uses an in-memory emitter that doesn't cross server
+// instances, so reconcile periodically while the tab is visible
+const RESYNC_INTERVAL_MS = 30_000;
 
 export function useDatabaseInitialization(enabled = true) {
   const eventSourceRef = useRef<EventSource | null>(null);
@@ -103,10 +106,14 @@ export function useDatabaseInitialization(enabled = true) {
 
     // Small delay to ensure React is ready
     const timeoutId = setTimeout(initialize, 100);
+    const resyncId = setInterval(() => {
+      if (document.visibilityState === "visible") refreshData(false);
+    }, RESYNC_INTERVAL_MS);
 
     return () => {
       // Cleanup on unmount
       clearTimeout(timeoutId);
+      clearInterval(resyncId);
       cleanup();
     };
   }, [cleanup, enabled, initialize]);

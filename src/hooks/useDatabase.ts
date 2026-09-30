@@ -24,28 +24,6 @@ type ActivityDraft = Omit<Activity, "id"> & {
   id?: number | null;
 };
 
-const RETRYABLE_QUICK_UPDATE_TYPES = new Set([
-  "attendance",
-  "puntuales",
-  "biblias",
-  "team",
-  "socials",
-  "goal_add",
-  "goal_remove",
-  "goal_update",
-  "extra_add",
-  "extra_update",
-  "extra_delete",
-  "extra_toggle",
-  "game_add",
-  "game_update",
-  "game_delete",
-  "game_pos",
-  "invitacion_add",
-  "invitacion_update",
-  "invitacion_delete",
-]);
-
 export function useDatabase() {
   const participants = useStore($participants);
   const activities = useStore($activities);
@@ -71,34 +49,20 @@ export function useDatabase() {
   }, []);
 
   // Quick update (asistencia, equipos, etc)
-  // After a successful non-optimistic PATCH, always refresh to reconcile with server truth.
-  // For optimistic types (attendance/socials/game_pos), the store was already updated
-  // by optimisticUpdateActivity — this refresh runs in the background to reconcile,
-  // and pendingOptimistic in appStore prevents overwriting in-flight mutations.
-  const quickUpdate = useCallback(async (activityId: number, type: string, data: unknown, version?: number) => {
-    const perform = async (currentVersion?: number) => quickUpdateActivity(activityId, type, data, currentVersion);
-
+  // The server never rejects on the activity version; a 409 only comes from the
+  // per-resource compare-and-set of config, config_bulk, teams_bulk and game_pos
+  // (the resource changed since the client's prev* base). Replaying would
+  // overwrite another user's work, so there is no auto-retry: refresh + surface it.
+  // Optimistic callers pass skipRefresh: the store already holds the change and
+  // the server version; SSE + the periodic resync reconcile the rest. Non-optimistic
+  // calls (e.g. _add types, where the server generates the id) still refetch.
+  const quickUpdate = useCallback(async (activityId: number, type: string, data: unknown, version?: number, skipRefresh = false) => {
     try {
-      const result = await perform(version);
-      // Always refresh after own change — SSE (in-memory EventEmitter) is not
-      // reliable across serverless instances, so we can't depend on it to reflect
-      // our own mutations back to us.
-      await refreshData(false);
+      const result = await quickUpdateActivity(activityId, type, data, version);
+      if (!skipRefresh) await refreshData(false);
       return result;
     } catch (error) {
-      const isConflict = error instanceof VersionConflictError;
-
-      if (isConflict && RETRYABLE_QUICK_UPDATE_TYPES.has(type)) {
-        // On conflict: fetch fresh data, grab latest version, retry
-        await refreshData(false);
-        const freshVersion = $activities.get().find((activity) => activity.id === activityId)?.version;
-        const retriedResult = await perform(freshVersion);
-        // Reconcile after successful retry too
-        await refreshData(false);
-        return retriedResult;
-      }
-
-      if (isConflict) {
+      if (error instanceof VersionConflictError && !skipRefresh) {
         await refreshData(false);
       }
       throw error;

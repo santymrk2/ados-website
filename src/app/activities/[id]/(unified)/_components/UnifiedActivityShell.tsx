@@ -8,7 +8,7 @@ import { cn, formatDate } from "@/lib/utils";
 import { SectionSkeleton } from "./SectionSkeleton";
 import { Button } from "@/components/ui/button";
 import { FloatingNav } from "@/components/ui/FloatingNav";
-import { Check, Loader2, AlertCircle, ChevronLeft } from "lucide-react";
+import { Check, Loader2, AlertCircle, ChevronLeft, Lock } from "lucide-react";
 import type { Activity } from "@/lib/types";
 
 // Map each section to an appropriate skeleton variant
@@ -170,6 +170,8 @@ function ShellInner({
     filtersActive,
     setFiltersActive,
     setEditingSection,
+    locked,
+    isAdmin,
   } = useUnifiedActivity();
   const router = useRouter();
 
@@ -270,6 +272,39 @@ function ShellInner({
           </div>
         </div>
       </div>
+
+      {locked && (
+
+
+        <div
+
+
+          role="status"
+
+
+          className="mx-4 mt-2 flex items-center gap-2 rounded-xl bg-amber-100 px-3 py-2 text-sm font-bold text-amber-900"
+
+
+        >
+
+
+          <Lock className="w-4 h-4 shrink-0" />
+
+
+          {isAdmin
+
+
+            ? "Actividad cerrada — desbloqueala en General para editar"
+
+
+            : "Actividad cerrada"}
+
+
+        </div>
+
+
+      )}
+
 
       <div
         className="bg-primary px-4 pt-4 flex-1 pb-32"

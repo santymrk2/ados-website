@@ -22,7 +22,7 @@ export interface Participant {
 }
 
 export interface ParticipantBasic {
-  // Versiónlight usada en listados (sin fotos de alta calidad)
+  // Versión light usada en listados (sin fotos de alta calidad)
   id: number;
   nombre: string;
   apellido: string;
@@ -129,9 +129,9 @@ export interface ActivityInput {
 export interface Ranking {
   id: number; // participantId
   total: number; // puntos totales
-  gf: number; // goles faltantes
-  gh: number; // goles hora
-  gb: number; // goles biblia
+  gf: number; // goles de fútbol
+  gh: number; // goles de handball
+  gb: number; // goles de básquet
   acts: number; // actividades asistidas
   invitados: number; // cantidad de personas invitadas
 }

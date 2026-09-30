@@ -13,9 +13,9 @@ import { removeGoal, updateGoal } from "@/lib/activity-mutates";
 import type { Gol, ParticipantBasic } from "@/lib/types";
 
 const GOAL_TYPES = [
-  { id: "f", label: "Fútbol", short: "F" },
-  { id: "h", label: "Handball", short: "H" },
-  { id: "b", label: "Básquet", short: "B" },
+  { id: "f", label: "Fútbol", short: "⚽ F" },
+  { id: "h", label: "Handball", short: "🤾 H" },
+  { id: "b", label: "Básquet", short: "🏀 B" },
 ] as const;
 
 
@@ -82,7 +82,7 @@ function GoalRow({
                 </>
               ) : (
                 <>
-                  <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center text-[10px] font-black text-muted-foreground">
+                  <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center text-xs font-black text-muted-foreground">
                     ?
                   </div>
                   <span className="text-base text-muted-foreground italic">Seleccionar jugador...</span>
@@ -135,7 +135,7 @@ function GoalRow({
             disabled={locked || saving}
             onClick={() => g.id != null && onUpdate(g.id, "tipo", type.id)}
             className={cn(
-              "px-2 py-1 rounded-md text-[10px] font-black transition-all",
+              "px-2 py-1 rounded-md text-xs font-black transition-all",
               g.tipo === type.id
               ? "bg-white text-primary shadow-sm"
                 : "text-muted-foreground hover:text-foreground",
@@ -317,10 +317,10 @@ export function GolesSection() {
             <h2 className="text-base font-black text-white">Goles Manuales</h2>
             <div className="flex items-center gap-2">
               {syncStatus.state === "saving" && (
-                <span className="text-[10px] text-white/60 animate-pulse">Guardando...</span>
+                <span className="text-xs text-white/90 animate-pulse">Guardando...</span>
               )}
               {syncStatus.state === "error" && syncStatus.message && (
-                <span className="text-[10px] text-red-300">{syncStatus.message}</span>
+                <span className="text-xs text-red-300">{syncStatus.message}</span>
               )}
               <Button
                 onClick={add}
@@ -384,7 +384,7 @@ export function GolesSection() {
             )}
           </div>
 
-          <div className="flex items-center justify-center gap-3 text-sm font-bold text-white/60 mb-4">
+          <div className="flex items-center justify-center gap-3 text-sm font-bold text-white/90 mb-4">
             <span>⚽ {bySport.f?.total || 0}</span>
             <span>·</span>
             <span>🤾 {bySport.h?.total || 0}</span>
@@ -403,7 +403,7 @@ export function GolesSection() {
                     key={p.pid}
                     className="bg-white/90 rounded-xl p-3 flex items-center gap-3"
                   >
-                    <div className="w-5 h-5 rounded bg-white/10 flex items-center justify-center text-[10px] font-black text-white/60">
+                    <div className="w-5 h-5 rounded bg-white/10 flex items-center justify-center text-xs font-black text-white/90">
                       {i + 1}
                     </div>
                     {p.participant && <Avatar p={p.participant} size={30} />}
@@ -423,7 +423,7 @@ export function GolesSection() {
 
           {goles.length === 0 && (
             <div className="flex flex-col items-center justify-center py-8 text-center">
-              <p className="text-base text-white/60">No hay goles registrados</p>
+              <p className="text-base text-white/90">No hay goles registrados</p>
             </div>
           )}
         </>

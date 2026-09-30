@@ -23,9 +23,9 @@ export interface ActivityPointsDetail {
 }
 
 const GOAL_LABELS = {
-  f: "Goles faltantes",
-  h: "Goles hora",
-  b: "Goles Biblia",
+  f: "Goles de fútbol",
+  h: "Goles de handball",
+  b: "Goles de básquet",
 } as const;
 
 function getParticipantName(pid: number | null | undefined, participants: AnyParticipant[]) {

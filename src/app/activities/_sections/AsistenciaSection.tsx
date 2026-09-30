@@ -29,30 +29,11 @@ import {
   Calendar,
   CheckCircle,
 } from "lucide-react";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DetailSheet } from "@/components/ui/DetailSheet";
 import type { Activity, ParticipantBasic } from "@/lib/types";
 import { $inflightKeys, inflightKey } from "@/store/appStore";
 
-const MONTHS = [
-  { value: "1", label: "Enero" },
-  { value: "2", label: "Febrero" },
-  { value: "3", label: "Marzo" },
-  { value: "4", label: "Abril" },
-  { value: "5", label: "Mayo" },
-  { value: "6", label: "Junio" },
-  { value: "7", label: "Julio" },
-  { value: "8", label: "Agosto" },
-  { value: "9", label: "Septiembre" },
-  { value: "10", label: "Octubre" },
-  { value: "11", label: "Noviembre" },
-  { value: "12", label: "Diciembre" },
-];
-
-function buildDate(day: string, month: string, year: string): string {
-  if (!day || !month || !year) return "";
-  return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
-}
+const TODAY = () => new Date().toISOString().slice(0, 10);
 
 function NewPlayerModal({
   onClose,
@@ -66,8 +47,7 @@ function NewPlayerModal({
     apellido: "",
     sexo: "M",
   });
-  const [dob, setDob] = useState({ day: "", month: "", year: "" });
-  const fechaNacimiento = buildDate(dob.day, dob.month, dob.year);
+  const [fechaNacimiento, setFechaNacimiento] = useState("");
   const [invitadorId, setInvitadorId] = useState<number | null>(null);
   const [invitadorOpen, setInvitadorOpen] = useState(false);
   const [invitadorSearch, setInvitadorSearch] = useState("");
@@ -166,50 +146,14 @@ function NewPlayerModal({
       </div>
       <div className="mb-4">
         <Label className="mb-1">Fecha de Nacimiento</Label>
-        <div className="grid grid-cols-3 gap-2">
-          <Select value={dob.day} onValueChange={(v) => {
-            const next = { ...dob, day: v };
-            setDob(next);
-            setForm((p) => ({ ...p, fechaNacimiento: buildDate(next.day, next.month, next.year) }));
-          }}>
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Día" />
-            </SelectTrigger>
-            <SelectContent>
-              {Array.from({ length: 31 }, (_, i) => String(i + 1)).map((d) => (
-                <SelectItem key={d} value={d}>{d}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select value={dob.month} onValueChange={(v) => {
-            const next = { ...dob, month: v };
-            setDob(next);
-            setForm((p) => ({ ...p, fechaNacimiento: buildDate(next.day, next.month, next.year) }));
-          }}>
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Mes" />
-            </SelectTrigger>
-            <SelectContent>
-              {MONTHS.map((m) => (
-                <SelectItem key={m.value} value={m.value}>{m.value}-{m.label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select value={dob.year} onValueChange={(v) => {
-            const next = { ...dob, year: v };
-            setDob(next);
-            setForm((p) => ({ ...p, fechaNacimiento: buildDate(next.day, next.month, next.year) }));
-          }}>
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Año" />
-            </SelectTrigger>
-            <SelectContent>
-              {Array.from({ length: new Date().getFullYear() - 1949 }, (_, i) => String(new Date().getFullYear() - i)).map((y) => (
-                <SelectItem key={y} value={y}>{y}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        <Input
+          type="date"
+          value={fechaNacimiento}
+          min="1990-01-01"
+          max={TODAY()}
+          onChange={(e) => setFechaNacimiento(e.target.value)}
+          className="text-base h-11"
+        />
       </div>
       <div className="mb-4">
         <Label className="mb-1">Sexo</Label>
@@ -350,13 +294,13 @@ function GenderGroup({
             <span
               className={
                 act.puntuales.includes(p.id)
-                  ? "rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-700"
-                  : "rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-700"
+                  ? "rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-bold text-emerald-700"
+                  : "rounded-full bg-slate-100 px-2 py-0.5 text-xs font-bold text-slate-700"
               }
             >
-              {act.puntuales.includes(p.id) ? "Puntual" : "Tardes"}
+              {act.puntuales.includes(p.id) ? "Puntual" : "Tarde"}
             </span>
-            <span className="rounded-full bg-sky-100 px-2 py-0.5 text-[10px] font-bold text-sky-700 shrink-0 whitespace-nowrap">
+            <span className="rounded-full bg-sky-100 px-2 py-0.5 text-xs font-bold text-sky-700 shrink-0 whitespace-nowrap">
               {act.socials.includes(p.id) ? "Social" : "Juegos"}
             </span>
           </div>
@@ -377,7 +321,7 @@ export function AsistenciaSection() {
     setFilterContent,
     setFiltersActive,
   } = useUnifiedActivity();
-  const [editing, setEditing] = useState(false);
+  const [summaryView, setSummaryView] = useState(false);
   const [showNewPlayer, setShowNewPlayer] = useState(false);
   const [selectedPlayer, setSelectedPlayer] = useState<ParticipantBasic | null>(
     null,
@@ -400,6 +344,8 @@ export function AsistenciaSection() {
   );
 
   const canEdit = isAdmin && !locked;
+  // Admins take attendance directly; everyone else (or a locked activity) sees the summary
+  const editing = canEdit && !summaryView;
   const activeTeams = TEAMS.slice(0, act.cantEquipos || 0);
 
   // Provide filter content to FloatingNav
@@ -410,7 +356,7 @@ export function AsistenciaSection() {
       <div className="space-y-4">
         {/* Género */}
         <div>
-          <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground px-1">
+          <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground px-1">
             Género
           </span>
           <div className="space-y-1 mt-1.5">
@@ -455,7 +401,7 @@ export function AsistenciaSection() {
 
         {/* Orden */}
         <div>
-          <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground px-1">
+          <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground px-1">
             Ordenar por
           </span>
           <div className="space-y-1 mt-1.5">
@@ -529,7 +475,7 @@ export function AsistenciaSection() {
     enriched.sort((a, b) => {
       switch (sortMode) {
         case "name":
-          return dir * a.nombre.localeCompare(b.nombre);
+          return dir * `${a.nombre} ${a.apellido}`.localeCompare(`${b.nombre} ${b.apellido}`);
         case "lastname":
           return dir * a.apellido.localeCompare(b.apellido);
         case "age":
@@ -555,7 +501,7 @@ export function AsistenciaSection() {
       );
     }
     arr.sort((a, b) =>
-      `${a.apellido} ${a.nombre}`.localeCompare(`${b.apellido} ${b.nombre}`),
+      `${a.nombre} ${a.apellido}`.localeCompare(`${b.nombre} ${b.apellido}`),
     );
     return arr;
   }, [db.participants, searchQuery]);
@@ -656,34 +602,22 @@ export function AsistenciaSection() {
         <NewPlayerModal onClose={() => setShowNewPlayer(false)} />
       )}
 
-      {canEdit && !editing && (
+      {canEdit && (
         <div className="flex justify-end mb-4">
           <Button
-            onClick={() => setEditing(true)}
+            onClick={() => setSummaryView((v) => !v)}
             variant="ghost"
             size="sm"
-            className="bg-white/20 text-white hover:bg-white/30"
+            className="bg-white/20 text-white hover:bg-white/30 h-10"
           >
-            Editar
-          </Button>
-        </div>
-      )}
-      {editing && (
-        <div className="flex justify-end mb-4">
-          <Button
-            onClick={() => setEditing(false)}
-            variant="ghost"
-            size="sm"
-            className="bg-white/20 text-white hover:bg-white/30"
-          >
-            Listo
+            {editing ? "Ver resumen" : "Tomar asistencia"}
           </Button>
         </div>
       )}
 
       {!editing && (
         <>
-      <div className="flex items-center justify-center gap-2 text-sm font-bold text-white/60 flex-wrap mb-5">
+      <div className="flex items-center justify-center gap-2 text-sm font-bold text-white/80 flex-wrap mb-5">
         <span className="bg-white/10 px-2 py-0.5 rounded-full">{stats.total} presentes</span>
         <span className="bg-white/10 px-2 py-0.5 rounded-full">{stats.puntuales} puntuales</span>
         <span className="bg-white/10 px-2 py-0.5 rounded-full">{stats.juegos} juegos</span>
@@ -692,7 +626,7 @@ export function AsistenciaSection() {
 
       {filteredAsistentes.length === 0
         ? (
-          <div className="text-center text-white/60 py-8">
+          <div className="text-center text-white/80 py-8">
             {act.asistentes.length === 0
               ? "No hay asistentes registrados"
               : "No hay asistentes que coincidan con los filtros"}
@@ -759,7 +693,7 @@ export function AsistenciaSection() {
                     onClick={() => toggleAttendance(p.id)}
                     disabled={locked || !isAdmin || isSaving}
                     className={cn(
-                      "flex items-center justify-center h-9 min-w-9 px-2 text-base font-semibold transition-colors rounded-l-2xl border",
+                      "flex items-center justify-center gap-1.5 h-10 min-w-10 px-3 text-sm font-semibold transition-colors rounded-l-2xl border",
                       (locked || !isAdmin || isSaving) &&
                         "opacity-50 cursor-not-allowed pointer-events-none",
                       here
@@ -769,22 +703,24 @@ export function AsistenciaSection() {
                     )}
                   >
                     {here
-                      ? <CalendarCheck className="w-3.5 h-3.5" />
-                      : <CalendarX className="w-3.5 h-3.5" />}
+                      ? <CalendarCheck className="w-4 h-4" />
+                      : <CalendarX className="w-4 h-4" />}
+                    <span>Presente</span>
                   </button>
                   <button
                     onClick={() => togglePunctual(p.id)}
                     disabled={locked || !isAdmin || isSaving}
                     className={cn(
-                      "flex items-center justify-center h-9 min-w-9 px-2 text-base font-semibold transition-colors rounded-r-2xl border border-l-0",
-                      (locked || !isAdmin) &&
+                      "flex items-center justify-center gap-1.5 h-10 min-w-10 px-3 text-sm font-semibold transition-colors rounded-r-2xl border border-l-0",
+                      (locked || !isAdmin || isSaving) &&
                         "opacity-50 cursor-not-allowed pointer-events-none",
                       punct
                         ? "bg-primary text-primary-foreground border-primary"
                         : "bg-card text-muted-foreground border-border",
                     )}
                   >
-                    <Clock className="w-3.5 h-3.5" />
+                    <Clock className="w-4 h-4" />
+                    <span>Puntual</span>
                   </button>
                 </div>
                 <div
@@ -812,8 +748,8 @@ export function AsistenciaSection() {
                       onClick={() => toggleSocial(p.id)}
                       disabled={locked || !isAdmin || isSaving}
                       className={cn(
-                        "flex items-center gap-1 h-9 min-w-9 px-3 text-base font-semibold transition-colors rounded-2xl border",
-                        (locked || !isAdmin) &&
+                        "flex items-center gap-1.5 h-10 min-w-10 px-3 text-sm font-semibold transition-colors rounded-2xl border",
+                        (locked || !isAdmin || isSaving) &&
                           "opacity-50 cursor-not-allowed pointer-events-none",
                         (act.socials || []).includes(p.id)
                           ? "bg-[#F59E0B33] border-[#F59E0B66] text-[#F59E0B]"
@@ -821,9 +757,9 @@ export function AsistenciaSection() {
                       )}
                     >
                       {(act.socials || []).includes(p.id)
-                        ? <Coffee className="w-3.5 h-3.5" />
-                        : <Zap className="w-3.5 h-3.5" />}
-                      <span className="text-sm font-medium">
+                        ? <Coffee className="w-4 h-4" />
+                        : <Zap className="w-4 h-4" />}
+                      <span className="text-sm font-semibold">
                         {(act.socials || []).includes(p.id)
                           ? "Social"
                           : "Juegos"}

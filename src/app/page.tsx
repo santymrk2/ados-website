@@ -1,9 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { useStore } from "@nanostores/react";
 import { useApp } from "@/hooks/useApp";
-import { $role } from "@/store/appStore";
 import {
   ChevronRight,
   ChevronLeft,
@@ -13,7 +11,6 @@ import {
 } from "lucide-react";
 import { Empty } from "@/components/ui/Common";
 import { Avatar } from "@/components/ui/Avatar";
-import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { RankBadge, PodiumBadge } from "@/components/ui/Badges";
 import { DetailSheet } from "@/components/ui/DetailSheet";
@@ -227,7 +224,6 @@ function RankingDetailView({
 export default function Page() {
   const { db, isLoading } = useApp();
   const { participants, activities, rankings } = db;
-  const role = useStore($role);
   // Sheet states
   const [goleadoresOpen, setGoleadoresOpen] = useState(false);
   const [rankingOpen, setRankingOpen] = useState(false);

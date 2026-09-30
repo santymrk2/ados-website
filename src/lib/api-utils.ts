@@ -9,6 +9,17 @@ import { createHmac, timingSafeEqual } from "crypto";
 import { AppError } from "./errors";
 
 export const AUTH_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24;
+export const AUTH_COOKIE_NAME = "activados_auth";
+// Sliding session: re-issue the cookie once less than this remains, so active users never get logged out mid-activity
+const AUTH_COOKIE_REFRESH_THRESHOLD_MS = 12 * 60 * 60 * 1000;
+
+export const AUTH_COOKIE_OPTIONS = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === "production",
+  sameSite: "lax" as const,
+  path: "/",
+  maxAge: AUTH_COOKIE_MAX_AGE_SECONDS,
+};
 
 export const AUTH_ROLES = {
   ADMIN: "admin",
@@ -54,9 +65,10 @@ export interface PaginatedResponse<T> {
 export function getPagination(request: NextRequest): { page: number; limit: number } {
   const page = parseInt(request.nextUrl.searchParams.get("page") || "1", 10);
   const limit = parseInt(request.nextUrl.searchParams.get("limit") || "50", 10);
+  // parseInt yields NaN for junk like ?page=abc, and Math.max/min would propagate it
   return {
-    page: Math.max(1, page),
-    limit: Math.min(100, Math.max(1, limit)),
+    page: Number.isFinite(page) ? Math.max(1, page) : 1,
+    limit: Number.isFinite(limit) ? Math.min(100, Math.max(1, limit)) : 50,
   };
 }
 
@@ -223,7 +235,7 @@ export async function parseBody<T>(
  * Returns null if not authenticated
  */
 export function getAuthUser(request: NextRequest): { role: AuthRole } | null {
-  const authCookie = request.cookies.get("activados_auth");
+  const authCookie = request.cookies.get(AUTH_COOKIE_NAME);
 
   if (!authCookie?.value) {
     return null;
@@ -285,6 +297,21 @@ export function createAuthCookieValue(role: AuthRole) {
   ).toString("base64url");
 
   return `${payload}.${signAuthPayload(payload)}`;
+}
+
+/**
+ * Returns a fresh cookie value when the current one is valid but close to expiring, otherwise null.
+ */
+export function getRefreshedAuthCookieValue(value: string | undefined): string | null {
+  if (!value || !process.env.AUTH_SECRET) return null;
+  try {
+    const payload = parseAuthCookieValue(value);
+    if (!payload) return null;
+    if (payload.exp - Date.now() > AUTH_COOKIE_REFRESH_THRESHOLD_MS) return null;
+    return createAuthCookieValue(payload.role);
+  } catch {
+    return null;
+  }
 }
 
 function parseAuthCookieValue(value: string): AuthCookiePayload | null {

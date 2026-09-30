@@ -4,7 +4,9 @@ import { useState, useMemo, useCallback } from "react";
 import { useUnifiedActivity } from "@/lib/activity-context";
 
 import { Plus, Minus, Trash2 } from "lucide-react";
-import { TEAMS, TEAM_COLORS, getTeamBg } from "@/lib/constants";
+import { TEAMS } from "@/lib/constants";
+import { getContrastColor } from "@/components/teams/TeamSettingsEditor";
+import { useTeamStyles } from "@/hooks/useTeamStyles";
 import { Button } from "@/components/ui/button";
 import { Avatar } from "@/components/ui/Avatar";
 import { cn } from "@/lib/utils";
@@ -188,6 +190,7 @@ export function ExtrasSection() {
     performQuickUpdate,
   } = useUnifiedActivity();
 
+  const teams = useTeamStyles(activity.teamSettings);
   const isEditing = editingSection === "extras";
   const [saving, setSaving] = useState(false);
 
@@ -309,25 +312,27 @@ export function ExtrasSection() {
               key={t}
               className="rounded-xl p-3 flex flex-col gap-2 border border-l-4 transition-all relative shadow-sm"
               style={{
-                backgroundColor: getTeamBg(t),
-                borderColor: TEAM_COLORS[t] + "44",
+                backgroundColor: teams.bg(t),
+                borderColor: teams.color(t) + "44",
               }}
             >
               <div className="flex justify-between items-start">
                 <div
-                  className="w-10 h-10 rounded-2xl flex items-center justify-center font-black text-white text-lg shadow-inner"
-                  style={{ backgroundColor: TEAM_COLORS[t] }}
+                  className="w-10 h-10 rounded-2xl flex items-center justify-center font-black text-sm shadow-inner"
+                  style={{ backgroundColor: teams.color(t), color: getContrastColor(teams.color(t)) }}
+                  aria-hidden
                 >
-                  {t}
+                  {teams.short(t)}
                 </div>
                 <div className="text-right">
-                  <div className="text-[10px] font-black opacity-60 uppercase">Puntos</div>
-                  <div className="text-xl font-black" style={{ color: TEAM_COLORS[t] }}>
+                  <div className="text-xs font-black opacity-70 uppercase">Puntos</div>
+                  <div className="text-xl font-black" style={{ color: teams.get(t).bgDark }}>
                     {total > 0 ? "+" : ""}
                     {total}
                   </div>
                 </div>
               </div>
+                <div className="text-sm font-bold truncate" style={{ color: teams.get(t).bgDark }}>{teams.name(t)}</div>
 
               {tItems.length > 0 && (
                 <div className="space-y-1">
@@ -467,25 +472,27 @@ export function ExtrasSection() {
             key={t}
             className="rounded-xl p-3 flex flex-col gap-2 border border-l-4 shadow-sm"
             style={{
-              backgroundColor: getTeamBg(t),
-              borderColor: TEAM_COLORS[t] + "44",
+              backgroundColor: teams.bg(t),
+              borderColor: teams.color(t) + "44",
             }}
           >
             <div className="flex justify-between items-start">
               <div
-                className="w-10 h-10 rounded-2xl flex items-center justify-center font-black text-white text-lg shadow-inner"
-                style={{ backgroundColor: TEAM_COLORS[t] }}
+                className="w-10 h-10 rounded-2xl flex items-center justify-center font-black text-sm shadow-inner"
+                style={{ backgroundColor: teams.color(t), color: getContrastColor(teams.color(t)) }}
+                aria-hidden
               >
-                {t}
+                {teams.short(t)}
               </div>
               <div className="text-right">
-                <div className="text-[10px] font-black opacity-60 uppercase">Puntos</div>
-                <div className="text-xl font-black" style={{ color: TEAM_COLORS[t] }}>
+                <div className="text-xs font-black opacity-70 uppercase">Puntos</div>
+                <div className="text-xl font-black" style={{ color: teams.get(t).bgDark }}>
                   {total > 0 ? "+" : ""}
                   {total}
                 </div>
               </div>
             </div>
+              <div className="text-sm font-bold truncate" style={{ color: teams.get(t).bgDark }}>{teams.name(t)}</div>
             {tItems.length > 0 ? (
               <div className="space-y-1">
                 {tItems.map((item) => (

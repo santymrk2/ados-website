@@ -1,10 +1,12 @@
 import {
   $activities,
-  $dataVersion,
-  acquireInflight,
-  releaseInflight,
+  addOptimistic,
+  commitOptimistic,
+  dropOptimistic,
+  refreshData,
+  runSerialized,
 } from "@/store/appStore";
-import { VersionConflictError } from "@/lib/errors";
+import { AppError, VersionConflictError } from "@/lib/errors";
 import type { Activity } from "@/lib/types";
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -15,100 +17,73 @@ export interface OptimisticResult {
 
 // ── Core ───────────────────────────────────────────────────────────────────
 
+interface BaseTicket {
+  base: Activity;
+  failed: boolean;
+}
+// Last request enqueued per key, so the next one can inherit its base on failure
+const lastTicketByKey = new Map<string, BaseTicket>();
+
 /**
  * Applies a local mutation immediately, fires a server call, and reconciles.
  *
- * - On success: updates version in store + calls onSuccess(version)
- * - On 409: reverts to snapshot, mandatory refetch of that row, calls onConflict
- * - On other error: reverts to snapshot only
+ * - The mutation shows at once and stays applied (see appStore) while pending,
+ *   and after success until a refresh started after the commit lands.
+ * - On error (409 or other): drops only this mutation, rebuilds the row from the
+ *   last server row + the remaining mutations, and refetches server truth.
+ *
+ * Concurrency: requests with the same `key` are queued and sent one after the
+ * other in call order (none dropped, so the latest intent is persisted last);
+ * different keys run in parallel.
  *
  * @param activityId  - The activity to mutate
+ * @param key         - In-flight key from `inflightKey(activityId, type, rowId)`
  * @param mutate      - Pure function: takes current row, returns patched row.
  *                      Must only touch the fields it needs (idempotent patch).
- * @param serverCall  - The async PATCH call. Must return { version: number }.
+ * @param serverCall  - The async PATCH call, sent when its turn comes. Receives the
+ *                      base the edit was computed from (the displayed row when it
+ *                      was enqueued) to build compare-and-set prev* fields, so a
+ *                      change by someone else in between yields a 409 instead of
+ *                      being overwritten. If the same-key predecessor failed, it
+ *                      gets that predecessor's base instead. Must return { version }.
  * @param onSuccess   - Called with the server-returned version on success.
  * @param onConflict  - Called on VersionConflictError (409) after revert+refetch.
  */
 export async function optimisticUpdateActivity(
   activityId: number,
+  key: string,
   mutate: (activity: Activity) => Activity,
-  serverCall: () => Promise<OptimisticResult>,
+  serverCall: (base: Activity) => Promise<OptimisticResult>,
   onSuccess: (version: number) => void,
   onConflict?: () => void,
 ): Promise<void> {
-  if (!acquireInflight(activityId)) {
-    throw new Error("Optimistic update already in progress for this activity");
-  }
-
-  // Declared outside try so it's visible in catch (block scoping)
-  let previous: Activity | undefined;
+  // Base the caller computed this edit from: the row on screen before it
+  const captured = $activities.get().find((a) => a.id === activityId);
+  if (!captured) throw new AppError("No se encontró la actividad", 404);
+  const predecessor = lastTicketByKey.get(key);
+  const ticket: BaseTicket = { base: captured, failed: false };
+  lastTicketByKey.set(key, ticket);
+  const seq = addOptimistic(activityId, key, mutate);
 
   try {
-    // 1. Snapshot the row before mutation
-    const activities = $activities.get();
-    const idx = activities.findIndex((a) => a.id === activityId);
-    if (idx === -1) throw new Error("Activity not found in store");
-    previous = { ...activities[idx] };
-
-    // 2. Apply optimistic mutation immediately
-    const updated = mutate({ ...previous });
-    const newArr = [...activities];
-    newArr[idx] = updated;
-    $activities.set(newArr);
-
-    // 3. Fire server call
-    const result = await serverCall();
-
-    // 4. Success: reconcile with server truth
-    //    Always use result.version from the server, never assume local state
-    const current = $activities.get();
-    const i = current.findIndex((a) => a.id === activityId);
-    if (i !== -1) {
-      const patched = [...current];
-      patched[i] = { ...patched[i], version: result.version };
-      $activities.set(patched);
-      $dataVersion.set($dataVersion.get() + 1);
-    }
+    const result = await runSerialized(key, () => {
+      // captured already holds the predecessor's optimistic result; if that one
+      // was rejected, fall back to the base it was built on
+      if (predecessor?.failed) ticket.base = predecessor.base;
+      return serverCall(ticket.base);
+    });
+    commitOptimistic(seq, result.version);
     onSuccess(result.version);
   } catch (error) {
-    if (error instanceof VersionConflictError) {
-      // Revert only this row to snapshot
-      const current = $activities.get();
-      const i = current.findIndex((a) => a.id === activityId);
-      if (previous && i !== -1) {
-        const reverted = [...current];
-        reverted[i] = previous;
-        $activities.set(reverted);
-      }
+    ticket.failed = true;
+    dropOptimistic(seq);
 
-      // Mandatory refetch of this specific row from the server
-      try {
-        const { getActivities } = await import("@/lib/api-client");
-        const { mergeActivityIntoStore } = await import("@/store/appStore");
-        const allActs = await getActivities();
-        const fresh = allActs.find((a: Activity) => a.id === activityId);
-        if (fresh) {
-          mergeActivityIntoStore(fresh);
-        }
-      } catch {
-        // Refetch failed — the snapshot revert is still the best we have
-        console.error("[OptimisticUpdate] Failed to refetch activity after 409");
-      }
+    // Refetch server truth (remaining mutations are re-applied by the store)
+    void refreshData(false);
 
-      onConflict?.();
-      throw error;
-    }
-
-    // Non-conflict error: revert only, no refetch
-    const current = $activities.get();
-    const i = current.findIndex((a) => a.id === activityId);
-    if (previous && i !== -1) {
-      const reverted = [...current];
-      reverted[i] = previous;
-      $activities.set(reverted);
-    }
+    if (error instanceof VersionConflictError) onConflict?.();
     throw error;
   } finally {
-    releaseInflight(activityId);
+    if (lastTicketByKey.get(key) === ticket) lastTicketByKey.delete(key);
   }
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { useUnifiedActivity } from "@/lib/activity-context";
 
 import { Plus, Minus, X, Search } from "lucide-react";
@@ -13,9 +13,9 @@ import { removeGoal, updateGoal } from "@/lib/activity-mutates";
 import type { Gol, ParticipantBasic } from "@/lib/types";
 
 const GOAL_TYPES = [
-  { id: "f", label: "Fútbol", short: "F" },
-  { id: "h", label: "Handball", short: "H" },
-  { id: "b", label: "Básquet", short: "B" },
+  { id: "f", label: "Fútbol", short: "⚽ F" },
+  { id: "h", label: "Handball", short: "🤾 H" },
+  { id: "b", label: "Básquet", short: "🏀 B" },
 ] as const;
 
 
@@ -82,7 +82,7 @@ function GoalRow({
                 </>
               ) : (
                 <>
-                  <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center text-[10px] font-black text-muted-foreground">
+                  <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center text-xs font-black text-muted-foreground">
                     ?
                   </div>
                   <span className="text-base text-muted-foreground italic">Seleccionar jugador...</span>
@@ -135,10 +135,10 @@ function GoalRow({
             disabled={locked || saving}
             onClick={() => g.id != null && onUpdate(g.id, "tipo", type.id)}
             className={cn(
-              "px-2 py-1 rounded-md text-[10px] font-black transition-all",
+              "px-2 py-1 rounded-md text-xs font-black transition-all",
               g.tipo === type.id
               ? "bg-white text-primary shadow-sm"
-                : "text-white/70 hover:text-white",
+                : "text-muted-foreground hover:text-foreground",
             )}
           >
             <span className="hidden sm:inline">{type.label}</span>
@@ -194,6 +194,10 @@ export function GolesSection() {
 
   const [openDropdown, setOpenDropdown] = useState<number | string | null>(null);
   const [saving, setSaving] = useState(false);
+  // Goals without a player yet live only in the client (negative ids) until a player is picked
+  const [draftGoles, setDraftGoles] = useState<Gol[]>([]);
+  // Drafts being persisted: guards double submits without dropping a second draft saved meanwhile
+  const persistingDrafts = useRef(new Set<number>());
 
   const isEditing = editingSection === "goles";
 
@@ -203,7 +207,10 @@ export function GolesSection() {
   );
 
   const goles = useMemo(() => activity.goles || [], [activity.goles]);
-  const golesManuales = useMemo(() => goles.filter((g: Gol) => !g.matchId), [goles]);
+  const golesManuales = useMemo(
+    () => [...goles.filter((g: Gol) => !g.matchId), ...draftGoles],
+    [goles, draftGoles],
+  );
 
   const bySport = useMemo(() => {
     const sportTotals: Record<string, { total: number; players: Record<number, number> }> = {};
@@ -236,15 +243,14 @@ export function GolesSection() {
   const add = () => {
     if (locked || saving) return;
     const tempId = -(Date.now());
-    setSaving(true);
-    performQuickUpdate(
-      "goal_add",
-      { id: tempId, pid: null, tipo: "f", cant: 1 },
-      "goles",
-    ).catch(() => {}).finally(() => setSaving(false));
+    setDraftGoles((prev) => [...prev, { id: tempId, pid: null, tipo: "f", cant: 1 } as Gol]);
   };
 
   const del = async (id: number) => {
+    if (id < 0) {
+      setDraftGoles((prev) => prev.filter((g) => g.id !== id));
+      return;
+    }
     if (locked || saving) return;
     setSaving(true);
     try {
@@ -262,6 +268,10 @@ export function GolesSection() {
   };
 
   const upd = async (id: number, k: string, v: unknown) => {
+    if (id < 0) {
+      setDraftGoles((prev) => prev.map((g) => (g.id === id ? { ...g, [k]: v } : g)));
+      return;
+    }
     if (locked || saving) return;
     setSaving(true);
     try {
@@ -279,23 +289,32 @@ export function GolesSection() {
   };
 
   const createOnServer = async (tempId: number, goal: Gol) => {
-    if (!goal.pid) return;
+    if (!goal.pid || locked) return;
+    // Keep the chosen player on the draft so it survives a failed save
+    setDraftGoles((prev) => prev.map((g) => (g.id === tempId ? { ...g, pid: goal.pid } : g)));
+    if (persistingDrafts.current.has(tempId)) return;
+    persistingDrafts.current.add(tempId);
     setSaving(true);
     try {
       await performQuickUpdate(
         "goal_add",
-        { pid: goal.pid, tipo: goal.tipo, cant: goal.cant, goles: [...goles, goal] },
+        { pid: goal.pid, tipo: goal.tipo, cant: goal.cant },
         "goles",
       );
+      setDraftGoles((prev) => prev.filter((g) => g.id !== tempId));
     } catch {
-      // Error already handled by performQuickUpdate
+      // Error already handled by performQuickUpdate; the draft stays so the user can retry
     } finally {
-      setSaving(false);
+      persistingDrafts.current.delete(tempId);
+      setSaving(persistingDrafts.current.size > 0);
     }
   };
 
   const startEditing = () => setEditingSection("goles");
-  const stopEditing = () => setEditingSection(null);
+  const stopEditing = () => {
+    setDraftGoles([]);
+    setEditingSection(null);
+  };
 
   return (
     <div className="space-y-4">
@@ -305,10 +324,10 @@ export function GolesSection() {
             <h2 className="text-base font-black text-white">Goles Manuales</h2>
             <div className="flex items-center gap-2">
               {syncStatus.state === "saving" && (
-                <span className="text-[10px] text-white/60 animate-pulse">Guardando...</span>
+                <span className="text-xs text-white/90 animate-pulse">Guardando...</span>
               )}
               {syncStatus.state === "error" && syncStatus.message && (
-                <span className="text-[10px] text-red-300">{syncStatus.message}</span>
+                <span className="text-xs text-red-300">{syncStatus.message}</span>
               )}
               <Button
                 onClick={add}
@@ -372,7 +391,7 @@ export function GolesSection() {
             )}
           </div>
 
-          <div className="flex items-center justify-center gap-3 text-sm font-bold text-white/60 mb-4">
+          <div className="flex items-center justify-center gap-3 text-sm font-bold text-white/90 mb-4">
             <span>⚽ {bySport.f?.total || 0}</span>
             <span>·</span>
             <span>🤾 {bySport.h?.total || 0}</span>
@@ -391,7 +410,7 @@ export function GolesSection() {
                     key={p.pid}
                     className="bg-white/90 rounded-xl p-3 flex items-center gap-3"
                   >
-                    <div className="w-5 h-5 rounded bg-white/10 flex items-center justify-center text-[10px] font-black text-white/60">
+                    <div className="w-5 h-5 rounded bg-white/10 flex items-center justify-center text-xs font-black text-white/90">
                       {i + 1}
                     </div>
                     {p.participant && <Avatar p={p.participant} size={30} />}
@@ -411,7 +430,7 @@ export function GolesSection() {
 
           {goles.length === 0 && (
             <div className="flex flex-col items-center justify-center py-8 text-center">
-              <p className="text-base text-white/60">No hay goles registrados</p>
+              <p className="text-base text-white/90">No hay goles registrados</p>
             </div>
           )}
         </>

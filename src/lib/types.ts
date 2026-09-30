@@ -1,3 +1,4 @@
+import type { TeamDisplaySettings } from "./team-display";
 // ============================================================================
 // TIPOS CENTRALIZADOS DEL PROYECTO
 // Basados en el schema de Drizzle y la transformación de las APIs
@@ -22,7 +23,7 @@ export interface Participant {
 }
 
 export interface ParticipantBasic {
-  // Versiónlight usada en listados (sin fotos de alta calidad)
+  // Versión light usada en listados (sin fotos de alta calidad)
   id: number;
   nombre: string;
   apellido: string;
@@ -112,6 +113,8 @@ export interface Activity {
   extras: Extra[];
   descuentos: Extra[]; // Alias para extras con tipo='descuento'
   invitaciones: Invitacion[];
+  // Per-activity team names/colors (null = use shared defaults)
+  teamSettings?: TeamDisplaySettings | null;
 }
 
 // Tipo para crear/actualizar activity (input)
@@ -129,9 +132,9 @@ export interface ActivityInput {
 export interface Ranking {
   id: number; // participantId
   total: number; // puntos totales
-  gf: number; // goles faltantes
-  gh: number; // goles hora
-  gb: number; // goles biblia
+  gf: number; // goles de fútbol
+  gh: number; // goles de handball
+  gb: number; // goles de básquet
   acts: number; // actividades asistidas
   invitados: number; // cantidad de personas invitadas
 }

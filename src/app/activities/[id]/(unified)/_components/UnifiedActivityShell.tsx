@@ -8,7 +8,7 @@ import { cn, formatDate } from "@/lib/utils";
 import { SectionSkeleton } from "./SectionSkeleton";
 import { Button } from "@/components/ui/button";
 import { FloatingNav } from "@/components/ui/FloatingNav";
-import { Check, Loader2, AlertCircle, ChevronLeft } from "lucide-react";
+import { Check, Loader2, AlertCircle, ChevronLeft, Lock } from "lucide-react";
 import type { Activity } from "@/lib/types";
 
 // Map each section to an appropriate skeleton variant
@@ -48,11 +48,11 @@ function SyncStatusBadge() {
   const Icon = resolved.icon;
 
   return (
-    <Button
-      variant="ghost"
-      size="sm"
-      disabled
-      className="gap-1.5 bg-white/10 text-white/80 hover:bg-white/20 cursor-default shrink-0"
+    // Status indicator, not a control: a disabled <Button> rendered it at 50% opacity
+    <div
+      role="status"
+      aria-live="polite"
+      className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg bg-white/15 text-white shrink-0"
     >
       <Icon
         className={cn(
@@ -63,7 +63,7 @@ function SyncStatusBadge() {
         )}
       />
       <span className="text-sm font-medium">{resolved.label}</span>
-    </Button>
+    </div>
   );
 }
 
@@ -170,6 +170,8 @@ function ShellInner({
     filtersActive,
     setFiltersActive,
     setEditingSection,
+    locked,
+    isAdmin,
   } = useUnifiedActivity();
   const router = useRouter();
 
@@ -270,6 +272,39 @@ function ShellInner({
           </div>
         </div>
       </div>
+
+      {locked && (
+
+
+        <div
+
+
+          role="status"
+
+
+          className="mx-4 mt-2 flex items-center gap-2 rounded-xl bg-amber-100 px-3 py-2 text-sm font-bold text-amber-900"
+
+
+        >
+
+
+          <Lock className="w-4 h-4 shrink-0" />
+
+
+          {isAdmin
+
+
+            ? "Actividad cerrada — desbloqueala en General para editar"
+
+
+            : "Actividad cerrada"}
+
+
+        </div>
+
+
+      )}
+
 
       <div
         className="bg-primary px-4 pt-4 flex-1 pb-32"

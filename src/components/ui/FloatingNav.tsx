@@ -77,7 +77,8 @@ export function FloatingNav({
 
   const longPressTimer = useRef<NodeJS.Timeout | null>(null);
   const longPressTriggered = useRef(false);
-  const scrollEndTimer = useRef<NodeJS.Timeout | null>(null);
+  // Scrolling only previews; if the user doesn't tap, snap back to the real section
+  const snapBackTimer = useRef<NodeJS.Timeout | null>(null);
 
   const showSearch = searchValue !== undefined && onSearchChange !== undefined;
   const showFilter = filterContent !== undefined;
@@ -87,7 +88,7 @@ export function FloatingNav({
   const filterHeight = Math.min(Math.max(120, FILTER_HEIGHT), 320);
   const rows = Math.ceil(items.length / 3);
   const gridHeight = rows * 72 + 16;
-  const useCallback = !!onValueChange;
+  const isControlled = !!onValueChange;
 
   const activeMode: "search" | "filter" | "grid" | null = isExpandedMenuOpen
     ? "grid"
@@ -119,10 +120,9 @@ export function FloatingNav({
     }
   }, [searchMode, filterMode, isExpandedMenuOpen, onSearchModeChange]);
 
-  // Cleanup scroll-end timer on unmount
   useEffect(() => {
     return () => {
-      if (scrollEndTimer.current) clearTimeout(scrollEndTimer.current);
+      if (snapBackTimer.current) clearTimeout(snapBackTimer.current);
     };
   }, []);
 
@@ -163,18 +163,13 @@ export function FloatingNav({
       triggerHapticFeedback();
     }
 
-    // Auto-select tab when scroll settles (ViewPager-like behavior)
-    if (scrollEndTimer.current) clearTimeout(scrollEndTimer.current);
-    scrollEndTimer.current = setTimeout(() => {
-      if (index >= 0 && index < items.length) {
-        const settledItem = items[index];
-        if (settledItem && settledItem.value !== value) {
-          if (useCallback && onValueChange) {
-            onValueChange(settledItem.value);
-          }
-        }
-      }
-    }, 150);
+    if (snapBackTimer.current) clearTimeout(snapBackTimer.current);
+    snapBackTimer.current = setTimeout(() => {
+      const current = items.findIndex((i) => i.value === value);
+      const target = current >= 0 ? current : 0;
+      setActiveIndex(target);
+      wheelRef.current?.scrollTo({ left: target * ITEM_WIDTH, behavior: "smooth" });
+    }, 1500);
   };
 
   const handleItemClick = (
@@ -195,6 +190,7 @@ export function FloatingNav({
 
     triggerHapticFeedback();
 
+    if (snapBackTimer.current) clearTimeout(snapBackTimer.current);
     if (wheelRef.current) {
       wheelRef.current.scrollTo({
         left: index * ITEM_WIDTH,
@@ -203,7 +199,7 @@ export function FloatingNav({
     }
     setActiveIndex(index);
 
-    if (useCallback && onValueChange) {
+    if (isControlled && onValueChange) {
       onValueChange(item.value);
     }
     setIsExpandedMenuOpen(false);
@@ -260,7 +256,7 @@ export function FloatingNav({
         const Icon = item.icon;
         const isActive = item.value === value;
         const isLocked = lockedValues.includes(item.value);
-        const href = useCallback ? undefined : item.href || `/${item.value}`;
+        const href = isControlled ? undefined : item.href || `/${item.value}`;
         const commonClasses = cn(
           "flex flex-col items-center justify-center gap-1 rounded-2xl border border-border py-2 px-3 text-sm font-medium transition-colors",
           isActive
@@ -279,21 +275,21 @@ export function FloatingNav({
               )}
             >
               <Icon className="size-5" />
-              <span className="text-[10px] text-center leading-tight">
+              <span className="text-xs text-center leading-tight">
                 {item.label}
               </span>
             </button>
           );
         }
 
-        return useCallback ? (
+        return isControlled ? (
           <button
             key={item.value}
             onClick={(e) => handleItemClick(e, items.indexOf(item), item)}
             className={commonClasses}
           >
             <Icon className="size-5" />
-            <span className="text-[10px] text-center leading-tight">
+            <span className="text-xs text-center leading-tight">
               {item.label}
             </span>
           </button>
@@ -305,7 +301,7 @@ export function FloatingNav({
             className={commonClasses}
           >
             <Icon className="size-5" />
-            <span className="text-[10px] text-center leading-tight">
+            <span className="text-xs text-center leading-tight">
               {item.label}
             </span>
           </Link>
@@ -400,7 +396,7 @@ export function FloatingNav({
                     const isSelected = i === activeIndex;
                     const isItemLocked = lockedValues.includes(item.value);
                     const ItemIcon = item.icon;
-                    const href = useCallback
+                    const href = isControlled
                       ? undefined
                       : item.href || `/${item.value}`;
 
@@ -420,7 +416,7 @@ export function FloatingNav({
                         />
                         <span
                           className={cn(
-                            "text-[10px] text-center leading-tight transition-all duration-200 truncate w-full px-1",
+                            "text-xs text-center leading-tight transition-all duration-200 truncate w-full px-1",
                             isSelected ? "text-foreground" : "text-foreground",
                             isItemLocked && "line-through opacity-30",
                             scaleClass,
@@ -436,9 +432,20 @@ export function FloatingNav({
                       onPointerUp: cancelLongPress,
                       onPointerLeave: cancelLongPress,
                       onPointerCancel: cancelLongPress,
-                      onClick: (e: React.MouseEvent) =>
-                        handleItemClick(e, i, item),
-                      "aria-label": `${item.label}. Mantén presionado para ver más opciones`,
+                      onClick: (e: React.MouseEvent) => {
+                        // Tapping the section you're already on opens the full grid
+                        if (item.value === value && !longPressTriggered.current) {
+                          e.preventDefault();
+                          triggerHapticFeedback();
+                          setIsExpandedMenuOpen(true);
+                          return;
+                        }
+                        handleItemClick(e, i, item);
+                      },
+                      "aria-label":
+                        item.value === value
+                          ? `${item.label}. Tocá para ver todas las secciones`
+                          : item.label,
                       className:
                         "flex flex-col items-center justify-center gap-0.5 shrink-0 snap-center select-none transition-colors min-w-[44px] min-h-[44px]",
                       style: {
@@ -448,7 +455,7 @@ export function FloatingNav({
                       },
                     };
 
-                    if (useCallback)
+                    if (isControlled)
                       return (
                         <button key={item.value} {...commonProps}>
                           {innerContent}

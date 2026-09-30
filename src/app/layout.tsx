@@ -45,7 +45,7 @@ export default function RootLayout({
     <html lang="es" className={cn("font-sans", inter.variable)} suppressHydrationWarning>
       <body>
         <AuthGate>{children}</AuthGate>
-        <Toaster position="top-center" richColors />
+        <Toaster />
         <Analytics />
         <SpeedInsights />
       </body>

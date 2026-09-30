@@ -6,6 +6,8 @@ import {
   boolean,
   uniqueIndex,
   index,
+  jsonb,
+  timestamp,
   type AnyPgColumn,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
@@ -220,3 +222,21 @@ export const pushSubscriptions = pgTable(
     idx_participant_id: index("idx_push_subscriptions_participant_id").on(table.participantId),
   }),
 );
+
+// Team display settings (names/colors). New tables only: existing tables are never altered,
+// so the app keeps working if it's deployed before the migration runs.
+export type TeamDisplaySettings = Record<string, { name?: string; color?: string }>;
+
+export const appSettings = pgTable("app_settings", {
+  key: text("key").primaryKey(),
+  value: jsonb("value").notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const activityTeamSettings = pgTable("activity_team_settings", {
+  activityId: integer("activity_id")
+    .primaryKey()
+    .references(() => activities.id, { onDelete: "cascade" }),
+  teams: jsonb("teams").$type<TeamDisplaySettings>().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});

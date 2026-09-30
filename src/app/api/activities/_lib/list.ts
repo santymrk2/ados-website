@@ -1,6 +1,7 @@
 import { inArray } from "drizzle-orm";
 import { db } from "@/lib/db";
 import * as schema from "@/lib/schema";
+import { getActivityTeamSettingsMap } from "@/lib/team-settings-server";
 import { INDIVIDUAL_GAME_MARKER, getActiveTeams, isActiveTeam } from "./helpers";
 
 export async function listActivities() {
@@ -10,13 +11,15 @@ export async function listActivities() {
   const actIds = allActs.map((a) => a.id);
 
   // Execute all queries in PARALLEL using Promise.all for better performance
-  const [ap, jj, part, gol, ext, inv] = await Promise.all([
+  const [ap, jj, part, gol, ext, inv, teamSettings] = await Promise.all([
     db.select().from(schema.activityParticipants).where(inArray(schema.activityParticipants.activityId, actIds)),
     db.select().from(schema.juegos).where(inArray(schema.juegos.activityId, actIds)),
     db.select().from(schema.partidos).where(inArray(schema.partidos.activityId, actIds)),
     db.select().from(schema.goles).where(inArray(schema.goles.activityId, actIds)),
     db.select().from(schema.extras).where(inArray(schema.extras.activityId, actIds)),
     db.select().from(schema.invitaciones).where(inArray(schema.invitaciones.activityId, actIds)),
+    // Tolerates the table not existing yet (migration pending) → no overrides
+    getActivityTeamSettingsMap(actIds),
   ]);
 
   // Then get juego posiciones after we have jjIds
@@ -126,6 +129,7 @@ export async function listActivities() {
           invitador: x.invitadorId,
           invitadoId: x.invitadoId,
         })),
+      teamSettings: teamSettings.get(a.id) ?? null,
     };
   });
 

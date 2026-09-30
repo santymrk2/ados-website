@@ -166,3 +166,15 @@ export function validate<T>(schema: z.ZodSchema<T>, data: unknown): { success: t
     error: firstError ? `${firstError.path.join(".")}: ${firstError.message}` : "Datos inválidos",
   };
 }
+
+/**
+ * Team display settings (name + color per team id E1..E6).
+ * Team ids never change: names/colors are display-only.
+ */
+const teamIdSchema = z.enum(["E1", "E2", "E3", "E4", "E5", "E6"]);
+export const teamDisplayEntrySchema = z.object({
+  name: z.string().trim().min(1, { error: "El nombre no puede estar vacío" }).max(24).optional(),
+  color: z.string().regex(/^#[0-9a-fA-F]{6}$/, { error: "Color inválido" }).optional(),
+});
+export const teamDisplaySettingsSchema = z.partialRecord(teamIdSchema, teamDisplayEntrySchema);
+export const teamDefaultsUpdateSchema = z.object({ teams: teamDisplaySettingsSchema });

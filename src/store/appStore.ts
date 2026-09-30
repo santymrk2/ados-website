@@ -1,8 +1,8 @@
 import { atom } from 'nanostores';
 import { getParticipants, getActivities, checkDatabaseConnection } from "@/lib/api-client";
-import { syncTeamConstants } from '@/lib/constants';
 import { AppError } from '@/lib/errors';
 import type { ParticipantBasic, Activity, Ranking } from '@/lib/types';
+import type { TeamDisplaySettings } from '@/lib/team-display';
 
 // Auth State
 export const $isAuthenticated = atom<boolean>(false);
@@ -13,6 +13,8 @@ export const $role = atom<string>('admin'); // 'admin' or 'viewer'
 export const $participants = atom<ParticipantBasic[]>([]);
 export const $activities = atom<Activity[]>([]);
 export const $rankings = atom<Ranking[]>([]);
+// Shared default team names/colors (app_settings); activities may override them
+export const $teamDefaults = atom<TeamDisplaySettings>({});
 export const $dbLoading = atom<boolean>(true);
 export const $dbError = atom<Error | null>(null);
 export const $dbConnected = atom<boolean>(false);
@@ -197,11 +199,12 @@ async function doRefresh(): Promise<void> {
     // Committed mutations before this point may be missing from this response
     const startedAt = ++refreshStarts;
     try {
-      if (typeof window !== 'undefined') syncTeamConstants();
-      const [p, a, rReq] = await Promise.all([
+      const [p, a, rReq, tReq] = await Promise.all([
         getParticipants(),
         getActivities(),
-        fetch(`/api/rankings?t=${Date.now()}`, { cache: 'no-store' })
+        fetch(`/api/rankings?t=${Date.now()}`, { cache: 'no-store' }),
+        // Non-critical: if it fails we keep the last known defaults
+        fetch('/api/settings/teams', { cache: 'no-store' }).catch(() => null),
       ]);
 
       if (rReq.status === 401) throw new AppError('No autorizado', 401);
@@ -233,6 +236,10 @@ async function doRefresh(): Promise<void> {
       const mergedActivities = newActivities.map(buildRow);
       $activities.set(mergedActivities);
       $rankings.set(newRankings);
+      if (tReq?.ok) {
+        const tJson = await tReq.json().catch(() => null);
+        if (tJson?.data && typeof tJson.data === 'object') $teamDefaults.set(tJson.data);
+      }
       $dbError.set(null);
       $dbConnected.set(true);
       

@@ -5,11 +5,13 @@ import { extra_add, extra_delete, extra_toggle, extra_update } from "./extras";
 import { game_add, game_delete, game_pos, game_update } from "./games";
 import { partido_add, partido_delete, partido_update } from "./matches";
 import { invitacion_add, invitacion_delete, invitacion_update } from "./invitations";
+import { team_settings } from "./teams";
 import type { PatchHandler } from "./types";
 
 const patchHandlers: Record<string, PatchHandler> = {
   config,
   config_bulk,
+  team_settings,
   attendance,
   puntuales,
   biblias,

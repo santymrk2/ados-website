@@ -1,3 +1,4 @@
+import type { TeamDisplaySettings } from "./team-display";
 // ============================================================================
 // TIPOS CENTRALIZADOS DEL PROYECTO
 // Basados en el schema de Drizzle y la transformación de las APIs
@@ -112,6 +113,8 @@ export interface Activity {
   extras: Extra[];
   descuentos: Extra[]; // Alias para extras con tipo='descuento'
   invitaciones: Invitacion[];
+  // Per-activity team names/colors (null = use shared defaults)
+  teamSettings?: TeamDisplaySettings | null;
 }
 
 // Tipo para crear/actualizar activity (input)

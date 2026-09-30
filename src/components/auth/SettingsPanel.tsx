@@ -262,7 +262,7 @@ export function SettingsPanel({
                 Cerrar Sesión
               </Button>
               <div className="text-center text-xs text-text-muted mt-3">
-                Sesión activa por 24 horas
+                La sesión se renueva sola mientras uses la app
               </div>
             </div>
           </>

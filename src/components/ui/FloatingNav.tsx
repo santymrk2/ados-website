@@ -77,6 +77,8 @@ export function FloatingNav({
 
   const longPressTimer = useRef<NodeJS.Timeout | null>(null);
   const longPressTriggered = useRef(false);
+  // Scrolling only previews; if the user doesn't tap, snap back to the real section
+  const snapBackTimer = useRef<NodeJS.Timeout | null>(null);
 
   const showSearch = searchValue !== undefined && onSearchChange !== undefined;
   const showFilter = filterContent !== undefined;
@@ -118,6 +120,11 @@ export function FloatingNav({
     }
   }, [searchMode, filterMode, isExpandedMenuOpen, onSearchModeChange]);
 
+  useEffect(() => {
+    return () => {
+      if (snapBackTimer.current) clearTimeout(snapBackTimer.current);
+    };
+  }, []);
 
   // ── FIX: Sincronizar rueda al cambiar valor, cerrar menú expandido o VOLVER de búsqueda/filtros ──
   useEffect(() => {
@@ -155,6 +162,14 @@ export function FloatingNav({
       setActiveIndex(index);
       triggerHapticFeedback();
     }
+
+    if (snapBackTimer.current) clearTimeout(snapBackTimer.current);
+    snapBackTimer.current = setTimeout(() => {
+      const current = items.findIndex((i) => i.value === value);
+      const target = current >= 0 ? current : 0;
+      setActiveIndex(target);
+      wheelRef.current?.scrollTo({ left: target * ITEM_WIDTH, behavior: "smooth" });
+    }, 1500);
   };
 
   const handleItemClick = (
@@ -175,6 +190,7 @@ export function FloatingNav({
 
     triggerHapticFeedback();
 
+    if (snapBackTimer.current) clearTimeout(snapBackTimer.current);
     if (wheelRef.current) {
       wheelRef.current.scrollTo({
         left: index * ITEM_WIDTH,
@@ -448,6 +464,7 @@ export function FloatingNav({
                 </div>
 
                 <button
+                  type="button"
                   onClick={() => setIsExpandedMenuOpen(true)}
                   aria-label="Ver todas las secciones"
                   className="absolute right-2 z-30 flex items-center justify-center w-8 h-8 rounded-lg hover:bg-muted transition-colors text-foreground hover:text-primary"

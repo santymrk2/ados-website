@@ -5,6 +5,7 @@ import { useUnifiedActivity } from "@/lib/activity-context";
 
 import { Plus, Minus, Trash2 } from "lucide-react";
 import { TEAMS } from "@/lib/constants";
+import { getContrastColor } from "@/components/teams/TeamSettingsEditor";
 import { useTeamStyles } from "@/hooks/useTeamStyles";
 import { Button } from "@/components/ui/button";
 import { Avatar } from "@/components/ui/Avatar";
@@ -317,20 +318,21 @@ export function ExtrasSection() {
             >
               <div className="flex justify-between items-start">
                 <div
-                  className="w-10 h-10 rounded-2xl flex items-center justify-center font-black text-white text-lg shadow-inner"
-                  style={{ backgroundColor: teams.color(t) }}
-                  title={teams.name(t)}
+                  className="w-10 h-10 rounded-2xl flex items-center justify-center font-black text-sm shadow-inner"
+                  style={{ backgroundColor: teams.color(t), color: getContrastColor(teams.color(t)) }}
+                  aria-hidden
                 >
                   {teams.short(t)}
                 </div>
                 <div className="text-right">
-                  <div className="text-[10px] font-black opacity-60 uppercase">Puntos</div>
-                  <div className="text-xl font-black" style={{ color: teams.color(t) }}>
+                  <div className="text-xs font-black opacity-70 uppercase">Puntos</div>
+                  <div className="text-xl font-black" style={{ color: teams.get(t).bgDark }}>
                     {total > 0 ? "+" : ""}
                     {total}
                   </div>
                 </div>
               </div>
+                <div className="text-sm font-bold truncate" style={{ color: teams.get(t).bgDark }}>{teams.name(t)}</div>
 
               {tItems.length > 0 && (
                 <div className="space-y-1">
@@ -476,20 +478,21 @@ export function ExtrasSection() {
           >
             <div className="flex justify-between items-start">
               <div
-                className="w-10 h-10 rounded-2xl flex items-center justify-center font-black text-white text-lg shadow-inner"
-                style={{ backgroundColor: teams.color(t) }}
-                title={teams.name(t)}
+                className="w-10 h-10 rounded-2xl flex items-center justify-center font-black text-sm shadow-inner"
+                style={{ backgroundColor: teams.color(t), color: getContrastColor(teams.color(t)) }}
+                aria-hidden
               >
                 {teams.short(t)}
               </div>
               <div className="text-right">
-                <div className="text-[10px] font-black opacity-60 uppercase">Puntos</div>
-                <div className="text-xl font-black" style={{ color: teams.color(t) }}>
+                <div className="text-xs font-black opacity-70 uppercase">Puntos</div>
+                <div className="text-xl font-black" style={{ color: teams.get(t).bgDark }}>
                   {total > 0 ? "+" : ""}
                   {total}
                 </div>
               </div>
             </div>
+              <div className="text-sm font-bold truncate" style={{ color: teams.get(t).bgDark }}>{teams.name(t)}</div>
             {tItems.length > 0 ? (
               <div className="space-y-1">
                 {tItems.map((item) => (

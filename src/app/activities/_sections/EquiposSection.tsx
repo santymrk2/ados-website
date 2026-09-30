@@ -3,6 +3,7 @@
 import { useState, useMemo } from "react";
 import { useUnifiedActivity } from "@/lib/activity-context";
 import { TEAMS } from "@/lib/constants";
+import { getContrastColor } from "@/components/teams/TeamSettingsEditor";
 import { useTeamStyles } from "@/hooks/useTeamStyles";
 import { actPts } from "@/lib/calc";
 import { setTeamField, setTeamsBulk } from "@/lib/activity-mutates";
@@ -262,15 +263,16 @@ export function EquiposSection() {
             onClick={() => handleTeamClick(team)}
           >
             <div
-              className="w-8 h-8 rounded-full flex items-center justify-center font-black text-base shrink-0 text-white"
-              style={{ backgroundColor: teams.color(team) }}
-              title={teams.name(team)}
+              className="w-8 h-8 rounded-full flex items-center justify-center font-black text-xs shrink-0"
+              style={{ backgroundColor: teams.color(team), color: getContrastColor(teams.color(team)) }}
+              aria-hidden
             >
               {teams.short(team)}
             </div>
-            <div className="flex-1 text-center">
-              <div className="font-black text-xl text-white">{total}</div>
-              <div className="text-[10px] text-white/60 flex items-center justify-center gap-0.5">
+            <div className="flex-1 min-w-0 text-center">
+              <div className="text-sm font-bold text-white truncate">{teams.name(team)}</div>
+              <div className="font-black text-xl text-white leading-tight">{total}</div>
+              <div className="text-xs text-white/80 flex items-center justify-center gap-0.5">
                 <SexBadge sex="M" size={12} />
                 {m} <SexBadge sex="F" size={12} />
                 {f}

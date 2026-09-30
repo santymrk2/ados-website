@@ -12,6 +12,7 @@
     "test:e2e:quality": "playwright test --grep @critical",
     "db:push": "drizzle-kit push",
     "db:migrate": "drizzle-kit migrate",
+    "test:concurrency": "bash scripts/test-concurrency.sh",
     "db:harden": "psql \"$DATABASE_URL\" -f db-hardening.sql"
   },
   "dependencies": {

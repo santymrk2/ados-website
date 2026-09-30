@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Search, X, SlidersHorizontal, type LucideIcon } from "lucide-react";
+import { Search, X, SlidersHorizontal, LayoutGrid, type LucideIcon } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
@@ -77,7 +77,6 @@ export function FloatingNav({
 
   const longPressTimer = useRef<NodeJS.Timeout | null>(null);
   const longPressTriggered = useRef(false);
-  const scrollEndTimer = useRef<NodeJS.Timeout | null>(null);
 
   const showSearch = searchValue !== undefined && onSearchChange !== undefined;
   const showFilter = filterContent !== undefined;
@@ -119,12 +118,6 @@ export function FloatingNav({
     }
   }, [searchMode, filterMode, isExpandedMenuOpen, onSearchModeChange]);
 
-  // Cleanup scroll-end timer on unmount
-  useEffect(() => {
-    return () => {
-      if (scrollEndTimer.current) clearTimeout(scrollEndTimer.current);
-    };
-  }, []);
 
   // ── FIX: Sincronizar rueda al cambiar valor, cerrar menú expandido o VOLVER de búsqueda/filtros ──
   useEffect(() => {
@@ -162,19 +155,6 @@ export function FloatingNav({
       setActiveIndex(index);
       triggerHapticFeedback();
     }
-
-    // Auto-select tab when scroll settles (ViewPager-like behavior)
-    if (scrollEndTimer.current) clearTimeout(scrollEndTimer.current);
-    scrollEndTimer.current = setTimeout(() => {
-      if (index >= 0 && index < items.length) {
-        const settledItem = items[index];
-        if (settledItem && settledItem.value !== value) {
-          if (isControlled && onValueChange) {
-            onValueChange(settledItem.value);
-          }
-        }
-      }
-    }, 150);
   };
 
   const handleItemClick = (
@@ -279,7 +259,7 @@ export function FloatingNav({
               )}
             >
               <Icon className="size-5" />
-              <span className="text-[10px] text-center leading-tight">
+              <span className="text-xs text-center leading-tight">
                 {item.label}
               </span>
             </button>
@@ -293,7 +273,7 @@ export function FloatingNav({
             className={commonClasses}
           >
             <Icon className="size-5" />
-            <span className="text-[10px] text-center leading-tight">
+            <span className="text-xs text-center leading-tight">
               {item.label}
             </span>
           </button>
@@ -305,7 +285,7 @@ export function FloatingNav({
             className={commonClasses}
           >
             <Icon className="size-5" />
-            <span className="text-[10px] text-center leading-tight">
+            <span className="text-xs text-center leading-tight">
               {item.label}
             </span>
           </Link>
@@ -420,7 +400,7 @@ export function FloatingNav({
                         />
                         <span
                           className={cn(
-                            "text-[10px] text-center leading-tight transition-all duration-200 truncate w-full px-1",
+                            "text-xs text-center leading-tight transition-all duration-200 truncate w-full px-1",
                             isSelected ? "text-foreground" : "text-foreground",
                             isItemLocked && "line-through opacity-30",
                             scaleClass,
@@ -467,8 +447,17 @@ export function FloatingNav({
                   />
                 </div>
 
+                <button
+                  onClick={() => setIsExpandedMenuOpen(true)}
+                  aria-label="Ver todas las secciones"
+                  className="absolute right-2 z-30 flex items-center justify-center w-8 h-8 rounded-lg hover:bg-muted transition-colors text-foreground hover:text-primary"
+                  title="Ver todas las secciones"
+                >
+                  <LayoutGrid className="size-4" />
+                </button>
+
                 <div className="absolute top-0 bottom-0 left-0 w-6 bg-gradient-to-r from-white to-transparent pointer-events-none z-20" />
-                <div className="absolute top-0 bottom-0 right-0 w-6 bg-gradient-to-l from-white to-transparent pointer-events-none z-20" />
+                <div className="absolute top-0 bottom-0 right-0 w-12 bg-gradient-to-l from-white to-transparent pointer-events-none z-20" />
               </div>
             )}
           </motion.div>

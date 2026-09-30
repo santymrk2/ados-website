@@ -6,7 +6,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Input } from "@/components/ui/input";
 import { Avatar } from "@/components/ui/Avatar";
 import { normalizeText } from "@/lib/utils";
-import type { ParticipantBasic } from "@/lib/types";
+import { useTeamStyles } from "@/hooks/useTeamStyles";
+import type { ParticipantBasic, Activity } from "@/lib/types";
 
 type Player = ParticipantBasic & { team?: string };
 
@@ -16,6 +17,7 @@ interface PlayerPickerProps {
   selected?: Player | null;
   placeholder?: string;
   disabled?: boolean;
+  teamSettings?: Activity["teamSettings"];
 }
 
 export function PlayerPicker({
@@ -24,7 +26,9 @@ export function PlayerPicker({
   selected,
   placeholder = "Seleccionar jugador",
   disabled = false,
+  teamSettings,
 }: PlayerPickerProps) {
+  const teams = useTeamStyles(teamSettings);
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
 
@@ -98,7 +102,7 @@ export function PlayerPicker({
                   {p.nombre} {p.apellido}
                 </span>
                 {p.team && (
-                  <span className="text-sm text-text-muted ml-auto">{p.team}</span>
+                  <span className="text-sm text-text-muted ml-auto">{teams.name(p.team)}</span>
                 )}
               </button>
             ))

@@ -5,7 +5,8 @@ import { DetailSheet } from "@/components/ui/DetailSheet";
 import { CalendarCheck, CalendarX, Clock, Coffee, Zap, Check, Loader2 } from "lucide-react";
 import { Avatar } from "@/components/ui/Avatar";
 import { cn } from "@/lib/utils";
-import { TEAM_COLORS, getEdad } from "@/lib/constants";
+import { useTeamStyles } from "@/hooks/useTeamStyles";
+import { getEdad } from "@/lib/constants";
 import { actRankingPtsDetails } from "@/lib/calc";
 import { confirmDialog } from "@/components/ui/confirm-dialog";
 import { toggleArrayField, setTeamField } from "@/lib/activity-mutates";
@@ -39,6 +40,7 @@ export function PlayerPointsModal({
   performQuickUpdate,
   activeTeams = [],
 }: PlayerPointsModalProps) {
+  const teams = useTeamStyles(act.teamSettings);
   const { total, details } = useMemo(() => {
     const details = actRankingPtsDetails(player.id, act, participants);
     const total = details.reduce((sum, detail) => sum + detail.pts, 0);
@@ -194,11 +196,11 @@ export function PlayerPointsModal({
               <span
                 className="text-sm font-bold px-2 py-0.5 rounded-full"
                 style={{
-                  backgroundColor: TEAM_COLORS[team] + "20",
-                  color: TEAM_COLORS[team],
+                  backgroundColor: teams.color(team) + "20",
+                  color: teams.color(team),
                 }}
               >
-                Equipo {team}
+                {teams.name(team)}
               </span>
             ) : isPresent ? (
               <span className="text-sm font-bold px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
@@ -299,11 +301,11 @@ export function PlayerPointsModal({
                         : "border-border text-muted-foreground hover:border-primary/40",
                     )}
                     style={{
-                      backgroundColor: team === t ? TEAM_COLORS[t] + "15" : undefined,
+                      backgroundColor: team === t ? teams.color(t) + "15" : undefined,
                     }}
                   >
                     {team === t && <Check className="w-4 h-4" />}
-                    <span>{t}</span>
+                    <span>{teams.name(t)}</span>
                   </button>
                 ))}
               </div>

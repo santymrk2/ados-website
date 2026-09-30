@@ -13,6 +13,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Avatar } from "@/components/ui/Avatar";
 import { DetailSheet } from "@/components/ui/DetailSheet";
 import { cn, normalizeText } from "@/lib/utils";
+import { useTeamStyles } from "@/hooks/useTeamStyles";
 import { confirmDialog } from "@/components/ui/confirm-dialog";
 import { deleteGame, updateGameName } from "@/lib/activity-mutates";
 import type { Juego, ParticipantBasic, Activity } from "@/lib/types";
@@ -96,6 +97,8 @@ function GameDetailModal({
   onToggleItem: (gameId: number | string, itemId: string, pos: string) => void;
   onFillRemaining: (gameId: number | string, pos: string) => void;
 }) {
+  const { activity } = useUnifiedActivity();
+  const teams = useTeamStyles(activity.teamSettings);
   const [localName, setLocalName] = useState(game.nombre || "");
   const [openPopover, setOpenPopover] = useState<string | null>(null);
   const [search, setSearch] = useState("");
@@ -208,7 +211,7 @@ function GameDetailModal({
                               >
                                 <Avatar p={p} size={24} />
                                 <span className="text-base font-medium">{p.nombre} {p.apellido}</span>
-                                <span className="text-sm text-muted-foreground ml-auto">{p.team}</span>
+                                <span className="text-sm text-muted-foreground ml-auto">{teams.name(p.team)}</span>
                               </button>
                             ))
                           ) : (
@@ -257,7 +260,7 @@ function GameDetailModal({
                             <>
                               <Avatar p={person} size={18} />
                               <span>{person.nombre} {person.apellido}</span>
-                              <span className="text-muted-foreground">· {person.team}</span>
+                              <span className="text-muted-foreground">· {teams.name(person.team)}</span>
                             </>
                           ) : (
                             <span>{value}</span>
@@ -294,7 +297,7 @@ function GameDetailModal({
                             : "border-border bg-white hover:border-primary hover:text-primary",
                         )}
                       >
-                        {team}
+                        {teams.name(team)}
                       </button>
                     );
                   })}
@@ -328,6 +331,7 @@ export function JuegosSection() {
 
   const isEditing = editingSection === "juegos";
   const participants = db.participants;
+  const teams = useTeamStyles(activity.teamSettings);
   const activeTeams = useMemo(
     () => TEAMS.slice(0, activity.cantEquipos || 4),
     [activity.cantEquipos],
@@ -475,7 +479,7 @@ export function JuegosSection() {
       const p = participantById.get(Number(value));
       return p ? `${p.nombre} ${p.apellido}` : value;
     }
-    return value;
+    return teams.name(value);
   };
 
   const renderReadMode = () => {

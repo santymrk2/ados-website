@@ -2,7 +2,8 @@
 
 import { useState, useMemo } from "react";
 import { useUnifiedActivity } from "@/lib/activity-context";
-import { TEAMS, TEAM_COLORS } from "@/lib/constants";
+import { TEAMS } from "@/lib/constants";
+import { useTeamStyles } from "@/hooks/useTeamStyles";
 import { actPts } from "@/lib/calc";
 import { setTeamField, setTeamsBulk } from "@/lib/activity-mutates";
 import { SexBadge } from "@/components/ui/Badges";
@@ -33,6 +34,7 @@ export function EquiposSection() {
     searchQuery,
     performQuickUpdate,
   } = useUnifiedActivity();
+  const teams = useTeamStyles(act.teamSettings);
   const [editing, setEditing] = useState(false);
   const [selectedTeam, setSelectedTeam] = useState<string | null>(null);
   const [selectedPlayer, setSelectedPlayer] = useState<ParticipantBasic | null>(
@@ -254,16 +256,17 @@ export function EquiposSection() {
             className="rounded-xl border border-white/30 bg-white/20 p-2.5 flex items-center gap-2 cursor-pointer transition-colors hover:bg-white/30"
             style={{
               ...(selectedTeam === team
-                ? { boxShadow: `0 0 0 2px ${TEAM_COLORS[team]}` }
+                ? { boxShadow: `0 0 0 2px ${teams.color(team)}` }
                 : {}),
             }}
             onClick={() => handleTeamClick(team)}
           >
             <div
               className="w-8 h-8 rounded-full flex items-center justify-center font-black text-base shrink-0 text-white"
-              style={{ backgroundColor: TEAM_COLORS[team] }}
+              style={{ backgroundColor: teams.color(team) }}
+              title={teams.name(team)}
             >
-              {team}
+              {teams.short(team)}
             </div>
             <div className="flex-1 text-center">
               <div className="font-black text-xl text-white">{total}</div>
@@ -308,9 +311,9 @@ export function EquiposSection() {
           <div>
             <div
               className="font-black text-lg mb-3"
-              style={{ color: TEAM_COLORS[selectedTeam] }}
+              style={{ color: teams.color(selectedTeam) }}
             >
-              {selectedTeam}
+              {teams.name(selectedTeam)}
             </div>
             <div className="flex flex-col gap-3">
               {selectedTeamData.women.length > 0 && (
@@ -427,7 +430,7 @@ export function EquiposSection() {
                       className="rounded-2xl border border-border bg-white p-3 flex items-center gap-3"
                       style={{
                         borderLeftColor: cur
-                          ? TEAM_COLORS[cur]
+                          ? teams.color(cur)
                           : "transparent",
                         borderLeftWidth: 4,
                       }}
@@ -458,16 +461,16 @@ export function EquiposSection() {
                             className="rounded-full px-3 py-1 text-sm font-bold transition border disabled:opacity-50"
                             style={{
                               backgroundColor:
-                                cur === t ? TEAM_COLORS[t] : "transparent",
+                                cur === t ? teams.color(t) : "transparent",
                               borderColor:
                                 cur === t
-                                  ? TEAM_COLORS[t]
-                                  : TEAM_COLORS[t] + "44",
+                                  ? teams.color(t)
+                                  : teams.color(t) + "44",
                               color:
-                                cur === t ? "white" : TEAM_COLORS[t],
+                                cur === t ? "white" : teams.color(t),
                             }}
                           >
-                            {t}
+                            {teams.name(t)}
                           </button>
                         ))}
                       </div>
@@ -503,10 +506,10 @@ export function EquiposSection() {
                   </span>{" "}
                   va a pasar del equipo{" "}
                   <span className="font-bold">
-                    {confirmChange.fromTeam}
+                    {teams.name(confirmChange.fromTeam)}
                   </span>{" "}
                   al equipo{" "}
-                  <span className="font-bold">{confirmChange.toTeam}</span>
+                  <span className="font-bold">{teams.name(confirmChange.toTeam)}</span>
                   . ¿Estás seguro?
                 </>
               )}

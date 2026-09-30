@@ -24,37 +24,40 @@ export const $dataVersion = atom<number>(0);
 // UI State
 export const $showSettings = atom<boolean>(false);
 
-// Optimistic update state — tracks in-flight attendance/socials updates
-// so doRefresh() (SSE) doesn't overwrite optimistic data with stale server state
-export const pendingOptimistic = new Set<number>();
-export const $isSavingAttendance = atom<boolean>(false);
+// Optimistic update state — tracks in-flight row-level mutations keyed by
+// `${activityId}:${type}:${rowId}` so concurrent edits on different players/rows
+// can run in parallel, and doRefresh() re-applies them on top of server data
+// instead of overwriting them with stale state.
+interface PendingOptimistic {
+  activityId: number;
+  mutate: (activity: Activity) => Activity;
+}
+export const pendingOptimistic = new Map<string, PendingOptimistic>();
+export const $inflightKeys = atom<ReadonlySet<string>>(new Set());
 
-export function acquireInflight(id: number): boolean {
-  if (pendingOptimistic.has(id)) return false;
-  pendingOptimistic.add(id);
-  $isSavingAttendance.set(true);
+export function inflightKey(activityId: number, type: string, rowId: unknown): string {
+  return `${activityId}:${type}:${rowId ?? "*"}`;
+}
+
+export function acquireInflight(key: string, activityId: number, mutate: (activity: Activity) => Activity): boolean {
+  if (pendingOptimistic.has(key)) return false;
+  pendingOptimistic.set(key, { activityId, mutate });
+  $inflightKeys.set(new Set(pendingOptimistic.keys()));
   return true;
 }
 
-export function releaseInflight(id: number) {
-  pendingOptimistic.delete(id);
-  if (pendingOptimistic.size === 0) {
-    $isSavingAttendance.set(false);
-  }
+export function releaseInflight(key: string) {
+  pendingOptimistic.delete(key);
+  $inflightKeys.set(new Set(pendingOptimistic.keys()));
 }
 
-/**
- * Merge a single activity into $activities (used after 409 refetch).
- * Only replaces the matching row, preserving other rows' optimistic state.
- */
-export function mergeActivityIntoStore(activity: Activity) {
-  const current = $activities.get();
-  const idx = current.findIndex((a) => a.id === activity.id);
-  if (idx === -1) return;
-  const next = [...current];
-  next[idx] = activity;
-  $activities.set(next);
-  $dataVersion.set($dataVersion.get() + 1);
+/** Re-applies every in-flight optimistic mutation of this activity on top of `activity`. */
+export function applyPendingOptimistic(activity: Activity): Activity {
+  let result = activity;
+  for (const pending of pendingOptimistic.values()) {
+    if (pending.activityId === activity.id) result = pending.mutate(result);
+  }
+  return result;
 }
 
 // Promise-based locking to prevent race conditions
@@ -142,16 +145,9 @@ async function doRefresh(): Promise<void> {
 
       // Update all atoms atomically to prevent inconsistent state
       $participants.set(newParticipants);
-      // Merge activities: skip rows with in-flight optimistic updates
-      // to avoid overwriting local mutations with stale server data
-      const currentActivities = $activities.get();
-      const mergedActivities = newActivities.map((a) => {
-        if (pendingOptimistic.has(a.id)) {
-          const existing = currentActivities.find((c) => c.id === a.id);
-          return existing ?? a; // preserve optimistic state
-        }
-        return a;
-      });
+      // Merge activities: re-apply in-flight optimistic mutations on top of
+      // server data so pending rows aren't clobbered by stale state
+      const mergedActivities = newActivities.map(applyPendingOptimistic);
       $activities.set(mergedActivities);
       $rankings.set(newRankings);
       $dbError.set(null);

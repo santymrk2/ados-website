@@ -13,6 +13,12 @@ import type { ActivityPatchPayload, ActivitySavePayload } from "./_lib/types";
 
 export const dynamic = 'force-dynamic';
 
+// PATCH types that replace whole-activity state (config, bulk team map, full
+// positions map) keep the strict optimistic lock. Every other type touches a
+// single participant/row and is applied regardless of the client's version so
+// concurrent staff edits don't collide; the version is still bumped.
+const VERSION_CHECKED_PATCH_TYPES = new Set(["config", "config_bulk", "teams_bulk", "game_pos"]);
+
 const NO_STORE_HEADERS = {
   'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
   'Pragma': 'no-cache',
@@ -113,16 +119,23 @@ export async function PATCH(request: NextRequest) {
 
     const result = await db.transaction(async (tx) => {
       const clientVersion = Number(version || 1);
+      const versionFilter = VERSION_CHECKED_PATCH_TYPES.has(type)
+        ? and(eq(schema.activities.id, activityId), eq(schema.activities.version, clientVersion))
+        : eq(schema.activities.id, activityId);
       const [versionClaim] = await tx
         .update(schema.activities)
         .set({ version: sql`${schema.activities.version} + 1` })
-        .where(and(eq(schema.activities.id, activityId), eq(schema.activities.version, clientVersion)))
+        .where(versionFilter)
         .returning({ version: schema.activities.version });
 
       const [currentActivity] = await tx
         .select({ version: schema.activities.version, locked: schema.activities.locked })
         .from(schema.activities)
         .where(eq(schema.activities.id, activityId));
+
+      if (!currentActivity) {
+        throw new AppError("Actividad no encontrada", 404);
+      }
 
       if (!versionClaim) {
         throw new AppError("Versión desactualizada", 409, {

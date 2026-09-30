@@ -17,6 +17,23 @@ import { initialSyncStatus } from "@/lib/sync-status";
 import { VersionConflictError } from "@/lib/errors";
 import { optimisticUpdateActivity, type OptimisticResult } from "@/lib/optimisticUpdate";
 import { toast } from "@/hooks/use-toast";
+import { inflightKey, pendingOptimistic } from "@/store/appStore";
+
+// Built-in mutations for attendance/socials (backward compat)
+function builtInMutate(type: string, data: unknown): ((act: Activity) => Activity) | undefined {
+  if (type !== "attendance" && type !== "socials") return undefined;
+  return (act: Activity) => {
+    const { participantId, value } = data as { participantId: number; value: boolean };
+    const key = type === "attendance" ? "asistentes" : "socials";
+    const arr = [...((act[key] as number[]) || [])];
+    if (value && !arr.includes(participantId)) arr.push(participantId);
+    if (!value) {
+      const idx = arr.indexOf(participantId);
+      if (idx !== -1) arr.splice(idx, 1);
+    }
+    return { ...act, [key]: arr };
+  };
+}
 
 // ── Context shape ────────────────────────────────────────────────────────────
 
@@ -143,34 +160,28 @@ export function UnifiedActivityProvider({
       optimisticMutate?: (activity: Activity) => Activity,
     ) => {
       if (!activityId) return;
+
+      const mutate = optimisticMutate || builtInMutate(type, data);
+      const record = (data ?? {}) as Record<string, unknown>;
+      const key = inflightKey(
+        activityId,
+        type,
+        record.participantId ?? record.juegoId ?? record.id ?? record.pid,
+      );
+      // Same row already saving (double click): ignore silently
+      if (mutate && pendingOptimistic.has(key)) return;
+
       setSyncStatus({ state: "saving" });
-
-      // Built-in mutations for attendance/socials (backward compat)
-      const builtInMutate =
-        type === "attendance" || type === "socials"
-          ? (act: Activity) => {
-              const { participantId, value } = data as { participantId: number; value: boolean };
-              const key = type === "attendance" ? "asistentes" : "socials";
-              const arr = [...((act[key] as number[]) || [])];
-              if (value && !arr.includes(participantId)) arr.push(participantId);
-              if (!value) {
-                const idx = arr.indexOf(participantId);
-                if (idx !== -1) arr.splice(idx, 1);
-              }
-              return { ...act, [key]: arr };
-            }
-          : undefined;
-
-      const mutate = optimisticMutate || builtInMutate;
 
       // Optimistic path: instant UI feedback with automatic revert on error
       if (mutate) {
         try {
           await optimisticUpdateActivity(
             activityId,
+            key,
             mutate,
-            () => quickUpdate(activityId, type, data, activityVersionRef.current) as Promise<OptimisticResult>,
-            (version) => { activityVersionRef.current = version; },
+            () => quickUpdate(activityId, type, data, activityVersionRef.current, true) as Promise<OptimisticResult>,
+            (version) => { activityVersionRef.current = Math.max(activityVersionRef.current ?? 0, version); },
             () => setSyncStatus({ state: "conflict", message: "Otro usuario modificó esta actividad." }),
           );
           setSyncStatus({ state: "saved" });
@@ -179,7 +190,7 @@ export function UnifiedActivityProvider({
           const message =
             error instanceof VersionConflictError
               ? "Otro usuario modificó esta actividad. Se actualizó la vista."
-              : error instanceof Error
+              : error instanceof Error && !(error instanceof TypeError)
                 ? error.message
                 : "Error al guardar";
           setSyncStatus({
@@ -207,7 +218,7 @@ export function UnifiedActivityProvider({
         const message =
           error instanceof VersionConflictError
             ? "Otro usuario modificó esta actividad. Recargá la página."
-            : error instanceof Error
+            : error instanceof Error && !(error instanceof TypeError)
               ? error.message
               : "Error al guardar";
         setSyncStatus({

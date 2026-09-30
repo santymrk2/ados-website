@@ -8,7 +8,7 @@
  * Rules:
  * - Toggle/update/delete on EXISTING rows → optimistic (these have real IDs)
  * - _add (create new row) → NOT optimistic (server generates the real ID)
- *   The `refreshData()` post-PATCH in useDatabase.ts reconciles these.
+ *   useDatabase.ts refetches after these non-optimistic PATCHes.
  */
 
 import type { Activity, Gol, Extra } from "@/lib/types";

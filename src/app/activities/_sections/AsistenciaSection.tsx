@@ -32,7 +32,7 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DetailSheet } from "@/components/ui/DetailSheet";
 import type { Activity, ParticipantBasic } from "@/lib/types";
-import { $isSavingAttendance } from "@/store/appStore";
+import { $inflightKeys, inflightKey } from "@/store/appStore";
 
 const MONTHS = [
   { value: "1", label: "Enero" },
@@ -385,8 +385,7 @@ export function AsistenciaSection() {
   const [genderFilter, setGenderFilter] = useState<"all" | "M" | "F">("all");
   const [sortMode, setSortMode] = useState<"name" | "lastname" | "age" | "punctual">("name");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
-  const isSaving = useStore($isSavingAttendance);
-  const [savingAction, setSavingAction] = useState(false);
+  const inflightKeys = useStore($inflightKeys);
 
   const handleSortClick = useCallback(
     (mode: typeof sortMode) => {
@@ -596,9 +595,7 @@ export function AsistenciaSection() {
   };
 
   const togglePunctual = async (id: number) => {
-    if (savingAction) return;
     const isPunctual = (act.puntuales || []).includes(id);
-    setSavingAction(true);
     try {
       if (!isPunctual && !act.asistentes.includes(id)) {
         await performQuickUpdate(
@@ -623,13 +620,10 @@ export function AsistenciaSection() {
       }
     } catch {
       // Error already handled by performQuickUpdate
-    } finally {
-      setSavingAction(false);
     }
   };
 
   const toggleSocial = async (id: number) => {
-    if (savingAction) return;
     const isSocial = (act.socials || []).includes(id);
 
     if (!isSocial && act.equipos?.[String(id)]) {
@@ -644,7 +638,6 @@ export function AsistenciaSection() {
       if (!ok) return;
     }
 
-    setSavingAction(true);
     try {
       await performQuickUpdate(
         "socials",
@@ -654,8 +647,6 @@ export function AsistenciaSection() {
       );
     } catch {
       // Error already handled by performQuickUpdate
-    } finally {
-      setSavingAction(false);
     }
   };
 
@@ -754,6 +745,9 @@ export function AsistenciaSection() {
         {sortedAll.map((p) => {
           const here = act.asistentes.includes(p.id);
           const punct = (act.puntuales || []).includes(p.id);
+          const isSaving = ["attendance", "puntuales", "socials"].some((type) =>
+            inflightKeys.has(inflightKey(act.id, type, p.id)),
+          );
           return (
             <div
               key={p.id}
@@ -780,7 +774,7 @@ export function AsistenciaSection() {
                   </button>
                   <button
                     onClick={() => togglePunctual(p.id)}
-                    disabled={locked || !isAdmin || savingAction}
+                    disabled={locked || !isAdmin || isSaving}
                     className={cn(
                       "flex items-center justify-center h-9 min-w-9 px-2 text-base font-semibold transition-colors rounded-r-2xl border border-l-0",
                       (locked || !isAdmin) &&
@@ -816,7 +810,7 @@ export function AsistenciaSection() {
                   <div className="flex flex-wrap gap-1 items-center">
                     <button
                       onClick={() => toggleSocial(p.id)}
-                      disabled={locked || !isAdmin || savingAction}
+                      disabled={locked || !isAdmin || isSaving}
                       className={cn(
                         "flex items-center gap-1 h-9 min-w-9 px-3 text-base font-semibold transition-colors rounded-2xl border",
                         (locked || !isAdmin) &&

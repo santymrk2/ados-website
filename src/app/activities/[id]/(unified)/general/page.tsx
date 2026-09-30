@@ -60,7 +60,7 @@ export default function GeneralPage() {
     setEditing(true);
   };
 
-  const flushDrafts = useCallback(async (showSuccessToast = false) => {
+  const saveDrafts = useCallback(async (showSuccessToast = false) => {
     const nextTitle = draftTitle.trim();
     if (!nextTitle) {
       toast.error("El título no puede estar vacío");
@@ -76,10 +76,12 @@ export default function GeneralPage() {
     if (!dirty) return;
 
     try {
+      // prev = values this edit started from; 409 if someone else changed them
       await performQuickUpdate("config_bulk", {
         titulo: nextTitle,
         fecha: draftDate,
         cantEquipos: draftTeams,
+        prev: { ...snapshot },
       });
       lastSavedRef.current = {
         titulo: nextTitle,
@@ -98,6 +100,15 @@ export default function GeneralPage() {
     }
   }, [draftTitle, draftDate, draftTeams, performQuickUpdate]);
 
+  // Autosave and "finish editing" may overlap: run flushes one at a time so each
+  // one compares against the values the previous one saved
+  const flushChainRef = useRef<Promise<unknown>>(Promise.resolve());
+  const flushDrafts = useCallback((showSuccessToast = false) => {
+    const run = flushChainRef.current.then(() => saveDrafts(showSuccessToast));
+    flushChainRef.current = run.catch(() => undefined);
+    return run;
+  }, [saveDrafts]);
+
   const handleFinishEditing = async () => {
     try {
       await flushDrafts(true);
@@ -113,7 +124,7 @@ export default function GeneralPage() {
     if (!newLocked && !(await confirmDialog("¿Desbloquear actividad? Se habilitará la edición."))) return;
 
     try {
-      await performQuickUpdate("config", { k: "locked", v: newLocked });
+      await performQuickUpdate("config", { k: "locked", v: newLocked, prev: locked });
       toast.success(newLocked ? "Actividad bloqueada" : "Actividad desbloqueada");
     } catch {
       toast.error("Error al cambiar estado de bloqueo");

@@ -29,3 +29,29 @@ export async function assertTeamEnabled(tx: Tx, activityId: number, team: string
     throw new AppError("Equipo no habilitado para esta actividad");
   }
 }
+
+/** Compare-and-set failure: the resource no longer matches the base the client edited. */
+export function staleConflict(bumpedVersion: number): never {
+  // Throwing rolls back this PATCH's bump, so the stored version is the previous one
+  throw new AppError("Otro usuario modificó este dato. Se actualizó la vista.", 409, { currentVersion: bumpedVersion - 1 });
+}
+
+/** Order-insensitive fingerprint of a positions map (position -> teams/participant ids). */
+export function canonicalPos(pos: Record<string, unknown[]>) {
+  return JSON.stringify(
+    Object.entries(pos)
+      .map(([k, list]) => [String(Number(k)), (list || []).map(String).sort()] as const)
+      .filter(([, list]) => list.length > 0)
+      .sort(([a], [b]) => Number(a) - Number(b)),
+  );
+}
+
+/** Order-insensitive fingerprint of a participant -> team map (empty teams ignored). */
+export function canonicalTeams(equipos: Record<string, string | null | undefined>) {
+  return JSON.stringify(
+    Object.entries(equipos)
+      .filter(([, team]) => typeof team === "string" && team.length > 0)
+      .map(([pid, team]) => [String(Number(pid)), team] as const)
+      .sort(([a], [b]) => Number(a) - Number(b)),
+  );
+}

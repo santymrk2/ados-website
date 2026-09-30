@@ -1,8 +1,9 @@
 import { eq } from "drizzle-orm";
 import { AppError } from "@/lib/errors";
+import { prevPosSchema, validate } from "@/lib/validation";
 import * as schema from "@/lib/schema";
 import { INDIVIDUAL_GAME_MARKER, getActiveTeams } from "../helpers";
-import { assertGameInActivity, inActivity } from "./shared";
+import { assertGameInActivity, canonicalPos, inActivity, staleConflict } from "./shared";
 import type { PatchHandler } from "./types";
 
 export const game_add: PatchHandler = async ({ tx, activityId, data }) => {
@@ -42,10 +43,19 @@ export const game_delete: PatchHandler = async ({ tx, activityId, data }) => {
   await tx.delete(schema.juegos).where(eq(schema.juegos.id, data.id));
 };
 
-export const game_pos: PatchHandler = async ({ tx, activityId, data }) => {
+export const game_pos: PatchHandler = async ({ tx, activityId, data, version }) => {
   const { juegoId, pos } = data;
   if (!juegoId || !pos) throw new AppError("Datos inválidos: juegoId y pos son requeridos");
-  await assertGameInActivity(tx, activityId, juegoId);
+  const prevPos = validate(prevPosSchema, data.prevPos);
+  if (!prevPos.success) throw new AppError(prevPos.error, 400);
+
+  // Lock the game row so concurrent writers of this game's positions serialize
+  const [game] = await tx
+    .select({ tipo: schema.juegos.tipo })
+    .from(schema.juegos)
+    .where(inActivity.juegos(juegoId, activityId))
+    .for("update");
+  if (!game) throw new AppError("Juego no encontrado en esta actividad", 404);
 
   const [activity] = await tx
     .select({ cantEquipos: schema.activities.cantEquipos })
@@ -67,6 +77,24 @@ export const game_pos: PatchHandler = async ({ tx, activityId, data }) => {
   const isIndividualGame = existingPositions.some(
     (row) => row.posicion === 0 && row.equipo === INDIVIDUAL_GAME_MARKER,
   );
+
+  // Compare-and-set: the positions the client edited must still be current.
+  // Mirrors how the listing builds `pos`, so an unchanged game always matches.
+  // Clients that don't send prevPos (stale tabs) are accepted without the check.
+  if (prevPos.data) {
+    const listedAsIndividual = isIndividualGame || game.tipo === "individual";
+    const currentPos: Record<string, string[]> = {};
+    for (const row of existingPositions) {
+      if (row.equipo === INDIVIDUAL_GAME_MARKER && row.posicion === 0) continue;
+      const value = listedAsIndividual
+        ? row.participantId && row.posicion >= 1 ? String(row.participantId) : null
+        : row.equipo && activeTeams.includes(row.equipo) && row.posicion >= 1 && row.posicion <= activeTeams.length
+          ? row.equipo
+          : null;
+      if (value) (currentPos[row.posicion] ??= []).push(value);
+    }
+    if (canonicalPos(currentPos) !== canonicalPos(prevPos.data)) staleConflict(version);
+  }
 
   // Delete all existing positions first, then bulk insert the new set.
   // No need for onConflictDoUpdate — rows were just deleted.

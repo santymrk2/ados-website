@@ -49,10 +49,10 @@ export function useDatabase() {
   }, []);
 
   // Quick update (asistencia, equipos, etc)
-  // Per-row types are never rejected for a stale version by the server, so there
-  // is no auto-retry: a 409 only happens for whole-state types (config,
-  // config_bulk, teams_bulk, game_pos) and replaying them would overwrite another
-  // user's work. On 409 we refresh and surface the conflict instead.
+  // The server never rejects on the activity version; a 409 only comes from the
+  // per-resource compare-and-set of config, config_bulk, teams_bulk and game_pos
+  // (the resource changed since the client's prev* base). Replaying would
+  // overwrite another user's work, so there is no auto-retry: refresh + surface it.
   // Optimistic callers pass skipRefresh: the store already holds the change and
   // the server version; SSE + the periodic resync reconcile the rest. Non-optimistic
   // calls (e.g. _add types, where the server generates the id) still refetch.

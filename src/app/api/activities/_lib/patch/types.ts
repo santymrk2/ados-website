@@ -4,6 +4,8 @@ export interface PatchContext {
   tx: Tx;
   activityId: number;
   data: ActivityPatchPayload;
+  /** Activity version after this PATCH's bump (reported on 409). */
+  version: number;
 }
 
 /** Returns extra fields to merge into the response; `success` and `version` are added by the dispatcher. */

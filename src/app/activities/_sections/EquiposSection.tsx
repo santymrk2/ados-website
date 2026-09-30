@@ -174,6 +174,7 @@ export function EquiposSection() {
         { equipos: nextEquipos },
         undefined,
         setTeamsBulk(nextEquipos),
+        (base) => ({ prevEquipos: base.equipos ?? {} }),
       );
     } catch {
       // Error already handled by performQuickUpdate

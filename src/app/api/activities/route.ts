@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { and, eq, inArray, sql } from "drizzle-orm";
+import { eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { apiConflict, apiForbidden, handleApiError, parseBody, requireAdmin, requireAuth } from "@/lib/api-utils";
 import { AppError } from "@/lib/errors";
@@ -13,11 +13,11 @@ import type { ActivityPatchPayload, ActivitySavePayload } from "./_lib/types";
 
 export const dynamic = 'force-dynamic';
 
-// PATCH types that replace whole-activity state (config, bulk team map, full
-// positions map) keep the strict optimistic lock. Every other type touches a
-// single participant/row and is applied regardless of the client's version so
-// concurrent staff edits don't collide; the version is still bumped.
-const VERSION_CHECKED_PATCH_TYPES = new Set(["config", "config_bulk", "teams_bulk", "game_pos"]);
+// PATCH never rejects on the activity version: it is only a change counter
+// (bumped and returned). Whole-state types (config, config_bulk, teams_bulk,
+// game_pos) do per-resource compare-and-set inside their handlers against the
+// prev* base the client sends, so unrelated edits never conflict. The version
+// bump also takes the activity row lock, serializing PATCHes of one activity.
 
 const NO_STORE_HEADERS = {
   'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
@@ -110,7 +110,7 @@ export async function PATCH(request: NextRequest) {
       return parsed.error;
     }
 
-    const { activityId, type, version } = parsed.data;
+    const { activityId, type } = parsed.data;
     const data = parsed.data.data as ActivityPatchPayload;
 
     if (auth.role !== "admin" && type !== "biblias") {
@@ -118,34 +118,19 @@ export async function PATCH(request: NextRequest) {
     }
 
     const result = await db.transaction(async (tx) => {
-      const clientVersion = Number(version || 1);
-      const versionFilter = VERSION_CHECKED_PATCH_TYPES.has(type)
-        ? and(eq(schema.activities.id, activityId), eq(schema.activities.version, clientVersion))
-        : eq(schema.activities.id, activityId);
       const [versionClaim] = await tx
         .update(schema.activities)
         .set({ version: sql`${schema.activities.version} + 1` })
-        .where(versionFilter)
-        .returning({ version: schema.activities.version });
-
-      const [currentActivity] = await tx
-        .select({ version: schema.activities.version, locked: schema.activities.locked })
-        .from(schema.activities)
-        .where(eq(schema.activities.id, activityId));
-
-      if (!currentActivity) {
-        throw new AppError("Actividad no encontrada", 404);
-      }
+        .where(eq(schema.activities.id, activityId))
+        .returning({ version: schema.activities.version, locked: schema.activities.locked });
 
       if (!versionClaim) {
-        throw new AppError("Versión desactualizada", 409, {
-          currentVersion: currentActivity?.version || clientVersion,
-        });
+        throw new AppError("Actividad no encontrada", 404);
       }
 
       const requestedData = data as Record<string, unknown> | null | undefined;
       const isUnlockRequest = type === "config" && requestedData?.k === "locked" && requestedData?.v === false;
-      if (currentActivity?.locked && !isUnlockRequest) {
+      if (versionClaim.locked && !isUnlockRequest) {
         // Throw (not return) so the transaction rolls back the version bump
         throw new AppError("La actividad está bloqueada", 403);
       }
@@ -153,7 +138,7 @@ export async function PATCH(request: NextRequest) {
       const handler = getPatchHandler(type);
       if (!handler) throw new AppError("Invalid update type");
 
-      const extra = await handler({ tx, activityId, data });
+      const extra = await handler({ tx, activityId, data, version: versionClaim.version });
       return { success: true, ...(extra ?? {}), version: versionClaim.version };
     });
 

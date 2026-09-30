@@ -372,7 +372,9 @@ export function JuegosSection() {
       };
 
       try {
-        await performQuickUpdate("game_pos", { juegoId: gameId, pos: nextPos }, "juegos", mutate);
+        await performQuickUpdate("game_pos", { juegoId: gameId, pos: nextPos }, "juegos", mutate, (base) => ({
+          prevPos: base.juegos?.find((j) => j.id === gameId)?.pos ?? {},
+        }));
       } catch {
         // El revert ya lo hace optimisticUpdateActivity
       }

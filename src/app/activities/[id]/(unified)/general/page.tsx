@@ -99,7 +99,7 @@ export default function GeneralPage() {
       if (fresh) {
         lastSavedRef.current = { titulo: fresh.titulo, fecha: fresh.fecha, cantEquipos: fresh.cantEquipos };
       }
-      toast.error("Error al guardar");
+      // No toast here: activity-context already reports conflicts/errors of performQuickUpdate
       throw error;
     }
   }, [activity.id, draftTitle, draftDate, draftTeams, performQuickUpdate]);
@@ -122,7 +122,7 @@ export default function GeneralPage() {
       await performQuickUpdate("config", { k: "locked", v: newLocked, prev: locked });
       toast.success(newLocked ? "Actividad bloqueada" : "Actividad desbloqueada");
     } catch {
-      toast.error("Error al cambiar estado de bloqueo");
+      // activity-context already reports the error
     }
   };
 

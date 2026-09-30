@@ -11,7 +11,10 @@ const Toaster = ({ ...props }: ToasterProps) => {
       theme="light"
       className="toaster group"
       richColors
-      position="top-center"
+      // Bottom, above the FloatingNav: at the top they covered the header actions (Editar/Listo)
+      position="bottom-center"
+      offset={{ bottom: 104 }}
+      mobileOffset={{ bottom: 104 }}
       icons={{
         success: (
           <CircleCheckIcon className="size-4" />

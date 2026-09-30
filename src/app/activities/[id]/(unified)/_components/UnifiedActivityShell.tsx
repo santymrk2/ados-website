@@ -48,11 +48,11 @@ function SyncStatusBadge() {
   const Icon = resolved.icon;
 
   return (
-    <Button
-      variant="ghost"
-      size="sm"
-      disabled
-      className="gap-1.5 bg-white/10 text-white/80 hover:bg-white/20 cursor-default shrink-0"
+    // Status indicator, not a control: a disabled <Button> rendered it at 50% opacity
+    <div
+      role="status"
+      aria-live="polite"
+      className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg bg-white/15 text-white shrink-0"
     >
       <Icon
         className={cn(
@@ -63,7 +63,7 @@ function SyncStatusBadge() {
         )}
       />
       <span className="text-sm font-medium">{resolved.label}</span>
-    </Button>
+    </div>
   );
 }
 

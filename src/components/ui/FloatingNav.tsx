@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Search, X, SlidersHorizontal, LayoutGrid, type LucideIcon } from "lucide-react";
+import { Search, X, SlidersHorizontal, type LucideIcon } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
@@ -432,9 +432,20 @@ export function FloatingNav({
                       onPointerUp: cancelLongPress,
                       onPointerLeave: cancelLongPress,
                       onPointerCancel: cancelLongPress,
-                      onClick: (e: React.MouseEvent) =>
-                        handleItemClick(e, i, item),
-                      "aria-label": `${item.label}. Mantén presionado para ver más opciones`,
+                      onClick: (e: React.MouseEvent) => {
+                        // Tapping the section you're already on opens the full grid
+                        if (item.value === value && !longPressTriggered.current) {
+                          e.preventDefault();
+                          triggerHapticFeedback();
+                          setIsExpandedMenuOpen(true);
+                          return;
+                        }
+                        handleItemClick(e, i, item);
+                      },
+                      "aria-label":
+                        item.value === value
+                          ? `${item.label}. Tocá para ver todas las secciones`
+                          : item.label,
                       className:
                         "flex flex-col items-center justify-center gap-0.5 shrink-0 snap-center select-none transition-colors min-w-[44px] min-h-[44px]",
                       style: {
@@ -463,18 +474,8 @@ export function FloatingNav({
                   />
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => setIsExpandedMenuOpen(true)}
-                  aria-label="Ver todas las secciones"
-                  className="absolute right-2 z-30 flex items-center justify-center w-8 h-8 rounded-lg hover:bg-muted transition-colors text-foreground hover:text-primary"
-                  title="Ver todas las secciones"
-                >
-                  <LayoutGrid className="size-4" />
-                </button>
-
                 <div className="absolute top-0 bottom-0 left-0 w-6 bg-gradient-to-r from-white to-transparent pointer-events-none z-20" />
-                <div className="absolute top-0 bottom-0 right-0 w-12 bg-gradient-to-l from-white to-transparent pointer-events-none z-20" />
+                <div className="absolute top-0 bottom-0 right-0 w-6 bg-gradient-to-l from-white to-transparent pointer-events-none z-20" />
               </div>
             )}
           </motion.div>

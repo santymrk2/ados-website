@@ -198,7 +198,7 @@ export function FloatingNav({
       const target = current >= 0 ? current : 0;
       setActiveIndex(target);
       wheelRef.current?.scrollTo({ left: target * ITEM_WIDTH, behavior: "smooth" });
-    }, 1000);
+    }, 500);
   };
 
   const handleItemClick = (

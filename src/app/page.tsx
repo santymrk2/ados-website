@@ -2,8 +2,8 @@
 
 import { useState, useMemo } from "react";
 import { useApp } from "@/hooks/useApp";
+import { MotionConfig } from "framer-motion";
 import {
-  ChevronRight,
   ChevronLeft,
   Award,
   ClipboardList,
@@ -12,8 +12,16 @@ import {
 import { Empty } from "@/components/ui/Common";
 import { Avatar } from "@/components/ui/Avatar";
 import { Skeleton } from "@/components/ui/skeleton";
-import { RankBadge, PodiumBadge } from "@/components/ui/Badges";
 import { DetailSheet } from "@/components/ui/DetailSheet";
+import {
+  CountUp,
+  EmptyBlock,
+  GroupedList,
+  LeaderRow,
+  Reveal,
+  SectionTitle,
+  SegmentedControl,
+} from "@/app/_components/home-ui";
 import { cn, formatDate } from "@/lib/utils";
 import { actRankingPtsDetails } from "@/lib/calc";
 import type { ParticipantBasic, Activity, Invitacion } from "@/lib/types";
@@ -37,70 +45,12 @@ interface InvitacionRanking extends ParticipantBasic {
   invitaciones: InvitacionWithActivity[];
 }
 
-const PODIUM_COLORS = [
-  { bg: "#F59E0B", text: "#fff", shadow: "#F59E0B44" },
-  { bg: "#94A3B8", text: "#fff", shadow: "#94A3B844" },
-  { bg: "#B45309", text: "#fff", shadow: "#B4530944" },
-];
-
 const RANKING_METRICS = [
   { key: "total", label: "Puntos", Icon: Award },
   { key: "acts", label: "Asist.", Icon: ClipboardList },
 ] as const;
 
 type RankingMetricKey = (typeof RANKING_METRICS)[number]["key"];
-
-function RankRow({
-  p,
-  pos,
-  metric,
-  isClickable = false,
-  onClick,
-}: {
-  p: RankingWithStats;
-  pos: number;
-  metric: RankingMetricKey;
-  isClickable?: boolean;
-  onClick?: () => void;
-}) {
-  const metricValue = p[metric] || 0;
-
-  const className = cn(
-    "bg-primary/10 rounded-xl p-3 flex items-center gap-3 border border-primary/15 relative overflow-hidden",
-    pos <= 3 && "border-primary/40 bg-primary/15",
-    isClickable &&
-      "w-full text-left cursor-pointer transition-all hover:border-primary/40 active:scale-[0.99]",
-  );
-
-  const content = (
-    <>
-      {pos <= 3 && (
-        <div
-          className="absolute inset-0"
-          style={{ backgroundColor: PODIUM_COLORS[pos - 1].bg + "0A" }}
-        />
-      )}
-      <RankBadge pos={pos} />
-      <Avatar p={p} size={32} />
-      <div className="flex-1 z-10 min-w-0">
-        <div className="font-bold text-sm truncate">
-          {p.nombre} {p.apellido}
-        </div>
-      </div>
-      <div className="font-black text-xl z-10">{metricValue}</div>
-    </>
-  );
-
-  if (isClickable && onClick) {
-    return (
-      <button type="button" onClick={onClick} className={className}>
-        {content}
-      </button>
-    );
-  }
-
-  return <div className={className}>{content}</div>;
-}
 
 function RankingDetailView({
   player,
@@ -298,6 +248,15 @@ export default function Page() {
     };
   }, [calculatedRankings, participants, activities]);
 
+  // The home podium is always by points: calculatedRankings follows the sheet's metric selector
+  const topByPoints = useMemo(
+    () =>
+      [...calculatedRankings]
+        .sort((a, b) => (b.total || 0) - (a.total || 0))
+        .slice(0, 3),
+    [calculatedRankings],
+  );
+
   const invitacionRanking = useMemo(() => {
     const counts: Record<
       number,
@@ -360,147 +319,91 @@ export default function Page() {
   }
 
   return (
-    <>
+    <MotionConfig reducedMotion="user">
       <div className="p-4">
-        {/* Stats Cards */}
-        <div className="grid grid-cols-3 gap-3 mb-6">
-          <div className="bg-primary/10 rounded-xl p-3 text-center border border-primary/15">
-            <div className="text-2xl font-black text-primary bg-white/50 rounded-lg py-1">
-              {activities.length}
-            </div>
-            <div className="text-xs font-bold text-text-muted mt-1.5">
-              Actividades
-            </div>
+        {/* Totals */}
+        <Reveal index={0} className="mb-8">
+          <div className="grid grid-cols-3 divide-x divide-border rounded-3xl border border-border bg-card py-5">
+            {[
+              { label: "Actividades", value: activities.length },
+              { label: "Jugadores", value: stats.totalPlayers },
+              { label: "Total Goles", value: stats.totalGoles },
+            ].map((item) => (
+              <div key={item.label} className="px-2 text-center">
+                <CountUp
+                  value={item.value}
+                  className="block text-4xl font-black tracking-tight text-foreground"
+                />
+                <div className="mt-1 text-xs font-bold text-muted-foreground">
+                  {item.label}
+                </div>
+              </div>
+            ))}
           </div>
-          <div className="bg-primary/10 rounded-xl p-3 text-center border border-primary/15">
-            <div className="text-2xl font-black text-primary bg-white/50 rounded-lg py-1">
-              {stats.totalPlayers}
-            </div>
-            <div className="text-xs font-bold text-text-muted mt-1.5">
-              Jugadores
-            </div>
-          </div>
-          <div className="bg-primary/10 rounded-xl p-3 text-center border border-primary/15">
-            <div className="text-2xl font-black text-primary bg-white/50 rounded-lg py-1">
-              {stats.totalGoles}
-            </div>
-            <div className="text-xs font-bold text-text-muted mt-1.5">
-              Total Goles
-            </div>
-          </div>
-        </div>
+        </Reveal>
 
         {/* ─── GOLEADORES ─── */}
-        <div
-          className="flex items-center gap-2 mb-3 cursor-pointer select-none"
-          onClick={() => setGoleadoresOpen(true)}
-        >
-          <div className="font-bold text-lg">Goleadores</div>
-          <ChevronRight className="w-4 h-4 text-text-muted" />
-        </div>
-        {stats.top3Scorers.length === 0 ? (
-          <div className="text-center py-4 text-xs text-text-muted italic mb-4">
-            Aún no hay goles registrados
-          </div>
-        ) : (
-          <div className="flex flex-col gap-2 mb-6">
-            {stats.top3Scorers.map((p, i) => (
-              <div
-                key={p.id}
-                className="flex items-center gap-3 p-2 bg-primary/10 rounded-xl border border-primary/15"
-              >
-                <PodiumBadge
+        <Reveal index={1} className="mb-8">
+          <SectionTitle title="Goleadores" onOpen={() => setGoleadoresOpen(true)} />
+          {stats.top3Scorers.length === 0 ? (
+            <EmptyBlock text="Aún no hay goles registrados" />
+          ) : (
+            <GroupedList>
+              {stats.top3Scorers.map((p, i) => (
+                <LeaderRow
+                  key={p.id}
+                  p={p}
                   pos={i + 1}
-                  className="w-6 h-6 bg-white border-0 text-primary font-bold"
+                  value={p.goals}
+                  unit={p.goals === 1 ? "gol" : "goles"}
+                  max={stats.top3Scorers[0].goals}
                 />
-                <Avatar p={p} size={28} />
-                <div className="flex-1 min-w-0">
-                  <div className="font-bold text-xs truncate">
-                    {p.nombre} {p.apellido}
-                  </div>
-                </div>
-                <div className="font-black text-primary text-lg">
-                  {p.goals}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+              ))}
+            </GroupedList>
+          )}
+        </Reveal>
 
-        {/* ─── RANKING ─── */}
-        <div
-          className="flex items-center gap-2 mb-3 cursor-pointer select-none"
-          onClick={() => setRankingOpen(true)}
-        >
-          <div className="font-bold text-lg">Puntaje</div>
-          <ChevronRight className="w-4 h-4 text-text-muted" />
-        </div>
-        {calculatedRankings.length === 0 ? (
-          <div className="text-center py-4 text-xs text-text-muted italic mb-4">
-            Aún no hay participantes
-          </div>
-        ) : (
-          <div className="flex flex-col gap-2 mb-6">
-            {calculatedRankings.slice(0, 3).map((p, i) => (
-              <div
-                key={p.id}
-                className="flex items-center gap-3 p-2 bg-primary/10 rounded-xl border border-primary/15"
-              >
-                <PodiumBadge
+        {/* ─── PUNTAJE ─── */}
+        <Reveal index={2} className="mb-8">
+          <SectionTitle title="Puntaje" onOpen={() => setRankingOpen(true)} />
+          {topByPoints.length === 0 ? (
+            <EmptyBlock text="Aún no hay participantes" />
+          ) : (
+            <GroupedList>
+              {topByPoints.map((p, i) => (
+                <LeaderRow
+                  key={p.id}
+                  p={p}
                   pos={i + 1}
-                  className="w-6 h-6 bg-white border-0 text-primary font-bold"
+                  value={p.total || 0}
+                  unit="pts"
+                  max={topByPoints[0].total || 0}
                 />
-                <Avatar p={p} size={28} />
-                <div className="flex-1 min-w-0">
-                  <div className="font-bold text-xs truncate">
-                    {p.nombre} {p.apellido}
-                  </div>
-                </div>
-                <div className="font-black text-primary text-lg">
-                  {p.total}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+              ))}
+            </GroupedList>
+          )}
+        </Reveal>
 
         {/* ─── INVITACIONES ─── */}
-        <div
-          className="flex items-center gap-2 mb-3 cursor-pointer select-none"
-          onClick={() => setInvitacionesOpen(true)}
-        >
-          <div className="font-bold text-lg">Invitaciones</div>
-          <ChevronRight className="w-4 h-4 text-text-muted" />
-        </div>
-        {invitacionRanking.length === 0 ? (
-          <div className="text-center py-4 text-xs text-text-muted italic mb-4">
-            No hay invitaciones registradas
-          </div>
-        ) : (
-          <div className="flex flex-col gap-2 mb-6">
-            {invitacionRanking.slice(0, 3).map((p, i) => (
-              <div
-                key={p.id}
-                className="flex items-center gap-3 p-2 bg-primary/10 rounded-xl border border-primary/15"
-              >
-                <PodiumBadge
+        <Reveal index={3} className="mb-8">
+          <SectionTitle title="Invitaciones" onOpen={() => setInvitacionesOpen(true)} />
+          {invitacionRanking.length === 0 ? (
+            <EmptyBlock text="No hay invitaciones registradas" />
+          ) : (
+            <GroupedList>
+              {invitacionRanking.slice(0, 3).map((p, i) => (
+                <LeaderRow
+                  key={p.id}
+                  p={p}
                   pos={i + 1}
-                  className="w-6 h-6 bg-white border-0 text-primary font-bold"
+                  value={p.invitedCount}
+                  unit={p.invitedCount === 1 ? "invitado" : "invitados"}
+                  max={invitacionRanking[0].invitedCount}
                 />
-                <Avatar p={p} size={28} />
-                <div className="flex-1 min-w-0">
-                  <div className="font-bold text-xs truncate">
-                    {p.nombre} {p.apellido}
-                  </div>
-                </div>
-                <div className="font-black text-primary text-lg">
-                  {p.invitedCount}
-                  <span className="text-[10px] opacity-50 font-bold ml-0.5">inv.</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+              ))}
+            </GroupedList>
+          )}
+        </Reveal>
       </div>
 
       {/* ─── SHEET: GOLEADORES ─── */}
@@ -512,29 +415,18 @@ export default function Page() {
         {stats.allScorers.length === 0 ? (
           <Empty text="Aún no hay goles registrados" />
         ) : (
-          <div className="flex flex-col gap-2">
+          <GroupedList>
             {stats.allScorers.map((p, i) => (
-              <div
+              <LeaderRow
                 key={p.id}
-                className="flex items-center gap-3 p-3 bg-primary/10 rounded-xl border border-primary/15"
-              >
-                <PodiumBadge
-                  pos={i + 1}
-                  className="w-6 h-6 bg-white border-0 text-primary font-bold"
-                />
-                <Avatar p={p} size={32} />
-                <div className="flex-1 min-w-0">
-                  <div className="font-bold text-sm truncate">
-                    {p.nombre} {p.apellido}
-                  </div>
-                </div>
-                <div className="font-black text-primary bg-white px-2 py-1 rounded-lg text-xs">
-                  {p.goals}{" "}
-                  <span className="text-[10px] opacity-50 font-bold">goles</span>
-                </div>
-              </div>
+                p={p}
+                pos={i + 1}
+                value={p.goals}
+                unit={p.goals === 1 ? "gol" : "goles"}
+                max={stats.allScorers[0].goals}
+              />
             ))}
-          </div>
+          </GroupedList>
         )}
       </DetailSheet>
 
@@ -556,39 +448,29 @@ export default function Page() {
           />
         ) : (
           <>
-            {/* Metric selector */}
-            <div className="grid grid-cols-2 gap-2 mb-4">
-              {RANKING_METRICS.map((metric) => {
-                const Icon = metric.Icon;
-                return (
-                  <button
-                    key={metric.key}
-                    onClick={() => setRankingMetric(metric.key)}
-                    className={cn(
-                      "flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg text-xs font-bold transition-all",
-                      rankingMetric === metric.key
-                        ? "bg-primary text-white"
-                        : "bg-surface-dark text-text-muted hover:bg-surface-dark/80",
-                    )}
-                  >
-                    <Icon className="w-4 h-4" />
-                    <span>{metric.label}</span>
-                  </button>
-                );
-              })}
-            </div>
+            <SegmentedControl
+              id="ranking-metric"
+              value={rankingMetric}
+              onChange={setRankingMetric}
+              options={RANKING_METRICS.map((metric) => ({
+                key: metric.key,
+                label: metric.label,
+                Icon: metric.Icon,
+              }))}
+            />
 
             {calculatedRankings.length === 0 ? (
               <Empty text="Aún no hay participantes" />
             ) : (
-              <div className="flex flex-col gap-2">
+              <GroupedList>
                 {calculatedRankings.map((p, i) => (
-                  <RankRow
+                  <LeaderRow
                     key={p.id}
                     p={p}
                     pos={i + 1}
-                    metric={rankingMetric}
-                    isClickable={rankingMetric === "total"}
+                    value={p[rankingMetric] || 0}
+                    unit={rankingMetric === "total" ? "pts" : "asist."}
+                    max={calculatedRankings[0][rankingMetric] || 0}
                     onClick={
                       rankingMetric === "total"
                         ? () => {
@@ -599,7 +481,7 @@ export default function Page() {
                     }
                   />
                 ))}
-              </div>
+              </GroupedList>
             )}
           </>
         )}
@@ -692,38 +574,22 @@ export default function Page() {
         {invitacionRanking.length === 0 ? (
           <Empty text="No hay invitaciones registradas" />
         ) : (
-          <div className="flex flex-col gap-2">
+          <GroupedList>
             {invitacionRanking.map((p, i) => (
-              <div
+              <LeaderRow
                 key={p.id}
+                p={p}
+                pos={i + 1}
+                value={p.invitedCount}
+                unit={p.invitedCount === 1 ? "invitado" : "invitados"}
+                max={invitacionRanking[0].invitedCount}
                 onClick={() => {
                   setInvitacionesOpen(false);
                   setSelectedInviter(p);
                 }}
-                className={cn(
-                  "bg-primary/10 rounded-xl p-3 flex items-center gap-3 border border-primary/15 cursor-pointer transition-colors",
-                  i <= 2 && "border-primary/40 bg-primary/15",
-                )}
-              >
-                <PodiumBadge
-                  pos={i + 1}
-                  className="w-6 h-6 bg-white border-0 text-primary font-bold"
-                />
-                <Avatar p={p} size={32} />
-                <div className="flex-1 z-10 min-w-0">
-                  <div className="font-bold text-sm truncate">
-                    {p.nombre} {p.apellido}
-                  </div>
-                </div>
-                <div className="font-black text-lg z-10">
-                  {p.invitedCount}
-                  <span className="text-[10px] font-bold text-text-muted ml-0.5">
-                    inv.
-                  </span>
-                </div>
-              </div>
+              />
             ))}
-          </div>
+          </GroupedList>
         )}
       </DetailSheet>
 
@@ -737,20 +603,17 @@ export default function Page() {
           <div className="text-sm text-text-muted mb-4">
             {selectedInviter.invitedCount} invitados
           </div>
-          <div className="flex flex-col gap-2">
+          <GroupedList>
             {getInvitadosDetails(selectedInviter.invitaciones).map(
               (detail, i) => (
-                <div
-                  key={i}
-                  className="flex items-center gap-3 p-2 bg-primary/10 rounded-xl border border-primary/15"
-                >
-                  <Avatar p={detail.invited} size={28} />
+                <div key={i} className="flex items-center gap-3 px-4 py-3">
+                  <Avatar p={detail.invited} size={40} />
                   <div className="flex-1 min-w-0">
-                    <div className="font-bold text-sm truncate">
+                    <div className="text-base font-bold leading-tight text-foreground">
                       {detail.invited.nombre} {detail.invited.apellido}
                     </div>
                     {detail.activity && (
-                      <div className="text-xs text-text-muted truncate">
+                      <div className="mt-0.5 text-xs text-muted-foreground">
                         {detail.activity.titulo ||
                           formatDate(detail.activity.fecha)}
                       </div>
@@ -759,9 +622,9 @@ export default function Page() {
                 </div>
               ),
             )}
-          </div>
+          </GroupedList>
         </DetailSheet>
       )}
-    </>
+    </MotionConfig>
   );
 }

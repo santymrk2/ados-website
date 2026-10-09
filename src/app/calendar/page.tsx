@@ -2,6 +2,9 @@
 
 import { useMemo, useState } from "react";
 import { X } from "lucide-react";
+import { MotionConfig } from "framer-motion";
+import { GroupedList } from "@/components/ui/GroupedList";
+import { CountUp, EmptyBlock, Reveal } from "@/app/_components/home-ui";
 import { useApp } from "@/hooks/useApp";
 import { Avatar } from "@/components/ui/Avatar";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -209,92 +212,123 @@ export default function Page() {
     return <CalendarSkeleton />;
   }
 
+  const monthBirthdays = birthdaysByMonth[selectedMonth];
+
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      {birthdaysToday.length > 0 && (
-        <div className="mx-4 mt-4 p-3 bg-primary/10 rounded-xl border border-primary/15">
-          <div className="font-bold text-sm text-primary mb-2">
-            Cumpleaños Hoy
-          </div>
-          <div className="flex gap-3 overflow-x-auto pb-1">
-            {birthdaysToday.map((p) => (
+    <MotionConfig reducedMotion="user">
+      <div className="flex min-h-screen flex-col bg-background">
+        <div className="max-w-3xl space-y-5 p-4">
+          <Reveal index={0}>
+            <div className="flex items-baseline gap-2">
+              <CountUp
+                value={monthBirthdays.length}
+                className="text-5xl font-black tracking-tight text-foreground"
+              />
+              <span className="text-base font-bold text-muted-foreground">
+                cumpleaños en {MONTHS[selectedMonth]}
+              </span>
+            </div>
+          </Reveal>
+
+          {birthdaysToday.length > 0 && (
+            <Reveal index={1}>
               <div
-                key={p.id}
-                className="flex items-center gap-2 flex-shrink-0 cursor-pointer"
-                onClick={() => setSelectedPlayer(p)}
+                className="overflow-hidden rounded-3xl border border-border bg-card"
+                style={{ boxShadow: "inset 4px 0 0 var(--primary)" }}
               >
-                <Avatar p={p} size={40} />
-                <div>
-                  <div className="font-bold text-sm">{p.nombre} {p.apellido}</div>
-                  <div className="text-xs text-primary font-bold">¡Hoy cumple!</div>
+                <div className="px-4 pt-3 text-sm font-black uppercase tracking-widest text-primary">
+                  Cumpleaños hoy
+                </div>
+                <div className="divide-y divide-border">
+                  {birthdaysToday.map((p) => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => setSelectedPlayer(p)}
+                      className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-muted"
+                    >
+                      <Avatar p={p} size={44} />
+                      <div className="min-w-0 flex-1">
+                        <div className="text-base font-bold leading-tight text-foreground">
+                          {p.nombre} {p.apellido}
+                        </div>
+                        <div className="mt-0.5 text-sm font-bold text-primary">¡Hoy cumple!</div>
+                      </div>
+                    </button>
+                  ))}
                 </div>
               </div>
+            </Reveal>
+          )}
+
+          <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {MONTHS.map((m, i) => (
+              <button
+                key={m}
+                type="button"
+                onClick={() => setSelectedMonth(i)}
+                aria-pressed={selectedMonth === i}
+                className={cn(
+                  "shrink-0 rounded-full px-4 py-2 text-sm font-bold transition-colors",
+                  selectedMonth === i
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted text-muted-foreground hover:text-foreground",
+                )}
+              >
+                {m.slice(0, 3)}
+              </button>
             ))}
           </div>
+
+          {monthBirthdays.length === 0 ? (
+            <EmptyBlock text="No hay cumpleaños este mes" />
+          ) : (
+            <Reveal index={2}>
+              <GroupedList>
+                {monthBirthdays.map((p) => {
+                  const day = parseInt(p.fechaNacimiento!.split("-")[2]);
+                  const edad = getAge(p.fechaNacimiento);
+                  const isToday = today.getMonth() === selectedMonth && day === todayDay;
+
+                  return (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => setSelectedPlayer(p)}
+                      className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-muted"
+                      style={isToday ? { boxShadow: "inset 4px 0 0 var(--primary)" } : undefined}
+                    >
+                      <Avatar p={p} size={44} />
+                      <div className="min-w-0 flex-1">
+                        <div className="text-base font-bold leading-tight text-foreground">
+                          {p.nombre} {p.apellido}
+                        </div>
+                        <div className="mt-0.5 text-sm text-muted-foreground">
+                          {edad !== null ? `${edad} años` : ""} · {day} de {MONTHS[selectedMonth]}
+                        </div>
+                      </div>
+                      {isToday ? (
+                        <span className="shrink-0 text-sm font-bold text-primary">¡Hoy!</span>
+                      ) : (
+                        <span className="shrink-0 text-sm text-muted-foreground">
+                          {birthdayCountdownLabel(p.fechaNacimiento!)}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </GroupedList>
+            </Reveal>
+          )}
         </div>
-      )}
 
-      <div className="flex gap-2 overflow-x-auto pb-2 px-4 pt-4 scrollbar-none">
-        {MONTHS.map((m, i) => (
-          <button
-            key={i}
-            onClick={() => setSelectedMonth(i)}
-            className={cn(
-              "flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-bold transition-all",
-              selectedMonth === i
-                ? "bg-primary text-white"
-                : "bg-surface-dark text-text-muted"
-            )}
-          >
-            {m.slice(0, 3)}
-          </button>
-        ))}
-      </div>
-
-      <div className="flex-1 p-4 space-y-2">
-        {birthdaysByMonth[selectedMonth].length === 0 ? (
-          <div className="text-center py-12 text-text-muted text-sm">
-            No hay cumpleaños este mes
-          </div>
-        ) : (
-          birthdaysByMonth[selectedMonth].map((p) => {
-            const day = parseInt(p.fechaNacimiento!.split("-")[2]);
-            const edad = getAge(p.fechaNacimiento);
-            const isToday =
-              today.getMonth() === selectedMonth && day === todayDay;
-
-            return (
-              <div
-                key={p.id}
-                className="flex items-center gap-3 p-3 bg-primary/10 rounded-xl border border-primary/15 cursor-pointer"
-                onClick={() => setSelectedPlayer(p)}
-              >
-                <Avatar p={p} size={40} />
-                <div className="flex-1 min-w-0">
-                  <div className="font-bold text-sm">{p.nombre} {p.apellido}</div>
-                  <div className="text-xs text-text-muted">
-                    {edad !== null ? `${edad} años` : ""} · {day} de {MONTHS[selectedMonth]}
-                  </div>
-                </div>
-                {isToday ? (
-                  <span className="text-xs font-bold text-primary">¡Hoy!</span>
-                ) : (
-                  <span className="text-xs text-text-muted">
-                    {birthdayCountdownLabel(p.fechaNacimiento!)}
-                  </span>
-                )}
-              </div>
-            );
-          })
+        {selectedPlayer && (
+          <PlayerDetailModal
+            player={selectedPlayer}
+            onClose={() => setSelectedPlayer(null)}
+          />
         )}
       </div>
-
-      {selectedPlayer && (
-        <PlayerDetailModal
-          player={selectedPlayer}
-          onClose={() => setSelectedPlayer(null)}
-        />
-      )}
-    </div>
+    </MotionConfig>
   );
 }

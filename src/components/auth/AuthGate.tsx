@@ -12,6 +12,7 @@ import { checkDbConnection } from "@/store/appStore";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialogWrapper } from "@/components/ui/confirm-dialog";
 import { PWAInstall } from "@/components/ui/PWAInstall";
+import { EdgeSwipeBack } from "@/components/ui/EdgeSwipeBack";
 import { cn } from "@/lib/utils";
 import { usePathname } from "next/navigation";
 
@@ -155,6 +156,7 @@ export function AuthGate({ children, showNav = true }: AuthGateProps) {
   return (
     <>
       <ConfirmDialogWrapper />
+      {showNav && <EdgeSwipeBack />}
       <PWAInstall />
       <div className="min-h-screen text-dark font-clash">
         {showNav && (

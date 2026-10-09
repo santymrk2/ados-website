@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { FloatingNav } from "@/components/ui/FloatingNav";
 import { motion, MotionConfig } from "framer-motion";
 import { toolbarButtonClass } from "./ui-classes";
+import { isEdgeStart } from "@/lib/edge-swipe";
 import { Check, Loader2, AlertCircle, ChevronLeft, Lock } from "lucide-react";
 import type { Activity } from "@/lib/types";
 
@@ -214,10 +215,13 @@ function ShellInner({
   const touchStartX = useRef(0);
   const touchStartY = useRef(0);
   const isSwiping = useRef(false);
+  // Touches that start on the left edge belong to the back gesture, not to section switching
+  const ignoreTouch = useRef(false);
 
   const sectionIds = ACTIVITY_SECTIONS.map((s) => s.id);
 
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    ignoreTouch.current = isEdgeStart(e.touches[0].clientX);
     touchStartX.current = e.touches[0].clientX;
     touchStartY.current = e.touches[0].clientY;
     isSwiping.current = false;
@@ -225,6 +229,7 @@ function ShellInner({
 
   const handleTouchEnd = useCallback(
     (e: React.TouchEvent) => {
+      if (ignoreTouch.current) return;
       const dx = e.changedTouches[0].clientX - touchStartX.current;
       const dy = e.changedTouches[0].clientY - touchStartY.current;
 

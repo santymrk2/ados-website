@@ -12,6 +12,8 @@
     "test:e2e:quality": "playwright test --grep @critical",
     "db:push": "drizzle-kit push",
     "db:migrate": "drizzle-kit migrate",
+    "demo": "bash scripts/demo.sh",
+    "demo:reset": "bash scripts/demo.sh --reset",
     "test:concurrency": "bash scripts/test-concurrency.sh",
     "test:optimistic": "bun run scripts/test-optimistic.ts",
     "test:edge-swipe": "bun run scripts/test-edge-swipe.ts",

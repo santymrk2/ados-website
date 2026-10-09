@@ -1,3 +1,10 @@
+## Pull Request Policy
+
+- Do not open a PR for a tiny change. Group related changes (several fixes or improvements) into one PR so a release reads as a coherent set.
+- Commit small and often on a branch, but open the PR to `develop` only when there is a meaningful batch, and promote `develop` to `main` once per batch.
+- Exception: urgent production fixes (`hotfix/*`) go through immediately.
+- Vercel only builds `main` (`ignoreCommand` in `vercel.json`); tests and quality checks keep running in GitHub Actions on every PR.
+
 ## ADOS Project Skills
 
 Before implementing code changes, read `.claude/skills/coding-discipline/SKILL.md` and apply it together with the matching project and framework skills below.

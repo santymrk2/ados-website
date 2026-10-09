@@ -12,7 +12,7 @@ import { TeamSettingsEditor, cleanTeamSettings } from "@/components/teams/TeamSe
 import type { TeamDisplaySettings } from "@/lib/team-display";
 import type { Activity } from "@/lib/types";
 
-/** Names and colors of this activity's teams; empty = shared defaults from Configuración. */
+/** Names and colors of this activity's teams; empty = shared defaults from Ajustes. */
 export function ActivityTeamsCard() {
   const { activity, isAdmin, locked, performQuickUpdate } = useUnifiedActivity();
   const teams = useTeamStyles(activity.teamSettings);
@@ -76,7 +76,7 @@ export function ActivityTeamsCard() {
       <DetailSheet open={open} onOpenChange={(o) => !saving && setOpen(o)} title="Equipos de esta actividad">
         <div className="space-y-4">
           <p className="text-sm text-slate-500">
-            Lo que dejes vacío usa el valor por defecto de Configuración.
+            Lo que dejes vacío usa el valor por defecto de Ajustes.
           </p>
           <TeamSettingsEditor
             teams={activeTeams}

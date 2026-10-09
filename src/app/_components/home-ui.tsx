@@ -69,15 +69,6 @@ export function SectionTitle({ title, onOpen }: { title: string; onOpen: () => v
   );
 }
 
-/** One rounded container with thin dividers between its rows. */
-export function GroupedList({ children }: { children: ReactNode }) {
-  return (
-    <div className="divide-y divide-border overflow-hidden rounded-3xl border border-border bg-card">
-      {children}
-    </div>
-  );
-}
-
 export function EmptyBlock({ text }: { text: string }) {
   return (
     <div className="rounded-3xl border border-dashed border-border px-4 py-6 text-center text-sm text-muted-foreground">

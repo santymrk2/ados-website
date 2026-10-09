@@ -13,10 +13,10 @@ import { Empty } from "@/components/ui/Common";
 import { Avatar } from "@/components/ui/Avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DetailSheet } from "@/components/ui/DetailSheet";
+import { GroupedList } from "@/components/ui/GroupedList";
 import {
   CountUp,
   EmptyBlock,
-  GroupedList,
   LeaderRow,
   Reveal,
   SectionTitle,

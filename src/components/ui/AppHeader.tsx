@@ -1,8 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { Menu, ChevronLeft, Settings } from "lucide-react";
+import { Menu, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { SettingsPanel } from "@/components/auth/SettingsPanel";
@@ -14,8 +13,6 @@ interface AppHeaderProps {
   title: string;
   sub?: string;
   showSettings?: boolean;
-  showBack?: boolean;
-  onBack?: () => void;
   onMenuClick?: () => void;
 }
 
@@ -23,11 +20,8 @@ export function AppHeader({
   title,
   sub,
   showSettings = true,
-  showBack = false,
-  onBack,
   onMenuClick,
 }: AppHeaderProps) {
-  const router = useRouter();
   const { logout } = useApp();
   const role = useStore($role);
 
@@ -43,30 +37,18 @@ export function AppHeader({
         <div className="text-foreground p-4">
           {/* Top Row: Menu/Back + Brand + Settings */}
           <div className="flex items-center justify-between">
-            {/* Left: Menu or Back Button */}
-            {showBack ? (
-              <Button
-                onClick={onBack || (() => router.back())}
-                variant="ghost"
-                size="icon"
-                className={cn(
-                  "text-foreground hover:bg-muted min-w-[44px] min-h-[44px]"
-                )}
-              >
-                <ChevronLeft className="w-6 h-6" />
-              </Button>
-            ) : (
-              <Button
-                onClick={onMenuClick}
-                variant="ghost"
-                size="icon"
-                className={cn(
-                  "text-foreground hover:bg-muted min-w-[44px] min-h-[44px]"
-                )}
-              >
-                <Menu className="w-6 h-6" />
-              </Button>
-            )}
+            {/* Left: Menu (screens go back with the system gesture or through the menu).
+                On large screens the sidebar is always visible, so the button is hidden but keeps its space. */}
+            <Button
+              onClick={onMenuClick}
+              variant="ghost"
+              size="icon"
+              className={cn(
+                "text-foreground hover:bg-muted min-w-[44px] min-h-[44px] lg:invisible"
+              )}
+            >
+              <Menu className="w-6 h-6" />
+            </Button>
 
             {/* Center: Brand */}
             <div

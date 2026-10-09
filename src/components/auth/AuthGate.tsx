@@ -8,10 +8,12 @@ import { Loader } from "./Loader";
 import { AppDrawer } from "@/components/ui/AppDrawer";
 import { AppHeader } from "@/components/ui/AppHeader";
 import { WifiOff, RefreshCw } from "lucide-react";
-import { checkDbConnection } from "@/store/appStore";
+import { useStore } from "@nanostores/react";
+import { checkDbConnection, $isDrawerOpen } from "@/store/appStore";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialogWrapper } from "@/components/ui/confirm-dialog";
 import { PWAInstall } from "@/components/ui/PWAInstall";
+import { EdgeSwipeBack } from "@/components/ui/EdgeSwipeBack";
 import { cn } from "@/lib/utils";
 import { usePathname } from "next/navigation";
 
@@ -51,13 +53,6 @@ function getPageTitle(pathname: string): string {
   return "Activados";
 }
 
-function isDetailPage(pathname: string): boolean {
-  return (
-    (pathname.startsWith("/activities/") && pathname !== "/activities") ||
-    (pathname.startsWith("/participants/") && pathname !== "/participants")
-  );
-}
-
 interface AuthGateProps {
   children: React.ReactNode;
   showNav?: boolean;
@@ -84,7 +79,7 @@ export function AuthGate({ children, showNav = true }: AuthGateProps) {
   const [loginError, setLoginError] = useState<string | false>(false);
   const [showPass, setShowPass] = useState(false);
   const [isRetrying, setIsRetrying] = useState(false);
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const isDrawerOpen = useStore($isDrawerOpen);
 
   const handleLogin = async (password: string, role: string = "admin") => {
     const result = await login(password, role);
@@ -155,24 +150,27 @@ export function AuthGate({ children, showNav = true }: AuthGateProps) {
   return (
     <>
       <ConfirmDialogWrapper />
+      {showNav && <EdgeSwipeBack />}
       <PWAInstall />
       <div className="min-h-screen text-dark font-clash">
         {showNav && (
-          <AppDrawer open={isDrawerOpen} onOpenChange={setIsDrawerOpen} />
+          <AppDrawer open={isDrawerOpen} onOpenChange={(open) => $isDrawerOpen.set(open)} />
         )}
         <div
           className={cn(
             "min-h-screen transition-transform duration-300 ease-out",
-            isDrawerOpen && "translate-x-[280px]",
-            isActivityDetailPage ? "bg-primary" : "bg-background"
+            // Room for the permanent sidebar on large screens
+            showNav && "lg:pl-[280px]",
+            // A transformed ancestor would move the activity's fixed nav, so those screens are not pushed
+            isDrawerOpen && !isActivityDetailPage && "translate-x-[280px]",
+            "bg-background"
           )}
         >
           {showNav && !isActivityDetailPage && (
             <AppHeader
               title={getPageTitle(pathname || "/")}
               showSettings={false}
-              showBack={isDetailPage(pathname || "/")}
-              onMenuClick={() => setIsDrawerOpen(true)}
+              onMenuClick={() => $isDrawerOpen.set(true)}
             />
           )}
           {children}

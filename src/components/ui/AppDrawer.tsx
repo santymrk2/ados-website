@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Drawer } from "vaul";
 import { useStore } from "@nanostores/react";
 import {
@@ -25,8 +25,16 @@ interface AppDrawerProps {
   onOpenChange: (open: boolean) => void;
 }
 
+const ROW =
+  "flex min-h-[44px] w-full items-center gap-3 rounded-2xl px-4 py-3 text-left transition-colors";
+
+/**
+ * Side menu. On large screens (lg) it is a permanent sidebar; below that it is a drawer opened from the header.
+ * Both show the same content.
+ */
 export function AppDrawer({ open, onOpenChange }: AppDrawerProps) {
   const router = useRouter();
+  const pathname = usePathname() ?? "/";
   const { logout } = useApp();
   const role = useStore($role);
   const isAdmin = role === "admin";
@@ -41,6 +49,9 @@ export function AppDrawer({ open, onOpenChange }: AppDrawerProps) {
     { href: "/activities", icon: Calendar, label: "Actividades" },
     { href: "/participants", icon: Users, label: "Jugadores" },
   ];
+
+  const isActive = (href: string) =>
+    href === "/" ? pathname === "/" : pathname.startsWith(href);
 
   const handleNavClick = (href: string) => {
     onOpenChange(false);
@@ -76,109 +87,115 @@ export function AppDrawer({ open, onOpenChange }: AppDrawerProps) {
   const userName = "Admin";
   const userRole = isAdmin ? "Administrador" : "Visualizador";
 
+  const menu = (
+    <div className="flex h-full flex-col">
+      {/* User Profile */}
+      <div className="border-b border-border p-5">
+        <div className="flex items-center gap-3">
+          <div className="flex size-12 items-center justify-center rounded-full bg-primary/10">
+            <span className="text-lg font-bold text-primary">{userInitials}</span>
+          </div>
+          <div>
+            <div className="font-bold text-foreground">{userName}</div>
+            <div className="text-sm text-muted-foreground">{userRole}</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Navigation Links */}
+      <nav className="flex-1 space-y-1 p-3">
+        {navItems.map((item) => {
+          const Icon = item.icon;
+          const active = isActive(item.href);
+          return (
+            <button
+              key={item.href}
+              onClick={() => handleNavClick(item.href)}
+              aria-current={active ? "page" : undefined}
+              className={cn(
+                ROW,
+                active
+                  ? "bg-primary/10 font-bold text-primary"
+                  : "font-medium text-foreground hover:bg-muted active:bg-muted",
+              )}
+            >
+              <Icon
+                className={cn("size-5", active ? "text-primary" : "text-muted-foreground")}
+              />
+              <span>{item.label}</span>
+            </button>
+          );
+        })}
+      </nav>
+
+      {/* Quick Actions */}
+      {isAdmin && (
+        <div className="border-t border-border px-5 py-4">
+          <div className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Acciones rápidas
+          </div>
+          <div className="space-y-2">
+            <Button
+              onClick={handleNewActivity}
+              className="w-full justify-start gap-2"
+              variant="outline"
+            >
+              <Plus className="size-4" />
+              Nueva Actividad
+            </Button>
+            <Button
+              onClick={handleNewPlayer}
+              className="w-full justify-start gap-2"
+              variant="outline"
+            >
+              <Plus className="size-4" />
+              Nuevo Jugador
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Bottom Actions */}
+      <div className="space-y-1 border-t border-border p-3 pb-safe">
+        <button
+          onClick={handleSettings}
+          className={cn(ROW, "font-medium text-foreground hover:bg-muted active:bg-muted")}
+        >
+          <Settings className="size-5 text-muted-foreground" />
+          <span>Ajustes</span>
+        </button>
+        <button
+          onClick={handleLogoutClick}
+          className={cn(
+            ROW,
+            "font-medium text-destructive hover:bg-destructive/10 active:bg-destructive/15",
+          )}
+        >
+          <LogOut className="size-5" />
+          <span>Cerrar sesión</span>
+        </button>
+      </div>
+    </div>
+  );
+
   return (
     <>
+      {/* Large screens: permanent sidebar */}
+      <aside className="fixed inset-y-0 left-0 z-30 hidden w-[280px] border-r border-border bg-card pt-safe lg:block">
+        {menu}
+      </aside>
+
+      {/* Small screens: drawer opened from the header */}
       <Drawer.Root
         open={open}
         onOpenChange={onOpenChange}
         direction="left"
         shouldScaleBackground={false}
       >
-        <Drawer.Overlay className="fixed inset-0 bg-black/40 z-40" />
-        <Drawer.Content className="fixed top-0 left-0 bottom-0 z-50 w-[280px] bg-white shadow-xl pt-safe">
+        <Drawer.Overlay className="fixed inset-0 z-40 bg-black/40 lg:hidden" />
+        <Drawer.Content className="fixed bottom-0 left-0 top-0 z-50 w-[280px] bg-card pt-safe shadow-xl lg:hidden">
           <Drawer.Title className="sr-only">Menú de navegación</Drawer.Title>
-          <div className="flex flex-col h-full">
-            {/* User Profile */}
-            <div className="p-5 border-b border-surface-dark">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                  <span className="text-lg font-bold text-primary">
-                    {userInitials}
-                  </span>
-                </div>
-                <div>
-                  <div className="font-bold text-dark">{userName}</div>
-                  <div className="text-sm text-text-muted">{userRole}</div>
-                </div>
-              </div>
-            </div>
-
-            {/* Navigation Links */}
-            <nav className="flex-1 py-4">
-              {navItems.map((item) => {
-                const Icon = item.icon;
-                return (
-                  <button
-                    key={item.href}
-                    onClick={() => handleNavClick(item.href)}
-                    className={cn(
-                      "w-full flex items-center gap-3 px-5 py-3 text-left transition-colors",
-                      "hover:bg-surface-dark active:bg-surface-dark/80",
-                      "min-h-[44px]"
-                    )}
-                  >
-                    <Icon className="w-5 h-5 text-text-muted" />
-                    <span className="font-medium text-dark">{item.label}</span>
-                  </button>
-                );
-              })}
-            </nav>
-
-            {/* Quick Actions */}
-            {isAdmin && (
-              <div className="px-5 py-4 border-t border-surface-dark">
-                <div className="text-xs text-text-muted uppercase tracking-wide mb-3 font-semibold">
-                  Acciones rápidas
-                </div>
-                <div className="space-y-2">
-                  <Button
-                    onClick={handleNewActivity}
-                    className="w-full justify-start gap-2"
-                    variant="outline"
-                  >
-                    <Plus className="w-4 h-4" />
-                    Nueva Actividad
-                  </Button>
-                  <Button
-                    onClick={handleNewPlayer}
-                    className="w-full justify-start gap-2"
-                    variant="outline"
-                  >
-                    <Plus className="w-4 h-4" />
-                    Nuevo Jugador
-                  </Button>
-                </div>
-              </div>
-            )}
-
-            {/* Bottom Actions */}
-            <div className="px-5 py-4 border-t border-surface-dark pb-safe">
-              <div className="space-y-2">
-                <button
-                  onClick={handleSettings}
-                  className={cn(
-                    "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-colors",
-                    "hover:bg-surface-dark active:bg-surface-dark/80",
-                    "min-h-[44px]"
-                  )}
-                >
-                  <Settings className="w-5 h-5 text-text-muted" />
-                  <span className="font-medium text-dark">Ajustes</span>
-                </button>
-                <button
-                  onClick={handleLogoutClick}
-                  className={cn(
-                    "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-colors",
-                    "hover:bg-red-50 active:bg-red-100",
-                    "min-h-[44px]"
-                  )}
-                >
-                  <LogOut className="w-5 h-5 text-red-500" />
-                  <span className="font-medium text-red-600">Cerrar sesión</span>
-                </button>
-              </div>
-            </div>
-          </div>
+          {menu}
         </Drawer.Content>
       </Drawer.Root>
 
@@ -197,9 +214,9 @@ export function AppDrawer({ open, onOpenChange }: AppDrawerProps) {
       {/* Logout Confirmation */}
       {showLogoutConfirm && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50">
-          <div className="bg-white rounded-xl p-6 mx-4 max-w-sm w-full">
-            <h3 className="font-bold text-lg mb-2">Cerrar sesión</h3>
-            <p className="text-text-muted text-sm mb-4">
+          <div className="mx-4 w-full max-w-sm rounded-3xl bg-card p-6">
+            <h3 className="mb-2 text-lg font-bold text-foreground">Cerrar sesión</h3>
+            <p className="mb-4 text-sm text-muted-foreground">
               ¿Estás seguro de que quieres cerrar sesión?
             </p>
             <div className="flex gap-2">
@@ -212,7 +229,7 @@ export function AppDrawer({ open, onOpenChange }: AppDrawerProps) {
               </Button>
               <Button
                 onClick={handleConfirmLogout}
-                className="flex-1 bg-red-500 hover:bg-red-600"
+                className="flex-1 bg-destructive text-white hover:bg-destructive/90"
               >
                 Cerrar sesión
               </Button>

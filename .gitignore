@@ -47,3 +47,6 @@ backup*.sql
 next-env.d.ts
 
 /old_src
+
+# local demo database (bun run demo)
+/.demo

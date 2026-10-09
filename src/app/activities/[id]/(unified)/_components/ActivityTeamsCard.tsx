@@ -6,13 +6,12 @@ import { useUnifiedActivity } from "@/lib/activity-context";
 import { useTeamStyles } from "@/hooks/useTeamStyles";
 import { TEAMS } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/Common";
 import { DetailSheet } from "@/components/ui/DetailSheet";
 import { TeamSettingsEditor, cleanTeamSettings } from "@/components/teams/TeamSettingsEditor";
 import type { TeamDisplaySettings } from "@/lib/team-display";
 import type { Activity } from "@/lib/types";
 
-/** Names and colors of this activity's teams; empty = shared defaults from Configuración. */
+/** Names and colors of this activity's teams; empty = shared defaults from Ajustes. */
 export function ActivityTeamsCard() {
   const { activity, isAdmin, locked, performQuickUpdate } = useUnifiedActivity();
   const teams = useTeamStyles(activity.teamSettings);
@@ -40,14 +39,14 @@ export function ActivityTeamsCard() {
   };
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-3 px-4 py-4">
       <div className="flex items-center justify-between gap-2">
-        <Label>Equipos</Label>
+        <span className="text-base text-muted-foreground">Equipos</span>
         {canEdit && (
           <Button
             variant="outline"
             size="sm"
-            className="gap-1.5"
+            className="gap-1.5 rounded-full"
             onClick={() => {
               setDraft(activity.teamSettings ?? {});
               setOpen(true);
@@ -69,14 +68,19 @@ export function ActivityTeamsCard() {
           </span>
         ))}
       </div>
-      <p className="text-xs text-slate-500">
+      <p className="text-xs text-muted-foreground">
         {hasOverrides ? "Personalizados para esta actividad" : "Usando los equipos por defecto"}
       </p>
 
-      <DetailSheet open={open} onOpenChange={(o) => !saving && setOpen(o)} title="Equipos de esta actividad">
+      <DetailSheet
+        open={open}
+        onOpenChange={(o) => !saving && setOpen(o)}
+        title="Equipos de esta actividad"
+        headerVariant="plain"
+      >
         <div className="space-y-4">
-          <p className="text-sm text-slate-500">
-            Lo que dejes vacío usa el valor por defecto de Configuración.
+          <p className="px-1 text-sm text-muted-foreground">
+            Lo que dejes vacío usa el valor por defecto de Ajustes.
           </p>
           <TeamSettingsEditor
             teams={activeTeams}
@@ -84,6 +88,7 @@ export function ActivityTeamsCard() {
             fallback={teams.defaults}
             onChange={setDraft}
             disabled={saving}
+            framed
           />
           <div className="flex flex-col gap-2 pt-2">
             <Button onClick={() => save(cleanTeamSettings(draft))} disabled={saving} size="lg">

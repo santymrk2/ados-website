@@ -4,6 +4,8 @@ import { useState, useMemo, useCallback } from "react";
 import { useUnifiedActivity } from "@/lib/activity-context";
 
 import { Gamepad2, Users, Plus, X, Search, Trash2 } from "lucide-react";
+import { MotionConfig } from "framer-motion";
+import { CountUp, Reveal } from "@/app/_components/home-ui";
 import { TEAMS, PTS } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -13,6 +15,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Avatar } from "@/components/ui/Avatar";
 import { DetailSheet } from "@/components/ui/DetailSheet";
 import { cn, normalizeText } from "@/lib/utils";
+import { sectionTitleClass, toolbarButtonClass, savingTextClass } from "@/app/activities/[id]/(unified)/_components/ui-classes";
 import { useTeamStyles } from "@/hooks/useTeamStyles";
 import { confirmDialog } from "@/components/ui/confirm-dialog";
 import { deleteGame, updateGameName } from "@/lib/activity-mutates";
@@ -131,7 +134,7 @@ function GameDetailModal({
           size="sm"
           disabled={saving}
           onClick={onDelete}
-          className="text-red-500 hover:bg-red-50 hover:text-red-500 gap-1"
+          className="text-destructive hover:bg-destructive/10 hover:text-destructive gap-1"
         >
           <Trash2 className="h-4 w-4" /> Eliminar
         </Button>
@@ -164,7 +167,7 @@ function GameDetailModal({
             >
               <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                 <div className="flex items-center gap-2">
-                  <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-primary text-base font-black text-white">
+                  <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-primary text-base font-black text-primary-foreground">
                     {pos}
                   </span>
                   <span className="font-bold">Puesto {pos}</span>
@@ -195,7 +198,7 @@ function GameDetailModal({
                               placeholder="Buscar jugador..."
                               value={search}
                               onChange={(e) => setSearch(e.target.value)}
-                              className="h-8 pl-8 text-sm bg-white"
+                              className="h-8 pl-8 text-sm bg-card"
                               autoFocus
                             />
                           </div>
@@ -207,7 +210,7 @@ function GameDetailModal({
                                 key={p.id}
                                 type="button"
                                 onClick={() => onToggleItem(game.id, String(p.id), pos)}
-                                className="flex items-center gap-2 w-full px-3 py-2 text-left transition-colors hover:bg-indigo-50"
+                                className="flex items-center gap-2 w-full px-3 py-2 text-left transition-colors hover:bg-primary/10"
                               >
                                 <Avatar p={p} size={24} />
                                 <span className="text-base font-medium">{p.nombre} {p.apellido}</span>
@@ -254,7 +257,7 @@ function GameDetailModal({
                       return (
                         <div
                           key={value}
-                          className="inline-flex items-center gap-1.5 rounded-full border border-border bg-white px-2.5 py-1 text-sm font-medium shadow-sm"
+                          className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-2.5 py-1 text-sm font-medium"
                         >
                           {person ? (
                             <>
@@ -269,7 +272,7 @@ function GameDetailModal({
                             type="button"
                             disabled={locked}
                             onClick={() => onToggleItem(game.id, value, pos)}
-                            className="ml-0.5 rounded-full p-0.5 text-muted-foreground hover:bg-red-50 hover:text-red-500 transition-colors"
+                            className="ml-0.5 rounded-full p-0.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
                           >
                             <X className="w-3 h-3" />
                           </button>
@@ -293,8 +296,8 @@ function GameDetailModal({
                         className={cn(
                           "rounded-full border px-3 py-1.5 text-sm font-bold transition",
                           active
-                            ? "border-primary bg-primary text-white"
-                            : "border-border bg-white hover:border-primary hover:text-primary",
+                            ? "border-primary bg-primary text-primary-foreground"
+                            : "border-border bg-card hover:border-primary hover:text-primary",
                         )}
                       >
                         {teams.name(team)}
@@ -484,7 +487,7 @@ export function JuegosSection() {
 
   const renderReadMode = () => {
     if (gameList.length === 0) {
-      return <Empty text="Sin juegos registrados" className="text-white/90" />;
+      return <Empty text="Sin juegos registrados" />;
     }
 
     return (
@@ -497,12 +500,12 @@ export function JuegosSection() {
           return (
             <div
               key={String(j.id)}
-              className="bg-white rounded-2xl border border-border overflow-hidden"
+              className="bg-card rounded-3xl border border-border overflow-hidden"
             >
               <div className="flex items-center justify-between gap-3 p-3 border-b border-border">
                 <div className="min-w-0 flex-1">
-                  <div className="font-bold truncate">{j.nombre || `Juego ${index + 1}`}</div>
-                  <div className="mt-1 flex items-center gap-2 flex-wrap text-[11px] text-muted-foreground">
+                  <div className="font-bold text-base leading-tight">{j.nombre || `Juego ${index + 1}`}</div>
+                  <div className="mt-1 flex items-center gap-2 flex-wrap text-xs text-muted-foreground">
                     <span className="inline-flex items-center gap-1 rounded-full border border-border/60 bg-card px-2 py-0.5 font-bold uppercase tracking-wide">
                       {j.tipo === "individual" ? (
                         <Users className="h-3 w-3" />
@@ -520,7 +523,7 @@ export function JuegosSection() {
                 {getPositions(activeTeams.length, j.tipo).map((pos) => {
                   const values = (j.pos || {})[pos] || [];
                   return (
-                    <div key={pos} className="flex items-center gap-2 text-sm py-1 px-3">
+                    <div key={pos} className="flex items-center gap-2 text-sm py-2.5 px-4">
                       <span className="font-bold text-foreground/60 w-6">P{pos}</span>
                       <div className="flex flex-wrap gap-1">
                         {values.length > 0 ? (
@@ -551,24 +554,24 @@ export function JuegosSection() {
   const renderEditMode = () => (
     <>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h2 className="text-base font-black text-white">Juegos</h2>
+        <h2 className={sectionTitleClass}>Juegos</h2>
         <div className="flex flex-wrap items-center gap-2 sm:justify-end">
           {syncStatus.state === "saving" && (
-            <span className="text-xs text-white/90 animate-pulse">Guardando...</span>
+            <span className={savingTextClass}>Guardando...</span>
           )}
           {syncStatus.state === "error" && syncStatus.message && (
-            <span className="text-xs text-red-300">{syncStatus.message}</span>
+            <span className="text-xs text-destructive">{syncStatus.message}</span>
           )}
           <Button
             onClick={() => setCreateOpen(true)}
             variant="ghost"
             size="sm"
             disabled={locked || saving}
-            className="bg-white/20 text-white font-black px-4 hover:bg-white/30"
+            className={`${toolbarButtonClass} font-black px-4`}
           >
             <Plus className="w-4 h-4 mr-1" /> Juego
           </Button>
-          <Button onClick={stopEditing} size="sm" variant="ghost" className="font-black bg-white/20 text-white hover:bg-white/30">
+          <Button onClick={stopEditing} size="sm" variant="ghost" className={`${toolbarButtonClass} font-black`}>
             Listo
           </Button>
         </div>
@@ -584,12 +587,12 @@ export function JuegosSection() {
             onKeyDown={(e) => {
               if (e.key === "Enter" || e.key === " ") setSelectedId(game.id);
             }}
-            className="text-left rounded-2xl border border-border bg-white p-4 shadow-sm transition hover:shadow-md cursor-pointer"
+            className="text-left rounded-3xl border border-border bg-card p-5 transition hover:bg-muted/50 cursor-pointer"
           >
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="font-black text-base truncate">
+                  <span className="font-black text-base">
                     {game.nombre || `Juego ${index + 1}`}
                   </span>
                   <span className="inline-flex items-center gap-1 rounded-full border border-border/60 bg-card px-2 py-0.5 text-xs font-bold uppercase tracking-wide text-muted-foreground">
@@ -607,7 +610,7 @@ export function JuegosSection() {
                 type="button"
                 variant="ghost"
                 size="icon"
-                className="h-9 w-9 shrink-0 hover:bg-red-50 hover:text-red-500"
+                className="h-9 w-9 shrink-0 hover:bg-destructive/10 hover:text-destructive"
                 onClick={async (e) => {
                   e.stopPropagation();
                   const confirmed = await confirmDialog(
@@ -624,7 +627,7 @@ export function JuegosSection() {
         ))}
       </div>
 
-      {gameList.length === 0 && <Empty text="Sin juegos registrados" className="text-white/90" />}
+      {gameList.length === 0 && <Empty text="Sin juegos registrados" />}
 
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent className="sm:max-w-lg" aria-describedby={undefined}>
@@ -635,7 +638,7 @@ export function JuegosSection() {
             <button
               type="button"
               onClick={() => addGame("grupal")}
-              className="rounded-2xl border border-border bg-white p-4 text-left transition hover:border-primary hover:shadow-md"
+              className="rounded-2xl border border-border bg-card p-4 text-left transition hover:border-primary hover:shadow-md"
             >
               <div className="flex items-center gap-2 font-black">
                 <Gamepad2 className="h-4 w-4" />
@@ -648,7 +651,7 @@ export function JuegosSection() {
             <button
               type="button"
               onClick={() => addGame("individual")}
-              className="rounded-2xl border border-border bg-white p-4 text-left transition hover:border-primary hover:shadow-md"
+              className="rounded-2xl border border-border bg-card p-4 text-left transition hover:border-primary hover:shadow-md"
             >
               <div className="flex items-center gap-2 font-black">
                 <Users className="h-4 w-4" />
@@ -691,15 +694,26 @@ export function JuegosSection() {
   );
 
   return (
-    <div className="space-y-4">
+    <MotionConfig reducedMotion="user">
+    <div className="max-w-3xl space-y-4">
       {isEditing ? (
         renderEditMode()
       ) : (
         <>
-          <div className="flex justify-between items-center">
-            <h2 className="text-base font-black text-white">Juegos</h2>
+          <div className="flex items-start justify-between gap-3">
+            <Reveal index={0}>
+              <div className="flex items-baseline gap-2">
+                <CountUp
+                  value={gameList.length}
+                  className="text-5xl font-black tracking-tight text-foreground"
+                />
+                <span className="text-base font-bold text-muted-foreground">
+                  {gameList.length === 1 ? "juego" : "juegos"}
+                </span>
+              </div>
+            </Reveal>
             {isAdmin && (
-              <Button onClick={startEditing} variant="ghost" size="sm" className="bg-white/20 text-white hover:bg-white/30">
+              <Button onClick={startEditing} variant="ghost" size="sm" className={toolbarButtonClass}>
                 Editar
               </Button>
             )}
@@ -708,5 +722,6 @@ export function JuegosSection() {
         </>
       )}
     </div>
+    </MotionConfig>
   );
 }

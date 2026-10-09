@@ -1,14 +1,15 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { motion, MotionConfig } from "framer-motion";
 import {
   LogOut,
   Palette,
   Save,
   Bell,
-  X,
   Info,
   ChevronRight,
+  type LucideIcon,
 } from "lucide-react";
 import { TEAMS } from "@/lib/constants";
 import { $teamDefaults } from "@/store/appStore";
@@ -17,6 +18,8 @@ import { TeamSettingsEditor, cleanTeamSettings } from "@/components/teams/TeamSe
 import { cn } from "@/lib/utils";
 import { Button } from "../ui/button";
 import { DetailSheet } from "../ui/DetailSheet";
+import { GroupedList } from "../ui/GroupedList";
+import { Switch } from "../ui/switch";
 import {
   subscribeToPush,
   unsubscribeFromPush,
@@ -31,6 +34,45 @@ const SECTION_TITLES: Record<string, string> = {
   push: "Notificaciones Push",
   about: "Acerca de",
 };
+
+const APP_VERSION = "1.0.0";
+
+/** List row: icon, label, optional current value and a chevron. */
+function SettingsRow({
+  icon: Icon,
+  label,
+  value,
+  onClick,
+  destructive = false,
+}: {
+  icon: LucideIcon;
+  label: string;
+  value?: string;
+  onClick: () => void;
+  destructive?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex w-full items-center gap-3 px-4 py-4 text-left transition-colors hover:bg-muted active:bg-muted"
+    >
+      <Icon
+        className={cn("size-5 shrink-0", destructive ? "text-destructive" : "text-muted-foreground")}
+      />
+      <span
+        className={cn(
+          "flex-1 text-base font-medium",
+          destructive ? "text-destructive" : "text-foreground",
+        )}
+      >
+        {label}
+      </span>
+      {value && <span className="text-base text-muted-foreground">{value}</span>}
+      {!destructive && <ChevronRight className="size-5 shrink-0 text-muted-foreground" />}
+    </button>
+  );
+}
 
 export function SettingsPanel({
   isOpen,
@@ -54,7 +96,6 @@ export function SettingsPanel({
   const [pushConfigured, setPushConfigured] = useState(false);
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [isSubscribing, setIsSubscribing] = useState(false);
-  const [subscriptionSaved, setSubscriptionSaved] = useState(false);
 
   const checkPushStatus = useCallback(async () => {
     try {
@@ -114,7 +155,6 @@ export function SettingsPanel({
 
   const handlePushSubscription = async () => {
     setIsSubscribing(true);
-    setSubscriptionSaved(false);
 
     try {
       if (isSubscribed) {
@@ -165,7 +205,6 @@ export function SettingsPanel({
             : "Recibirás notificaciones cuando haya cumpleños",
         },
       );
-      setSubscriptionSaved(true);
     } catch (error) {
       console.error("Push subscription error:", error);
       toast.error("Error al activar notificaciones", {
@@ -174,10 +213,9 @@ export function SettingsPanel({
     }
 
     setIsSubscribing(false);
-    setTimeout(() => setSubscriptionSaved(false), 2000);
   };
 
-  const sheetTitle = currentSection ? SECTION_TITLES[currentSection] : "Configuración";
+  const sheetTitle = currentSection ? SECTION_TITLES[currentSection] : "Ajustes";
 
   return (
     <DetailSheet
@@ -192,159 +230,140 @@ export function SettingsPanel({
         }
       }}
       title={sheetTitle}
+      headerVariant="plain"
     >
-      <div className="space-y-3">
-        {currentSection === null && (
-          <>
-            {isAdmin && (
-              <button
-                onClick={() => setCurrentSection("colors")}
-                className="w-full flex items-center gap-3 p-4 bg-primary/10 rounded-xl border border-primary/15 text-left transition-colors hover:bg-primary/15"
-              >
-                <Palette className="w-5 h-5 text-primary" />
-                <div className="flex-1">
-                  <div className="font-bold text-sm text-dark">Equipos por defecto</div>
-                </div>
-                <ChevronRight className="w-4 h-4 text-text-muted" />
-              </button>
-            )}
-
-            {pushAvailable && (
-              <button
-                onClick={() => setCurrentSection("push")}
-                className="w-full flex items-center gap-3 p-4 bg-primary/10 rounded-xl border border-primary/15 text-left transition-colors hover:bg-primary/15"
-              >
-                <Bell className="w-5 h-5 text-primary" />
-                <div className="flex-1">
-                  <div className="font-bold text-sm text-dark">Notificaciones Push</div>
-                </div>
-                <ChevronRight className="w-4 h-4 text-text-muted" />
-              </button>
-            )}
-
-            <button
-              onClick={() => setCurrentSection("about")}
-              className="w-full flex items-center gap-3 p-4 bg-primary/10 rounded-xl border border-primary/15 text-left transition-colors hover:bg-primary/15"
-            >
-              <Info className="w-5 h-5 text-primary" />
-              <div className="flex-1">
-                <div className="font-bold text-sm text-dark">Acerca de</div>
-              </div>
-              <ChevronRight className="w-4 h-4 text-text-muted" />
-            </button>
-
-            <div className="border-t border-surface-dark pt-4 mt-4">
-              <Button
-                onClick={onLogout}
-                variant="destructive"
-                className="w-full gap-3"
-                size="lg"
-              >
-                <LogOut className="w-5 h-5" />
-                Cerrar Sesión
-              </Button>
-              <div className="text-center text-xs text-text-muted mt-3">
-                La sesión se renueva sola mientras uses la app
-              </div>
-            </div>
-          </>
-        )}
-
-        {currentSection === "colors" && (
-          <div className="space-y-3">
-            <p className="text-sm text-text-muted">
-              Nombres y colores que usan todas las actividades. Cada actividad puede cambiarlos desde General.
-            </p>
-            <TeamSettingsEditor
-              teams={TEAMS}
-              value={teamDraft}
-              onChange={(next) => {
-                setTeamDraft(next);
-                setSaved(false);
-              }}
-              disabled={savingTeams}
-            />
-            <Button
-              onClick={handleSaveTeams}
-              disabled={savingTeams}
-              size="lg"
-              className={cn(
-                "w-full gap-2 mt-4",
-                saved && "bg-green-500 hover:bg-green-600 text-white",
+      <MotionConfig reducedMotion="user">
+        {/* Slides in from the side you are navigating towards; no exit animation, so it never waits */}
+        <motion.div
+          key={currentSection ?? "root"}
+          className="space-y-6"
+          initial={{ opacity: 0, x: currentSection ? 16 : -16 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.2, ease: "easeOut" }}
+        >
+          {currentSection === null && (
+            <>
+              {(isAdmin || pushAvailable) && (
+                <GroupedList>
+                  {isAdmin && (
+                    <SettingsRow
+                      icon={Palette}
+                      label="Equipos por defecto"
+                      onClick={() => setCurrentSection("colors")}
+                    />
+                  )}
+                  {pushAvailable && (
+                    <SettingsRow
+                      icon={Bell}
+                      label="Notificaciones Push"
+                      value={
+                        pushConfigured
+                          ? isSubscribed
+                            ? "Activadas"
+                            : "Desactivadas"
+                          : undefined
+                      }
+                      onClick={() => setCurrentSection("push")}
+                    />
+                  )}
+                </GroupedList>
               )}
-            >
-              <Save className="w-4 h-4" />
-              {saved ? "¡Guardado!" : savingTeams ? "Guardando..." : "Guardar equipos"}
-            </Button>
-          </div>
-        )}
 
-        {currentSection === "push" && (
-          <>
-            {!pushConfigured ? (
-              <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
+              <GroupedList>
+                <SettingsRow
+                  icon={Info}
+                  label="Acerca de"
+                  value={APP_VERSION}
+                  onClick={() => setCurrentSection("about")}
+                />
+              </GroupedList>
+
+              <div>
+                <GroupedList>
+                  <SettingsRow icon={LogOut} label="Cerrar sesión" onClick={onLogout} destructive />
+                </GroupedList>
+                <p className="mt-3 px-2 text-center text-xs text-muted-foreground">
+                  La sesión se renueva sola mientras uses la app
+                </p>
+              </div>
+            </>
+          )}
+
+          {currentSection === "colors" && (
+            <div className="space-y-4">
+              <p className="px-1 text-sm text-muted-foreground">
+                Nombres y colores que usan todas las actividades. Cada actividad puede cambiarlos desde General.
+              </p>
+              <TeamSettingsEditor
+                teams={TEAMS}
+                value={teamDraft}
+                onChange={(next) => {
+                  setTeamDraft(next);
+                  setSaved(false);
+                }}
+                disabled={savingTeams}
+                framed
+              />
+              <Button
+                onClick={handleSaveTeams}
+                disabled={savingTeams}
+                size="lg"
+                className={cn(
+                  "w-full gap-2",
+                  saved && "bg-green-500 hover:bg-green-600 text-white",
+                )}
+              >
+                <Save className="w-4 h-4" />
+                {saved ? "¡Guardado!" : savingTeams ? "Guardando..." : "Guardar equipos"}
+              </Button>
+            </div>
+          )}
+
+          {currentSection === "push" &&
+            (!pushConfigured ? (
+              <div className="rounded-3xl border border-yellow-200 bg-yellow-50 p-4">
                 <p className="text-sm text-yellow-800">
                   Las notificaciones push no están configuradas en el servidor.
                 </p>
               </div>
             ) : (
-              <div className="bg-surface-dark rounded-xl p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium">
+              <GroupedList>
+                <div className="flex items-center gap-3 px-4 py-4">
+                  <Bell className="size-5 shrink-0 text-muted-foreground" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-base font-medium text-foreground">
                       {isSubscribed ? "Suscrito" : "No suscrito"}
                     </p>
-                    <p className="text-xs text-text-muted">
+                    <p className="text-xs text-muted-foreground">
                       {isSubscribed
                         ? "Recibirás notificaciones"
                         : "Activa para recibir notificaciones"}
                     </p>
                   </div>
-                  <Button
-                    onClick={handlePushSubscription}
+                  <Switch
+                    checked={isSubscribed}
                     disabled={isSubscribing}
-                    size="sm"
-                    variant={isSubscribed ? "outline" : "default"}
-                    className={cn(
-                      isSubscribed &&
-                        "border-red-200 text-red-600 hover:bg-red-50",
-                      subscriptionSaved &&
-                        "bg-green-500 hover:bg-green-600 text-white",
-                    )}
-                  >
-                    {isSubscribing ? (
-                      "..."
-                    ) : isSubscribed ? (
-                      <>
-                        <X className="w-3 h-3 mr-1" />
-                        Desuscribirse
-                      </>
-                    ) : (
-                      <>
-                        <Bell className="w-3 h-3 mr-1" />
-                        Activar
-                      </>
-                    )}
-                  </Button>
+                    onCheckedChange={() => handlePushSubscription()}
+                    aria-label="Notificaciones push"
+                  />
                 </div>
-              </div>
-            )}
-          </>
-        )}
+              </GroupedList>
+            ))}
 
-        {currentSection === "about" && (
-          <div className="space-y-2 text-sm">
-            <div className="flex justify-between">
-              <span className="text-text-muted">Versión</span>
-              <span className="font-medium text-dark">1.0.0</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-text-muted">Desarrollado por</span>
-              <span className="font-medium text-dark">ADOS Team</span>
-            </div>
-          </div>
-        )}
-      </div>
+          {currentSection === "about" && (
+            <GroupedList>
+              <div className="flex items-center justify-between px-4 py-4 text-base">
+                <span className="font-medium text-foreground">Versión</span>
+                <span className="text-muted-foreground">{APP_VERSION}</span>
+              </div>
+              <div className="flex items-center justify-between px-4 py-4 text-base">
+                <span className="font-medium text-foreground">Desarrollado por</span>
+                <span className="text-muted-foreground">ADOS Team</span>
+              </div>
+            </GroupedList>
+          )}
+        </motion.div>
+      </MotionConfig>
     </DetailSheet>
   );
 }

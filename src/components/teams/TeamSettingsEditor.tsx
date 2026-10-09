@@ -40,12 +40,15 @@ export function TeamSettingsEditor({
   fallback,
   onChange,
   disabled = false,
+  framed = false,
 }: {
   teams: string[];
   value: TeamDisplaySettings;
   fallback?: TeamDisplaySettings;
   onChange: (next: TeamDisplaySettings) => void;
   disabled?: boolean;
+  /** Each team in its own rounded card (for screens that are not already inside one). */
+  framed?: boolean;
 }) {
   const update = (team: string, patch: { name?: string; color?: string }) =>
     onChange({ ...value, [team]: { ...value[team], ...patch } });
@@ -57,7 +60,13 @@ export function TeamSettingsEditor({
         const color = value[team]?.color && HEX_RE.test(value[team]!.color!) ? value[team]!.color! : base.color;
         const invalidHex = !!value[team]?.color && !HEX_RE.test(value[team]!.color!);
         return (
-          <div key={team} className="flex items-start gap-3">
+          <div
+            key={team}
+            className={cn(
+              "flex items-start gap-3",
+              framed && "rounded-3xl border border-border bg-card p-4",
+            )}
+          >
             <div
               className="w-10 h-10 rounded-lg flex items-center justify-center font-black text-sm shrink-0 mt-5"
               style={{ backgroundColor: color, color: getContrastColor(color) }}

@@ -102,7 +102,7 @@ export function FloatingNav({
 
   // Click outside
   useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
+    function handleClickOutside(event: PointerEvent) {
       if (
         containerRef.current &&
         !containerRef.current.contains(event.target as Node)
@@ -114,11 +114,30 @@ export function FloatingNav({
       }
     }
     if (searchMode || filterMode || isExpandedMenuOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
+      document.addEventListener("pointerdown", handleClickOutside);
       return () =>
-        document.removeEventListener("mousedown", handleClickOutside);
+        document.removeEventListener("pointerdown", handleClickOutside);
     }
   }, [searchMode, filterMode, isExpandedMenuOpen, onSearchModeChange]);
+
+  // Escape closes whichever pill is expanded
+  useEffect(() => {
+    if (!searchMode && !filterMode && !isExpandedMenuOpen) return;
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      setSearchMode(false);
+      onSearchModeChange?.(false);
+      setFilterMode(false);
+      setIsExpandedMenuOpen(false);
+    };
+    document.addEventListener("keydown", handleEscape);
+    return () => document.removeEventListener("keydown", handleEscape);
+  }, [searchMode, filterMode, isExpandedMenuOpen, onSearchModeChange]);
+
+  // Opening search leaves the input ready to type, without a second click
+  useEffect(() => {
+    if (searchMode) searchInputRef.current?.focus({ preventScroll: true });
+  }, [searchMode]);
 
   useEffect(() => {
     return () => {
@@ -164,12 +183,22 @@ export function FloatingNav({
     }
 
     if (snapBackTimer.current) clearTimeout(snapBackTimer.current);
+    // Resting on a section selects it; only locked or non-controlled items snap back
     snapBackTimer.current = setTimeout(() => {
+      const settledIndex = Math.round((wheelRef.current?.scrollLeft ?? 0) / ITEM_WIDTH);
+      const settled = items[settledIndex];
+      if (settled && isControlled && onValueChange && !lockedValues.includes(settled.value)) {
+        if (settled.value !== value) {
+          triggerHapticFeedback();
+          onValueChange(settled.value);
+        }
+        return;
+      }
       const current = items.findIndex((i) => i.value === value);
       const target = current >= 0 ? current : 0;
       setActiveIndex(target);
       wheelRef.current?.scrollTo({ left: target * ITEM_WIDTH, behavior: "smooth" });
-    }, 1500);
+    }, 1000);
   };
 
   const handleItemClick = (
@@ -203,6 +232,17 @@ export function FloatingNav({
       onValueChange(item.value);
     }
     setIsExpandedMenuOpen(false);
+  };
+
+  // The wheel item that started a long press is unmounted when the grid opens, so its
+  // click never fires and the flag would swallow the first tap made inside the grid.
+  const handleGridItemClick = (
+    e: React.MouseEvent,
+    index: number,
+    item: NavItem,
+  ) => {
+    longPressTriggered.current = false;
+    handleItemClick(e, index, item);
   };
 
   // Lógica de Pulsación Larga
@@ -260,7 +300,7 @@ export function FloatingNav({
         const commonClasses = cn(
           "flex flex-col items-center justify-center gap-1 rounded-2xl border border-border py-2 px-3 text-sm font-medium transition-colors",
           isActive
-            ? "bg-primary text-white border-primary shadow-sm ring-2 ring-primary/20"
+            ? "bg-primary text-primary-foreground border-primary shadow-sm ring-2 ring-primary/20"
             : "hover:bg-muted",
         );
 
@@ -285,7 +325,7 @@ export function FloatingNav({
         return isControlled ? (
           <button
             key={item.value}
-            onClick={(e) => handleItemClick(e, items.indexOf(item), item)}
+            onClick={(e) => handleGridItemClick(e, items.indexOf(item), item)}
             className={commonClasses}
           >
             <Icon className="size-5" />
@@ -297,7 +337,7 @@ export function FloatingNav({
           <Link
             key={item.value}
             href={href!}
-            onClick={(e) => handleItemClick(e, items.indexOf(item), item)}
+            onClick={(e) => handleGridItemClick(e, items.indexOf(item), item)}
             className={commonClasses}
           >
             <Icon className="size-5" />
@@ -334,7 +374,7 @@ export function FloatingNav({
   return (
     <div
       ref={containerRef}
-      className="fixed left-1/2 z-[60] -translate-x-1/2 pb-safe flex items-center justify-center gap-2"
+      className="fixed left-1/2 z-[60] -translate-x-1/2 pb-safe flex items-center justify-center gap-2 lg:left-[calc(50%+140px)]"
       style={{ bottom: bottomOffset, filter: 'drop-shadow(0 4px 24px rgba(0,0,0,0.18))' }}
     >
       <AnimatePresence mode="popLayout">
@@ -353,7 +393,7 @@ export function FloatingNav({
             exit={{ opacity: 0, scale: 0.9 }}
             transition={pillTransition}
             className={cn(
-              "rounded-2xl border border-border bg-white shadow-lg overflow-hidden relative",
+              "rounded-2xl border border-border bg-card shadow-lg overflow-hidden relative",
               isExpandedMenuOpen && "border-primary ring-2 ring-primary/20",
             )}
           >
@@ -474,8 +514,8 @@ export function FloatingNav({
                   />
                 </div>
 
-                <div className="absolute top-0 bottom-0 left-0 w-6 bg-gradient-to-r from-white to-transparent pointer-events-none z-20" />
-                <div className="absolute top-0 bottom-0 right-0 w-6 bg-gradient-to-l from-white to-transparent pointer-events-none z-20" />
+                <div className="absolute top-0 bottom-0 left-0 w-6 bg-gradient-to-r from-card to-transparent pointer-events-none z-20" />
+                <div className="absolute top-0 bottom-0 right-0 w-6 bg-gradient-to-l from-card to-transparent pointer-events-none z-20" />
               </div>
             )}
           </motion.div>
@@ -506,25 +546,25 @@ export function FloatingNav({
             }}
             transition={pillTransition}
             className={cn(
-              "rounded-2xl border border-border bg-white shadow-lg overflow-hidden shrink-0",
+              "rounded-2xl border border-border bg-card shadow-lg overflow-hidden shrink-0",
               searchMode && "border-primary",
               isSearchActive && !searchMode && "ring-2 ring-primary/20",
             )}
           >
             {searchMode ? (
               <div className="flex items-center gap-2 px-3 h-full w-full">
-                <Search className="size-4 text-text-muted shrink-0" />
+                <Search className="size-4 text-muted-foreground shrink-0" />
                 <input
                   ref={searchInputRef}
                   type="text"
                   value={searchValue || ""}
                   onChange={(e) => onSearchChange?.(e.target.value)}
                   placeholder={searchPlaceholder}
-                  className="flex-1 bg-transparent border-none outline-none text-sm text-foreground placeholder:text-text-muted"
+                  className="flex-1 bg-transparent border-none outline-none text-sm text-foreground placeholder:text-muted-foreground"
                 />
                 <button
                   onClick={handleClearSearch}
-                  className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-surface-light text-foreground transition-colors shrink-0"
+                  className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-muted text-foreground transition-colors shrink-0"
                 >
                   <X className="size-4" />
                 </button>
@@ -566,7 +606,7 @@ export function FloatingNav({
             }}
             transition={pillTransition}
             className={cn(
-              "rounded-2xl border border-border bg-white shadow-lg overflow-hidden shrink-0",
+              "rounded-2xl border border-border bg-card shadow-lg overflow-hidden shrink-0",
               filterMode && "border-primary",
               isFilterActive && !filterMode && "ring-2 ring-primary/20",
             )}
@@ -575,14 +615,14 @@ export function FloatingNav({
               <div className="flex flex-col h-full w-full">
                 <div className="flex items-center justify-between px-3 py-2 border-b border-border shrink-0">
                   <div className="flex items-center gap-2">
-                    <SlidersHorizontal className="size-4 text-text-muted" />
+                    <SlidersHorizontal className="size-4 text-muted-foreground" />
                     <span className="text-xs font-bold text-foreground">
                       Filtros
                     </span>
                   </div>
                   <button
                     onClick={() => setFilterMode(false)}
-                    className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-surface-light text-foreground transition-colors"
+                    className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-muted text-foreground transition-colors"
                   >
                     <X className="size-4" />
                   </button>

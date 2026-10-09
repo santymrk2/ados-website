@@ -2,6 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { sectionTitleClass, savingTextClass, toolbarButtonClass } from "./ui-classes";
 
 interface SectionHeaderProps {
   title: string;
@@ -31,15 +32,15 @@ export function SectionHeader({
 
   return (
     <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-      <h2 className="text-base font-black text-white">{title}</h2>
+      <h2 className={sectionTitleClass}>{title}</h2>
       <div className="flex flex-wrap items-center gap-2 sm:justify-end">
         {syncStatus?.state === "saving" && (
-          <span className="text-[10px] text-white/60 animate-pulse">
+          <span className={savingTextClass}>
             Guardando...
           </span>
         )}
         {syncStatus?.state === "error" && syncStatus.message && (
-          <span className="text-[10px] text-red-300">{syncStatus.message}</span>
+          <span className="text-xs text-destructive">{syncStatus.message}</span>
         )}
         {isEditing && onAdd && (
           <Button
@@ -48,7 +49,7 @@ export function SectionHeader({
             size="sm"
             disabled={disabled}
             className={cn(
-              "bg-white/20 text-white hover:bg-white/30",
+              toolbarButtonClass,
               disabled && "opacity-50 cursor-not-allowed",
             )}
           >
@@ -62,7 +63,7 @@ export function SectionHeader({
             size="sm"
             disabled={disabled}
             className={cn(
-              "bg-white/20 text-white hover:bg-white/30",
+              toolbarButtonClass,
               disabled && "opacity-50 cursor-not-allowed",
             )}
           >

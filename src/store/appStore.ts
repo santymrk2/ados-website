@@ -9,6 +9,9 @@ export const $isAuthenticated = atom<boolean>(false);
 export const $authLoading = atom<boolean>(true);
 export const $role = atom<string>('admin'); // 'admin' or 'viewer'
 
+// Side menu: opened from the header on every screen, including the activity ones
+export const $isDrawerOpen = atom<boolean>(false);
+
 // Database State
 export const $participants = atom<ParticipantBasic[]>([]);
 export const $activities = atom<Activity[]>([]);

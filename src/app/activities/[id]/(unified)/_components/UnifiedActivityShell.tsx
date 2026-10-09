@@ -11,7 +11,8 @@ import { FloatingNav } from "@/components/ui/FloatingNav";
 import { motion, MotionConfig } from "framer-motion";
 import { toolbarButtonClass } from "./ui-classes";
 import { isEdgeStart } from "@/lib/edge-swipe";
-import { Check, Loader2, AlertCircle, ChevronLeft, Lock } from "lucide-react";
+import { Check, Loader2, AlertCircle, Lock, Menu } from "lucide-react";
+import { $isDrawerOpen } from "@/store/appStore";
 import type { Activity } from "@/lib/types";
 
 // Map each section to an appropriate skeleton variant
@@ -70,6 +71,21 @@ function SyncStatusBadge() {
   );
 }
 
+// ── Menu button: the activity screens use the side menu instead of a back arrow ──
+
+function MenuButton() {
+  return (
+    <button
+      type="button"
+      aria-label="Abrir menú"
+      onClick={() => $isDrawerOpen.set(true)}
+      className="min-w-[44px] min-h-[44px] flex items-center justify-center -ml-2 shrink-0 rounded-full hover:bg-muted transition-colors"
+    >
+      <Menu className="w-6 h-6" />
+    </button>
+  );
+}
+
 // ── Header (used outside provider for loading/error) ─────────────────────────
 
 function SimpleHeader({
@@ -81,17 +97,11 @@ function SimpleHeader({
   date?: string;
   asistentes?: number;
 }) {
-  const router = useRouter();
   return (
     <div className="pt-safe">
       <div className="text-foreground p-4">
         <div className="flex items-center gap-3">
-          <button
-            onClick={() => router.push("/activities")}
-            className="min-w-[44px] min-h-[44px] flex items-center justify-center -ml-2 shrink-0 rounded-full hover:bg-muted transition-colors"
-          >
-            <ChevronLeft className="w-6 h-6" />
-          </button>
+          <MenuButton />
           <div className="flex-1 min-w-0">
             <h1 className="font-black text-lg truncate">
               {title || "Actividad"}
@@ -266,12 +276,7 @@ function ShellInner({
       <div className="pt-safe">
         <div className="text-foreground px-4 pt-4 pb-2">
           <div className="flex items-center gap-3">
-            <button
-              onClick={() => router.push("/activities")}
-              className="min-w-[44px] min-h-[44px] flex items-center justify-center -ml-2 shrink-0 rounded-full hover:bg-muted transition-colors"
-            >
-              <ChevronLeft className="w-6 h-6" />
-            </button>
+            <MenuButton />
             <div className="flex-1 min-w-0">
               <ActivityTitle />
               <ActivityMeta />

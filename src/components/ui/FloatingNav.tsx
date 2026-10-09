@@ -183,12 +183,22 @@ export function FloatingNav({
     }
 
     if (snapBackTimer.current) clearTimeout(snapBackTimer.current);
+    // Resting on a section selects it; only locked or non-controlled items snap back
     snapBackTimer.current = setTimeout(() => {
+      const settledIndex = Math.round((wheelRef.current?.scrollLeft ?? 0) / ITEM_WIDTH);
+      const settled = items[settledIndex];
+      if (settled && isControlled && onValueChange && !lockedValues.includes(settled.value)) {
+        if (settled.value !== value) {
+          triggerHapticFeedback();
+          onValueChange(settled.value);
+        }
+        return;
+      }
       const current = items.findIndex((i) => i.value === value);
       const target = current >= 0 ? current : 0;
       setActiveIndex(target);
       wheelRef.current?.scrollTo({ left: target * ITEM_WIDTH, behavior: "smooth" });
-    }, 1500);
+    }, 1000);
   };
 
   const handleItemClick = (

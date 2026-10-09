@@ -4,6 +4,9 @@ import { useState, useMemo, useCallback } from "react";
 import { useUnifiedActivity } from "@/lib/activity-context";
 
 import { Plus, Minus, Trash2 } from "lucide-react";
+import { MotionConfig } from "framer-motion";
+import { GroupedList } from "@/components/ui/GroupedList";
+import { Reveal } from "@/app/_components/home-ui";
 import { TEAMS } from "@/lib/constants";
 import { getContrastColor } from "@/components/teams/TeamSettingsEditor";
 import { useTeamStyles } from "@/hooks/useTeamStyles";
@@ -80,8 +83,8 @@ function AdjustmentRow({
     >
       <span
         className={cn(
-          "text-[10px] font-bold uppercase shrink-0 w-7",
-          item.tipo === "extra" ? "text-green-600" : "text-red-600",
+          "text-xs font-bold uppercase shrink-0 w-7",
+          item.tipo === "extra" ? "text-green-600" : "text-destructive",
         )}
       >
         {item.tipo === "extra" ? "Extra" : "Desc"}
@@ -102,12 +105,12 @@ function AdjustmentRow({
               setEditingMotivo(false);
             }
           }}
-          className="h-6 min-w-0 flex-1 bg-white rounded border border-primary outline-none text-[10px] text-foreground placeholder:text-muted-foreground px-1"
+          className="h-6 min-w-0 flex-1 bg-card rounded border border-primary outline-none text-xs text-foreground placeholder:text-muted-foreground px-1"
         />
       ) : (
         <span
           className={cn(
-            "h-6 min-w-0 flex-1 text-[10px] truncate cursor-pointer hover:bg-white/60 hover:rounded px-0.5 transition-colors self-center leading-6",
+            "h-6 min-w-0 flex-1 text-xs cursor-pointer hover:bg-white/60 hover:rounded px-0.5 transition-colors self-center leading-6",
             motivoInput ? "text-foreground" : "text-muted-foreground",
           )}
           onClick={() => {
@@ -123,7 +126,7 @@ function AdjustmentRow({
         <button
           disabled={disabled}
           onClick={() => onUpdatePoints(Math.max(0, item.puntos - 1))}
-          className="w-5 h-5 flex items-center justify-center text-muted-foreground hover:text-red-500 transition-colors disabled:opacity-30"
+          className="w-5 h-5 flex items-center justify-center text-muted-foreground hover:text-destructive transition-colors disabled:opacity-30"
         >
           <Minus className="w-2.5 h-2.5" />
         </button>
@@ -133,7 +136,7 @@ function AdjustmentRow({
             autoFocus
             type="number"
             min="0"
-            className="w-8 text-center text-[10px] font-black bg-white rounded border border-primary outline-none p-0 h-5"
+            className="w-8 text-center text-xs font-black bg-card rounded border border-primary outline-none p-0 h-5"
             style={{ color }}
             value={pointsInput}
             onChange={(e) => setPointsInput(e.target.value)}
@@ -148,7 +151,7 @@ function AdjustmentRow({
           />
         ) : (
           <span
-            className="w-5 text-center text-[10px] font-black cursor-pointer hover:bg-white hover:rounded px-0.5 transition-colors"
+            className="w-5 text-center text-xs font-black cursor-pointer hover:bg-white hover:rounded px-0.5 transition-colors"
             style={{ color }}
             onClick={() => {
               if (disabled) return;
@@ -172,7 +175,7 @@ function AdjustmentRow({
       <button
         onClick={onDelete}
         disabled={locked}
-        className="w-5 h-5 flex items-center justify-center text-red-300 hover:text-red-500 transition-colors disabled:opacity-30 shrink-0"
+        className="w-5 h-5 flex items-center justify-center text-destructive/60 hover:text-destructive transition-colors disabled:opacity-30 shrink-0"
       >
         <Trash2 className="w-2.5 h-2.5" />
       </button>
@@ -340,7 +343,7 @@ export function ExtrasSection() {
                   </div>
                 </div>
               </div>
-                <div className="text-sm font-bold truncate" style={{ color: teams.get(t).bgDark }}>{teams.name(t)}</div>
+                <div className="text-sm font-bold" style={{ color: teams.get(t).bgDark }}>{teams.name(t)}</div>
 
               {tItems.length > 0 && (
                 <div className="space-y-1">
@@ -363,7 +366,7 @@ export function ExtrasSection() {
                   onClick={() => addAdjustment(null, t, "descuento")}
                   size="sm"
                   disabled={locked || saving}
-                  className="flex-1 h-9 rounded-xl bg-white/50 hover:bg-white/80 border-none text-red-700 font-black disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="flex-1 h-9 rounded-xl bg-white/50 hover:bg-white/80 border-none text-destructive font-black disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   <Minus className="w-4 h-4" />
                 </Button>
@@ -392,12 +395,12 @@ export function ExtrasSection() {
             Individuales
           </span>
         </div>
-        <span className="text-[10px] font-bold text-muted-foreground">
+        <span className="text-xs font-bold text-muted-foreground">
           {eligiblePlayers.length} personas
         </span>
       </div>
 
-      <div className="grid grid-cols-1 gap-2">
+      <GroupedList>
         {eligiblePlayers.map((p) => {
           const pItems = adjustments.filter((x) => x.pid === p.id);
           const total = balance(pItems);
@@ -405,19 +408,19 @@ export function ExtrasSection() {
           return (
             <div
               key={p.id}
-              className="bg-white rounded-xl p-3 flex items-start gap-3 border border-border shadow-sm"
+              className="flex items-start gap-3 px-4 py-3"
             >
-              <Avatar p={p} size={36} className="mt-1" />
+              <Avatar p={p} size={44} className="mt-0.5" />
 
               <div className="flex-1 min-w-0">
-                <div className="font-bold text-base truncate">
+                <div className="font-bold text-base leading-tight">
                   {p.nombre} {p.apellido}
                 </div>
-                <div className="text-[10px] font-black text-muted-foreground uppercase mb-1">
+                <div className="text-xs font-black text-muted-foreground uppercase mb-1">
                   Balance:{" "}
                   <span
                     className={cn(
-                      total > 0 ? "text-green-600" : total < 0 ? "text-red-600" : "",
+                      total > 0 ? "text-green-600" : total < 0 ? "text-destructive" : "",
                     )}
                   >
                     {total > 0 ? "+" : ""}
@@ -448,7 +451,7 @@ export function ExtrasSection() {
                   size="icon"
                   variant="ghost"
                   disabled={locked || saving}
-                  className="h-9 w-9 bg-red-50 text-red-600 hover:bg-red-100 rounded-xl disabled:opacity-30 disabled:cursor-not-allowed"
+                  className="h-9 w-9 bg-destructive/10 text-destructive hover:bg-destructive/20 rounded-xl disabled:opacity-30 disabled:cursor-not-allowed"
                 >
                   <Minus className="w-5 h-5" />
                 </Button>
@@ -457,7 +460,7 @@ export function ExtrasSection() {
                   size="icon"
                   variant="ghost"
                   disabled={locked || saving}
-                  className="h-9 w-9 bg-indigo-50 text-primary hover:bg-indigo-100 rounded-xl disabled:opacity-30 disabled:cursor-not-allowed"
+                  className="h-9 w-9 bg-primary/10 text-primary hover:bg-primary/20 rounded-xl disabled:opacity-30 disabled:cursor-not-allowed"
                 >
                   <Plus className="w-5 h-5" />
                 </Button>
@@ -465,7 +468,7 @@ export function ExtrasSection() {
             </div>
           );
         })}
-      </div>
+      </GroupedList>
     </div>
   );
 
@@ -500,13 +503,13 @@ export function ExtrasSection() {
                 </div>
               </div>
             </div>
-              <div className="text-sm font-bold truncate" style={{ color: teams.get(t).bgDark }}>{teams.name(t)}</div>
+              <div className="text-sm font-bold" style={{ color: teams.get(t).bgDark }}>{teams.name(t)}</div>
             {tItems.length > 0 ? (
               <div className="space-y-1">
                 {tItems.map((item) => (
                   <div
                     key={item.id}
-                    className="flex items-center gap-1.5 rounded-lg px-2 py-1 text-[10px]"
+                    className="flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs"
                     style={{
                       backgroundColor:
                         item.tipo === "extra"
@@ -517,12 +520,12 @@ export function ExtrasSection() {
                     <span
                       className={cn(
                         "font-bold uppercase shrink-0 w-7",
-                        item.tipo === "extra" ? "text-green-600" : "text-red-600",
+                        item.tipo === "extra" ? "text-green-600" : "text-destructive",
                       )}
                     >
                       {item.tipo === "extra" ? "Extra" : "Desc"}
                     </span>
-                    <span className="flex-1 truncate">{item.motivo || "—"}</span>
+                    <span className="flex-1">{item.motivo || "—"}</span>
                     <span
                       className="font-black"
                       style={{
@@ -536,7 +539,7 @@ export function ExtrasSection() {
                 ))}
               </div>
             ) : (
-              <p className="text-[10px] opacity-60 italic">Sin ajustes</p>
+              <p className="text-xs opacity-60 italic">Sin ajustes</p>
             )}
           </div>
         );
@@ -552,7 +555,7 @@ export function ExtrasSection() {
           Individuales
         </span>
       </div>
-      <div className="grid grid-cols-1 gap-2">
+      <GroupedList>
         {eligiblePlayers.length > 0 ? (
           eligiblePlayers.map((p) => {
             const pItems = adjustments.filter((x) => x.pid === p.id);
@@ -561,11 +564,11 @@ export function ExtrasSection() {
             return (
               <div
                 key={p.id}
-                className="bg-white rounded-xl p-3 flex items-center gap-3 border border-border shadow-sm"
+                className="flex items-center gap-3 px-4 py-3"
               >
-                <Avatar p={p} size={32} />
+                <Avatar p={p} size={44} />
                 <div className="flex-1 min-w-0">
-                  <div className="font-bold text-base truncate">
+                  <div className="font-bold text-base leading-tight">
                     {p.nombre} {p.apellido}
                   </div>
                   {pItems.length > 0 && (
@@ -574,10 +577,10 @@ export function ExtrasSection() {
                         <span
                           key={item.id}
                           className={cn(
-                            "text-[10px] font-bold px-1.5 py-0.5 rounded",
+                            "text-xs font-bold px-1.5 py-0.5 rounded",
                             item.tipo === "extra"
                               ? "bg-green-50 text-green-700"
-                              : "bg-red-50 text-red-700",
+                              : "bg-destructive/10 text-destructive",
                           )}
                         >
                           {item.tipo === "extra" ? "+" : "-"}
@@ -590,7 +593,7 @@ export function ExtrasSection() {
                 <div
                   className={cn(
                     "font-black text-base",
-                    total > 0 ? "text-green-600" : total < 0 ? "text-red-600" : "text-muted-foreground",
+                    total > 0 ? "text-green-600" : total < 0 ? "text-destructive" : "text-muted-foreground",
                   )}
                 >
                   {total > 0 ? "+" : ""}
@@ -604,12 +607,13 @@ export function ExtrasSection() {
             No hay participantes con asistencias
           </p>
         )}
-      </div>
+      </GroupedList>
     </div>
   );
 
   return (
-    <div className="pb-10">
+    <MotionConfig reducedMotion="user">
+    <div className="max-w-5xl pb-10">
       {isEditing ? (
         <div className="space-y-2">
           <div className="flex justify-between items-center">
@@ -619,7 +623,7 @@ export function ExtrasSection() {
                 <span className={savingTextClass}>Guardando...</span>
               )}
               {syncStatus.state === "error" && syncStatus.message && (
-                <span className="text-[10px] text-red-300">{syncStatus.message}</span>
+                <span className="text-xs text-destructive">{syncStatus.message}</span>
               )}
               <Button onClick={stopEditing} size="sm" variant="ghost" className={`${toolbarButtonClass} font-black`}>
                 Listo
@@ -642,11 +646,12 @@ export function ExtrasSection() {
             )}
           </div>
           <div className="space-y-6">
-            {renderReadTeams()}
-            {renderReadIndividuals()}
+            <Reveal index={0}>{renderReadTeams()}</Reveal>
+            <Reveal index={1}>{renderReadIndividuals()}</Reveal>
           </div>
         </div>
       )}
     </div>
+    </MotionConfig>
   );
 }

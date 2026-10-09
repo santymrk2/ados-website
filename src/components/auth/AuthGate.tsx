@@ -164,7 +164,7 @@ export function AuthGate({ children, showNav = true }: AuthGateProps) {
           className={cn(
             "min-h-screen transition-transform duration-300 ease-out",
             isDrawerOpen && "translate-x-[280px]",
-            isActivityDetailPage ? "bg-primary" : "bg-background"
+            "bg-background"
           )}
         >
           {showNav && !isActivityDetailPage && (

@@ -8,6 +8,8 @@ import { cn, formatDate } from "@/lib/utils";
 import { SectionSkeleton } from "./SectionSkeleton";
 import { Button } from "@/components/ui/button";
 import { FloatingNav } from "@/components/ui/FloatingNav";
+import { motion, MotionConfig } from "framer-motion";
+import { toolbarButtonClass } from "./ui-classes";
 import { Check, Loader2, AlertCircle, ChevronLeft, Lock } from "lucide-react";
 import type { Activity } from "@/lib/types";
 
@@ -52,14 +54,14 @@ function SyncStatusBadge() {
     <div
       role="status"
       aria-live="polite"
-      className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg bg-white/15 text-white shrink-0"
+      className="inline-flex items-center gap-1.5 h-8 px-3 rounded-full bg-muted text-muted-foreground shrink-0"
     >
       <Icon
         className={cn(
           "w-4 h-4",
           resolved.spin && "animate-spin",
-          syncStatus.state === "error" && "text-red-300",
-          syncStatus.state === "conflict" && "text-amber-300",
+          syncStatus.state === "error" && "text-destructive",
+          syncStatus.state === "conflict" && "text-amber-600",
         )}
       />
       <span className="text-sm font-medium">{resolved.label}</span>
@@ -80,12 +82,12 @@ function SimpleHeader({
 }) {
   const router = useRouter();
   return (
-    <div className="pt-safe bg-primary">
-      <div className="text-white p-4">
+    <div className="pt-safe">
+      <div className="text-foreground p-4">
         <div className="flex items-center gap-3">
           <button
             onClick={() => router.push("/activities")}
-            className="min-w-[44px] min-h-[44px] flex items-center justify-center -ml-2 shrink-0"
+            className="min-w-[44px] min-h-[44px] flex items-center justify-center -ml-2 shrink-0 rounded-full hover:bg-muted transition-colors"
           >
             <ChevronLeft className="w-6 h-6" />
           </button>
@@ -94,7 +96,7 @@ function SimpleHeader({
               {title || "Actividad"}
             </h1>
             {date && (
-              <div className="text-base opacity-70 truncate">
+              <div className="text-sm text-muted-foreground truncate">
                 {formatDate(date)} · {asistentes ?? 0} presentes
               </div>
             )}
@@ -118,7 +120,7 @@ export function UnifiedActivityShell({
   // Loading state (no context available)
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-primary flex flex-col">
+      <div className="min-h-screen bg-background flex flex-col">
         <SimpleHeader />
         <div className="flex-1 flex items-center justify-center p-4">
           <SectionSkeleton variant="card" />
@@ -130,15 +132,15 @@ export function UnifiedActivityShell({
   // Error state (no context available)
   if (error) {
     return (
-      <div className="min-h-screen bg-primary flex flex-col">
+      <div className="min-h-screen bg-background flex flex-col">
         <SimpleHeader />
         <div className="flex-1 flex items-center justify-center">
-          <div className="text-white text-center">
+          <div className="text-foreground text-center">
             <h2 className="text-xl font-black mb-2">Actividad no encontrada</h2>
             <Button
               variant="ghost"
               onClick={() => router.push("/activities")}
-              className="bg-white/20 text-white hover:bg-white/30"
+              className={toolbarButtonClass}
             >
               Volver a actividades
             </Button>
@@ -254,13 +256,14 @@ function ShellInner({
   }));
 
   return (
-    <div className="min-h-screen bg-primary flex flex-col">
+    <MotionConfig reducedMotion="user">
+    <div className="min-h-screen bg-background flex flex-col">
       <div className="pt-safe">
-        <div className="text-white p-4">
+        <div className="text-foreground px-4 pt-4 pb-2">
           <div className="flex items-center gap-3">
             <button
               onClick={() => router.push("/activities")}
-              className="min-w-[44px] min-h-[44px] flex items-center justify-center -ml-2 shrink-0"
+              className="min-w-[44px] min-h-[44px] flex items-center justify-center -ml-2 shrink-0 rounded-full hover:bg-muted transition-colors"
             >
               <ChevronLeft className="w-6 h-6" />
             </button>
@@ -307,7 +310,7 @@ function ShellInner({
 
 
       <div
-        className="bg-primary px-4 pt-4 flex-1 pb-32"
+        className="px-4 pt-2 flex-1 pb-32"
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
       >
@@ -316,7 +319,15 @@ function ShellInner({
             <SectionSkeleton {...(SECTION_SKELETON[activeSection] ?? { variant: "card" })} />
           </div>
         ) : (
-          children
+          // Short entrance on section change; no exit animation so switching never waits
+          <motion.div
+            key={activeSection}
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.18, ease: "easeOut" }}
+          >
+            {children}
+          </motion.div>
         )}
       </div>
 
@@ -332,13 +343,14 @@ function ShellInner({
         hasActiveFilters={hasFilter ? filtersActive : false}
       />
     </div>
+    </MotionConfig>
   );
 }
 
 function ActivityTitle() {
   const { activity } = useUnifiedActivity();
   return (
-    <h1 className="font-black text-lg truncate">
+    <h1 className="font-black text-2xl tracking-tight truncate">
       {activity.titulo || "Actividad"}
     </h1>
   );
@@ -347,7 +359,7 @@ function ActivityTitle() {
 function ActivityMeta() {
   const { activity } = useUnifiedActivity();
   return (
-    <div className="text-base opacity-70 truncate">
+    <div className="text-sm text-muted-foreground truncate">
       {formatDate(activity.fecha)} · {(activity.asistentes || []).length}{" "}
       presentes
     </div>

@@ -53,6 +53,15 @@ if [ "$fresh" = true ]; then
   psql "$DB_URL" -v ON_ERROR_STOP=1 -q -f scripts/demo-seed.sql >/dev/null
 fi
 
+# Valid throwaway push keys so the notifications screen can be previewed (nothing is ever sent)
+if [ ! -f .demo/vapid.env ]; then
+  bun -e 'const k = require("web-push").generateVAPIDKeys(); console.log(`VAPID_PUBLIC_KEY=${k.publicKey}\nVAPID_PRIVATE_KEY=${k.privateKey}`)' > .demo/vapid.env
+fi
+set -a
+# shellcheck disable=SC1091
+source .demo/vapid.env
+set +a
+
 cat <<EOF
 
   Modo demo (datos inventados, sin Supabase)

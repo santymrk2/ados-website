@@ -61,10 +61,10 @@ BEGIN
       (act_id, 'Fútbol', 'M', 'E1', 'E2', '2-1'),
       (act_id, 'Vóley', 'F', 'E3', 'E4', '2-0');
 
-    -- invitations
-    FOR i IN 1..4 LOOP
+    -- invitations: different people and a different count in each activity, so filtering by activity changes the ranking
+    FOR i IN 1..(4 + a) LOOP
       INSERT INTO invitaciones (activity_id, invitador_id, invitado_id)
-      VALUES (act_id, part_ids[i], part_ids[n - i]);
+      VALUES (act_id, part_ids[((i + 3 * (a - 1)) % 8) + 1], part_ids[n - i - a]);
     END LOOP;
   END LOOP;
 END $$;

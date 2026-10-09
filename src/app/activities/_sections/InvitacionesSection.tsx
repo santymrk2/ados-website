@@ -3,14 +3,17 @@
 import { useState, useMemo, useRef } from "react";
 import { useUnifiedActivity } from "@/lib/activity-context";
 
-import { Mail, Users, X, Plus, ArrowRight } from "lucide-react";
+import { Mail, X, Plus, ArrowRight } from "lucide-react";
+import { MotionConfig } from "framer-motion";
+import { GroupedList } from "@/components/ui/GroupedList";
+import { CountUp, EmptyBlock, LeaderRow, Reveal } from "@/app/_components/home-ui";
 import { Button } from "@/components/ui/button";
 import { Avatar } from "@/components/ui/Avatar";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { cn, normalizeText } from "@/lib/utils";
-import { sectionTitleClass, toolbarButtonClass, savingTextClass, listItemClass } from "@/app/activities/[id]/(unified)/_components/ui-classes";
+import { sectionTitleClass, toolbarButtonClass, savingTextClass } from "@/app/activities/[id]/(unified)/_components/ui-classes";
 import { confirmDialog } from "@/components/ui/confirm-dialog";
 import { deleteInvitacion, updateInvitacion } from "@/lib/activity-mutates";
 import type { ParticipantBasic } from "@/lib/types";
@@ -75,7 +78,7 @@ function InvitationRow({
   };
 
   return (
-    <div className="flex items-center gap-2 px-3 py-2 bg-white rounded-2xl border border-border transition-all duration-150 hover:border-primary/30">
+    <div className="flex items-center gap-2 px-4 py-3 transition-colors hover:bg-muted/50">
       <div className="flex-1 min-w-0">
         {invitador ? (
           <Popover
@@ -106,7 +109,7 @@ function InvitationRow({
                     onClick={() => handleSelect("invitador", p.id)}
                     className={cn(
                       "flex items-center gap-2 w-full px-3 py-2 text-left hover:bg-card transition-colors",
-                      p.id === inv.invitador && "bg-indigo-50",
+                      p.id === inv.invitador && "bg-primary/10",
                     )}
                   >
                     <Avatar p={p} size={24} />
@@ -122,7 +125,7 @@ function InvitationRow({
             onOpenChange={(o) => setOpenDropdown(o ? `${inv.id}_invitador` : null)}
           >
             <PopoverTrigger asChild disabled={locked || saving}>
-              <button className="flex items-center gap-2 w-full text-left p-2 rounded-lg border border-dashed border-border hover:border-primary/40 hover:bg-indigo-50/30 transition-colors text-base text-muted-foreground">
+              <button className="flex items-center gap-2 w-full text-left p-2 rounded-lg border border-dashed border-border hover:border-primary/40 hover:bg-primary/5 transition-colors text-base text-muted-foreground">
                 <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center text-sm font-black text-muted-foreground">
                   ?
                 </div>
@@ -189,7 +192,7 @@ function InvitationRow({
                     onClick={() => handleSelect("invitado", p.id)}
                     className={cn(
                       "flex items-center gap-2 w-full px-3 py-2 text-left hover:bg-card transition-colors",
-                      p.id === inv.invitadoId && "bg-indigo-50",
+                      p.id === inv.invitadoId && "bg-primary/10",
                     )}
                   >
                     <Avatar p={p} size={24} />
@@ -205,7 +208,7 @@ function InvitationRow({
             onOpenChange={(o) => setOpenDropdown(o ? `${inv.id}_invitado` : null)}
           >
             <PopoverTrigger asChild disabled={locked || saving}>
-              <button className="flex items-center gap-2 w-full text-left p-2 rounded-lg border border-dashed border-border hover:border-primary/40 hover:bg-indigo-50/30 transition-colors text-base text-muted-foreground">
+              <button className="flex items-center gap-2 w-full text-left p-2 rounded-lg border border-dashed border-border hover:border-primary/40 hover:bg-primary/5 transition-colors text-base text-muted-foreground">
                 <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center text-sm font-black text-muted-foreground">
                   ?
                 </div>
@@ -243,7 +246,7 @@ function InvitationRow({
         variant="ghost"
         size="icon"
         disabled={locked || saving}
-        className="flex-shrink-0 text-red-500 hover:bg-red-50 w-8 h-8"
+        className="flex-shrink-0 text-destructive hover:bg-destructive/10 w-8 h-8"
       >
         <X className="w-4 h-4" />
       </Button>
@@ -414,7 +417,8 @@ export function InvitacionesSection() {
   const stopEditing = () => setEditingSection(null);
 
   return (
-    <div className="space-y-3">
+    <MotionConfig reducedMotion="user">
+    <div className="max-w-3xl space-y-3">
       {isEditing ? (
         <>
           <div className="flex justify-between items-center">
@@ -424,7 +428,7 @@ export function InvitacionesSection() {
                 <span className={savingTextClass}>Guardando...</span>
               )}
               {syncStatus.state === "error" && syncStatus.message && (
-                <span className="text-[10px] text-red-300">{syncStatus.message}</span>
+                <span className="text-xs text-destructive">{syncStatus.message}</span>
               )}
               <Button
                 onClick={add}
@@ -443,7 +447,7 @@ export function InvitacionesSection() {
           </div>
 
           {visibleInvitaciones.length > 0 ? (
-            <div className="flex flex-col gap-2">
+            <GroupedList>
               {visibleInvitaciones.map((inv) => (
                 <InvitationRow
                   key={inv.id}
@@ -457,7 +461,7 @@ export function InvitacionesSection() {
                   setOpenDropdown={setOpenDropdown}
                 />
               ))}
-            </div>
+            </GroupedList>
           ) : (
             <div className="flex flex-col items-center justify-center py-8 text-center">
               <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-3">
@@ -469,7 +473,7 @@ export function InvitacionesSection() {
                 variant="outline"
                 size="sm"
                 disabled={locked || saving}
-                className="border-primary/30 text-primary hover:bg-indigo-50"
+                className="border-primary/30 text-primary hover:bg-primary/5"
               >
                 Agregar primera invitación
               </Button>
@@ -478,8 +482,18 @@ export function InvitacionesSection() {
         </>
       ) : (
         <>
-          <div className="flex justify-between items-center">
-            <h2 className={sectionTitleClass}>Invitaciones</h2>
+          <div className="mb-2 flex items-start justify-between gap-3">
+            <Reveal index={0}>
+              <div className="flex items-baseline gap-2">
+                <CountUp
+                  value={invitacionesList.length}
+                  className="text-5xl font-black tracking-tight text-foreground"
+                />
+                <span className="text-base font-bold text-muted-foreground">
+                  {invitacionesList.length === 1 ? "invitación" : "invitaciones"}
+                </span>
+              </div>
+            </Reveal>
             {isAdmin && (
               <Button onClick={startEditing} variant="ghost" size="sm" className={toolbarButtonClass}>
                 Editar
@@ -488,35 +502,23 @@ export function InvitacionesSection() {
           </div>
 
           {sortedInviters.length > 0 ? (
-            <div className="flex flex-col gap-1">
-              {sortedInviters.map((inviter, i) => (
-                <button
-                  key={inviter.id}
-                  onClick={() => setSelectedInviter(inviter.id)}
-                  className={`${listItemClass} p-3 flex items-center gap-3 text-left`}
-                >
-                  <div className="w-7 h-7 flex items-center justify-center font-bold text-sm text-muted-foreground">
-                    {i + 1}
-                  </div>
-                  {inviter.participant && <Avatar p={inviter.participant} size={30} />}
-                  <div className="flex-1">
-                    <div className="font-bold text-base">
-                      {inviter.participant
-                        ? `${inviter.participant.nombre} ${inviter.participant.apellido}`
-                        : "Desconocido"}
-                    </div>
-                  </div>
-                  <div className="font-black text-lg">{inviter.count}</div>
-                </button>
-              ))}
-            </div>
+            <Reveal index={1}>
+              <GroupedList>
+                {sortedInviters.map((inviter, i) => (
+                  <LeaderRow
+                    key={inviter.id}
+                    p={inviter.participant ?? { nombre: "Desconocido", apellido: "", sexo: null }}
+                    pos={i + 1}
+                    value={inviter.count}
+                    unit={inviter.count === 1 ? "invitado" : "invitados"}
+                    max={sortedInviters[0].count}
+                    onClick={() => setSelectedInviter(inviter.id)}
+                  />
+                ))}
+              </GroupedList>
+            </Reveal>
           ) : (
-            <div className="flex flex-col items-center justify-center py-8 text-center">
-              <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-3">
-                <Users className="w-6 h-6 text-muted-foreground" />
-              </div>
-              <p className="text-base text-muted-foreground">No hay invitaciones</p>
-            </div>
+            <EmptyBlock text="No hay invitaciones" />
           )}
         </>
       )}
@@ -533,25 +535,23 @@ export function InvitacionesSection() {
                 : "Invitados"}
             </DialogTitle>
           </DialogHeader>
-          <div className="flex flex-col gap-2">
-            {selectedInviterInvited.length > 0 ? (
-              selectedInviterInvited.map((p) => (
-                <div
-                  key={p.id}
-                  className="flex items-center gap-3 p-2 rounded-lg bg-card"
-                >
-                  <Avatar p={p} size={32} />
-                  <span className="font-medium text-base">
+          {selectedInviterInvited.length > 0 ? (
+            <GroupedList>
+              {selectedInviterInvited.map((p) => (
+                <div key={p.id} className="flex items-center gap-3 px-4 py-3">
+                  <Avatar p={p} size={40} />
+                  <span className="text-base font-bold leading-tight text-foreground">
                     {p.nombre} {p.apellido}
                   </span>
                 </div>
-              ))
-            ) : (
-              <p className="text-base text-muted-foreground text-center py-4">Sin invitados</p>
-            )}
-          </div>
+              ))}
+            </GroupedList>
+          ) : (
+            <EmptyBlock text="Sin invitados" />
+          )}
         </DialogContent>
       </Dialog>
     </div>
+    </MotionConfig>
   );
 }

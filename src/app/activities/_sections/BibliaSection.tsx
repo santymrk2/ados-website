@@ -1,14 +1,16 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { MotionConfig } from "framer-motion";
 import { useUnifiedActivity } from "@/lib/activity-context";
 import { getEdad } from "@/lib/constants";
 import { toggleArrayField } from "@/lib/activity-mutates";
 import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/button";
-import { Empty } from "@/components/ui/Common";
+import { GroupedList } from "@/components/ui/GroupedList";
+import { CountUp, EmptyBlock, Reveal } from "@/app/_components/home-ui";
 import { cn, normalizeText } from "@/lib/utils";
-import { sectionTitleClass, toolbarButtonClass, statChipClass } from "@/app/activities/[id]/(unified)/_components/ui-classes";
+import { toolbarButtonClass } from "@/app/activities/[id]/(unified)/_components/ui-classes";
 import { BookOpen } from "lucide-react";
 import type { ParticipantBasic } from "@/lib/types";
 
@@ -75,131 +77,117 @@ export function BibliaSection() {
     }
   };
 
+  const count = participantsWithBiblia.length;
+
   return (
-    <div>
-      {canEdit && !editing && (
-        <div className="flex justify-end mb-4">
-          <Button
-            onClick={() => setEditing(true)}
-            variant="ghost"
-            size="sm"
-            className={toolbarButtonClass}
-          >
-            Editar
-          </Button>
+    <MotionConfig reducedMotion="user">
+      <div className="max-w-3xl">
+        <div className="mb-6 flex items-start justify-between gap-3">
+          <Reveal index={0}>
+            <div className="flex items-baseline gap-2">
+              <CountUp
+                value={count}
+                className="text-5xl font-black tracking-tight text-foreground"
+              />
+              <span className="text-base font-bold text-muted-foreground">
+                {count === 1 ? "trajo biblia" : "trajeron biblia"}
+              </span>
+            </div>
+          </Reveal>
+          {canEdit && (
+            <Button
+              onClick={() => setEditing((v) => !v)}
+              variant="ghost"
+              size="sm"
+              className={toolbarButtonClass}
+            >
+              {editing ? "Listo" : "Editar"}
+            </Button>
+          )}
         </div>
-      )}
-      {editing && (
-        <div className="flex justify-end mb-4">
-          <Button
-            onClick={() => setEditing(false)}
-            variant="ghost"
-            size="sm"
-            className={toolbarButtonClass}
-          >
-            Listo
-          </Button>
-        </div>
-      )}
 
-      {!editing && (
-        <>
-          <div className="flex items-center justify-center mb-5">
-            <span className={`${statChipClass} text-sm font-bold`}>
-              {participantsWithBiblia.length} trajeron biblia
-            </span>
-          </div>
-
-          {participantsWithBiblia.length === 0
-            ? (
-              <div className="text-center text-muted-foreground py-8">
-                No hay participantes con biblia
-              </div>
-            )
-            : (
-              <div>
-                <div className="flex flex-col gap-1">
-                  {participantsWithBiblia.map((p) => (
-                    <div
-                      key={p.id}
-                      className="bg-muted/60 rounded-lg p-2 flex items-center gap-2"
-                    >
-                      <Avatar p={p} size={28} />
-                      <div className="flex-1">
-                        <div className="font-bold text-base text-foreground">
-                          {p.nombre} {p.apellido}
-                        </div>
-                        <div className="text-sm text-foreground/60">
-                          {getEdad(p.fechaNacimiento)} años
-                        </div>
+        {!editing &&
+          (count === 0 ? (
+            <EmptyBlock text="No hay participantes con biblia" />
+          ) : (
+            <Reveal index={1}>
+              <GroupedList>
+                {participantsWithBiblia.map((p) => (
+                  <div key={p.id} className="flex items-center gap-3 px-4 py-3">
+                    <Avatar p={p} size={44} />
+                    <div className="min-w-0 flex-1">
+                      <div className="text-base font-bold leading-tight text-foreground">
+                        {p.nombre} {p.apellido}
+                      </div>
+                      <div className="mt-0.5 text-sm text-muted-foreground">
+                        {getEdad(p.fechaNacimiento)} años
                       </div>
                     </div>
-                  ))}
-                </div>
+                    <BookOpen className="size-5 shrink-0 text-primary" />
+                  </div>
+                ))}
+              </GroupedList>
+            </Reveal>
+          ))}
+
+        {editing && (
+          <>
+            {searchQuery && (
+              <div className="mb-2 px-1 text-sm text-muted-foreground">
+                Filtrado: {sortedParticipants.length}
               </div>
             )}
-        </>
-      )}
 
-      {editing && (
-        <>
-          <h2 className={sectionTitleClass}>
-            Biblia
-            {searchQuery && (
-              <span className="text-muted-foreground text-sm font-normal ml-1">
-                (filtrado: {sortedParticipants.length})
-              </span>
-            )}
-          </h2>
-
-          {sortedParticipants.length === 0
-            ? <Empty text="No hay participantes" />
-            : (
-              <div className="flex flex-col gap-1 mt-2">
+            {sortedParticipants.length === 0 ? (
+              <EmptyBlock text="No hay participantes" />
+            ) : (
+              <GroupedList>
                 {sortedParticipants.map((p) => {
                   const bib = (act.biblias || []).includes(p.id);
                   return (
                     <div
                       key={p.id}
-                      className={`rounded-2xl border bg-white ${bib ? "border-primary shadow-md shadow-primary/20" : "border-border"}`}
+                      className="flex items-center gap-3 px-4 py-3"
+                      style={bib ? { boxShadow: "inset 4px 0 0 var(--primary)" } : undefined}
                     >
-                      <div className="flex items-center p-3 gap-3">
-                        <Avatar p={p} size={30} />
-                        <div className="flex-1">
-                          <div
-                            className={cn(
-                              "font-bold text-base",
-                              bib ? "text-foreground" : "text-muted-foreground",
-                            )}
-                          >
-                            {p.nombre} {p.apellido}
-                          </div>
-                          <div className="text-sm text-muted-foreground">
-                            {getEdad(p.fechaNacimiento)}a
-                          </div>
-                        </div>
-                        <button
-                          onClick={() => toggle(p.id)}
-                          disabled={locked || saving}
+                      <Avatar p={p} size={44} />
+                      <div className="min-w-0 flex-1">
+                        <div
                           className={cn(
-                            "flex items-center justify-center h-9 min-w-9 px-3 text-base font-semibold transition-colors rounded-2xl border",
-                            (locked || saving) &&
-                              "opacity-50 cursor-not-allowed pointer-events-none",
-                            bib
-                              ? "bg-primary text-primary-foreground border-primary"
-                              : "bg-card text-muted-foreground border-border",
+                            "text-base font-bold leading-tight",
+                            bib ? "text-foreground" : "text-muted-foreground",
                           )}
                         >
-                          <BookOpen className="w-3.5 h-3.5" />
-                        </button>
+                          {p.nombre} {p.apellido}
+                        </div>
+                        <div className="mt-0.5 text-sm text-muted-foreground">
+                          {getEdad(p.fechaNacimiento)}a
+                        </div>
                       </div>
+                      <button
+                        onClick={() => toggle(p.id)}
+                        disabled={locked || saving}
+                        aria-pressed={bib}
+                        aria-label={`Biblia de ${p.nombre} ${p.apellido}`}
+                        className={cn(
+                          "flex size-11 shrink-0 items-center justify-center rounded-full border transition-all active:scale-95",
+                          (locked || saving) &&
+                            "opacity-50 cursor-not-allowed pointer-events-none",
+                          bib
+                            ? "border-primary bg-primary text-primary-foreground"
+                            : "border-border bg-card text-muted-foreground",
+                        )}
+                      >
+                        <BookOpen className="size-5" />
+                      </button>
                     </div>
                   );
                 })}
-              </div>
+              </GroupedList>
             )}
-        </>
-      )}
-    </div>
+          </>
+        )}
+      </div>
+    </MotionConfig>
   );
 }

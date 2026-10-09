@@ -679,7 +679,7 @@ export function AsistenciaSection() {
             )}
           </div>
 
-      <div className="grid grid-cols-1 gap-2 items-start sm:grid-cols-[repeat(auto-fill,minmax(310px,1fr))]">
+      <div className="grid grid-cols-1 gap-2 items-start sm:grid-cols-[repeat(auto-fill,minmax(310px,1fr))] lg:grid-cols-[repeat(auto-fill,minmax(520px,1fr))] lg:items-stretch">
         {sortedAll.map((p) => {
           const here = act.asistentes.includes(p.id);
           const punct = (act.puntuales || []).includes(p.id);
@@ -691,8 +691,9 @@ export function AsistenciaSection() {
               key={p.id}
               className={`rounded-2xl border bg-white ${here ? "border-primary shadow-md shadow-primary/20" : "border-border"}`}
             >
-              <div className="flex flex-col gap-3 p-3">
-                <div className="flex gap-0 shrink-0 self-start">
+              {/* Mobile: stacked card. Desktop (lg): one row with the name first and controls on the right */}
+              <div className="flex flex-col gap-3 p-3 lg:flex-row lg:items-center lg:h-full">
+                <div className="flex gap-0 shrink-0 self-start lg:self-auto">
                   <button
                     onClick={() => toggleAttendance(p.id)}
                     disabled={locked || !isAdmin || isSaving}
@@ -728,7 +729,7 @@ export function AsistenciaSection() {
                   </button>
                 </div>
                 <div
-                  className="flex items-center gap-3 min-w-0 flex-1 cursor-pointer"
+                  className="flex items-center gap-3 min-w-0 flex-1 cursor-pointer lg:order-first"
                   onClick={() => setSelectedPlayer(p)}
                 >
                   <Avatar p={p} size={30} />
@@ -746,8 +747,8 @@ export function AsistenciaSection() {
                     </div>
                   </div>
                 </div>
-                {here && (
-                  <div className="flex flex-wrap gap-1 items-center">
+                {here ? (
+                  <div className="flex flex-wrap gap-1 items-center lg:w-26 lg:shrink-0">
                     <button
                       onClick={() => toggleSocial(p.id)}
                       disabled={locked || !isAdmin || isSaving}
@@ -770,6 +771,9 @@ export function AsistenciaSection() {
                       </span>
                     </button>
                   </div>
+                ) : (
+                  // Desktop keeps the Juegos/Social slot so the buttons line up across rows
+                  <div className="hidden lg:block lg:w-26 lg:shrink-0" aria-hidden="true" />
                 )}
               </div>
             </div>

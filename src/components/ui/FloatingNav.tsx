@@ -35,6 +35,8 @@ const FILTER_HEIGHT = 200;
 const NAV_WIDTH = 220;
 const INNER_NAV_WIDTH = 218;
 const ITEM_WIDTH = 72;
+// Time resting on a section before it is selected
+const SETTLE_DELAY = 300;
 
 const SPACER_LEFT = (INNER_NAV_WIDTH - ITEM_WIDTH) / 2;
 const SPACER_RIGHT = SPACER_LEFT + 40;
@@ -77,6 +79,8 @@ export function FloatingNav({
 
   const longPressTimer = useRef<NodeJS.Timeout | null>(null);
   const longPressTriggered = useRef(false);
+  // A finger on the wheel means the scroll position is not final yet
+  const touchingWheel = useRef(false);
   // Scrolling only previews; if the user doesn't tap, snap back to the real section
   const snapBackTimer = useRef<NodeJS.Timeout | null>(null);
 
@@ -145,31 +149,46 @@ export function FloatingNav({
     };
   }, []);
 
-  // ── FIX: Sincronizar rueda al cambiar valor, cerrar menú expandido o VOLVER de búsqueda/filtros ──
+  // Keep the wheel on the current section when it changes, a pill closes or search/filters close.
+  // Depends on the index (a number), not on `items`: parents rebuild that array on every render and
+  // that used to yank the wheel back to the old section in the middle of a swipe.
+  const valueIndex = items.findIndex((i) => i.value === value);
   useEffect(() => {
-    // Añadimos 'showAll' a la comprobación para asegurarnos de que la rueda está en pantalla
-    if (showAll && !isExpandedMenuOpen && wheelRef.current) {
-      const index = items.findIndex((i) => i.value === value);
-      const targetIndex = index >= 0 ? index : 0;
-      setActiveIndex(targetIndex);
+    if (!showAll || isExpandedMenuOpen || !wheelRef.current) return;
+    const targetIndex = valueIndex >= 0 ? valueIndex : 0;
+    setActiveIndex(targetIndex);
 
-      wheelRef.current.scrollTo({
-        left: targetIndex * ITEM_WIDTH,
-        behavior: "instant" as ScrollBehavior,
-      });
+    const alignWheel = () => {
+      const wheel = wheelRef.current;
+      // Never fight a finger that is on the wheel, and skip it when already aligned
+      if (!wheel || touchingWheel.current) return;
+      if (Math.abs(wheel.scrollLeft - targetIndex * ITEM_WIDTH) < 1) return;
+      wheel.scrollTo({ left: targetIndex * ITEM_WIDTH, behavior: "instant" as ScrollBehavior });
+    };
 
-      const timeout = setTimeout(() => {
-        if (wheelRef.current) {
-          wheelRef.current.scrollTo({
-            left: targetIndex * ITEM_WIDTH,
-            behavior: "instant" as ScrollBehavior,
-          });
+    alignWheel();
+    const timeout = setTimeout(alignWheel, 300);
+    return () => clearTimeout(timeout);
+  }, [valueIndex, isExpandedMenuOpen, showAll]);
+
+  // Resting on a section selects it; locked or non-controlled items snap back to the real one
+  const scheduleSettle = () => {
+    if (snapBackTimer.current) clearTimeout(snapBackTimer.current);
+    snapBackTimer.current = setTimeout(() => {
+      const settledIndex = Math.round((wheelRef.current?.scrollLeft ?? 0) / ITEM_WIDTH);
+      const settled = items[settledIndex];
+      if (settled && isControlled && onValueChange && !lockedValues.includes(settled.value)) {
+        if (settled.value !== value) {
+          triggerHapticFeedback();
+          onValueChange(settled.value);
         }
-      }, 300);
-
-      return () => clearTimeout(timeout);
-    }
-  }, [value, items, isExpandedMenuOpen, showAll]); // <-- El fix está aquí: se añadió 'showAll' a las dependencias.
+        return;
+      }
+      const target = valueIndex >= 0 ? valueIndex : 0;
+      setActiveIndex(target);
+      wheelRef.current?.scrollTo({ left: target * ITEM_WIDTH, behavior: "smooth" });
+    }, SETTLE_DELAY);
+  };
 
   // Lógica de Scroll y Vibración
   const handleWheelScroll = (e: React.UIEvent<HTMLDivElement>) => {
@@ -182,23 +201,22 @@ export function FloatingNav({
       triggerHapticFeedback();
     }
 
+    // With a finger down the position is not final (snap happens on release): wait for touchend
+    if (touchingWheel.current) {
+      if (snapBackTimer.current) clearTimeout(snapBackTimer.current);
+      return;
+    }
+    scheduleSettle();
+  };
+
+  const handleWheelTouchStart = () => {
+    touchingWheel.current = true;
     if (snapBackTimer.current) clearTimeout(snapBackTimer.current);
-    // Resting on a section selects it; only locked or non-controlled items snap back
-    snapBackTimer.current = setTimeout(() => {
-      const settledIndex = Math.round((wheelRef.current?.scrollLeft ?? 0) / ITEM_WIDTH);
-      const settled = items[settledIndex];
-      if (settled && isControlled && onValueChange && !lockedValues.includes(settled.value)) {
-        if (settled.value !== value) {
-          triggerHapticFeedback();
-          onValueChange(settled.value);
-        }
-        return;
-      }
-      const current = items.findIndex((i) => i.value === value);
-      const target = current >= 0 ? current : 0;
-      setActiveIndex(target);
-      wheelRef.current?.scrollTo({ left: target * ITEM_WIDTH, behavior: "smooth" });
-    }, 500);
+  };
+
+  const handleWheelTouchEnd = () => {
+    touchingWheel.current = false;
+    scheduleSettle();
   };
 
   const handleItemClick = (
@@ -424,6 +442,9 @@ export function FloatingNav({
                 <div
                   ref={wheelRef}
                   onScroll={handleWheelScroll}
+                  onTouchStart={handleWheelTouchStart}
+                  onTouchEnd={handleWheelTouchEnd}
+                  onTouchCancel={handleWheelTouchEnd}
                   className="w-full h-full overflow-x-auto flex flex-row items-center snap-x snap-mandatory no-scrollbar z-10 touch-pan-x"
                 >
                   <div

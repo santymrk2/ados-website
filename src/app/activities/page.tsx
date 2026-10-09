@@ -3,12 +3,15 @@
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useStore } from "@nanostores/react";
+import { MotionConfig } from "framer-motion";
 import { Lock, Search, ChevronRight } from "lucide-react";
 import { Empty } from "@/components/ui/Common";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 
+import { GroupedList } from "@/components/ui/GroupedList";
+import { CountUp, Reveal } from "@/app/_components/home-ui";
 import { NewActivityModal } from "./_components/NewActivityModal";
 import { formatDate, normalizeText, parseLocalDate } from "@/lib/utils";
 import { $role } from "@/store/appStore";
@@ -27,37 +30,53 @@ function ActivityRow({
   activity: Activity;
   onClick: () => void;
 }) {
+  // parseLocalDate avoids the UTC shift of new Date("YYYY-MM-DD")
+  const date = parseLocalDate(activity.fecha);
+  const attendees = (activity.asistentes || []).length;
+
   return (
     <button
       type="button"
       onClick={onClick}
-      className="w-full bg-white rounded-xl p-3 border border-border flex items-center gap-3 text-left cursor-pointer hover:border-primary/40 transition-colors"
+      className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-muted active:bg-muted"
     >
-      <div className="flex-1 min-w-0">
-        <div className="font-bold text-base truncate">
+      <div className="flex size-12 shrink-0 flex-col items-center justify-center rounded-2xl bg-muted">
+        <span className="text-lg font-black leading-none tabular-nums text-foreground">
+          {date ? date.getDate() : "–"}
+        </span>
+        <span className="mt-0.5 text-[10px] font-bold uppercase leading-none text-muted-foreground">
+          {date ? MONTHS[date.getMonth()].slice(0, 3) : ""}
+        </span>
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="text-base font-bold leading-tight text-foreground">
           {activity.titulo || "Sin título"}
         </div>
-        <div className="text-sm text-muted-foreground mt-0.5">
-          {formatDate(activity.fecha)}
+        <div className="mt-1 text-xs text-muted-foreground">{formatDate(activity.fecha)}</div>
+      </div>
+      {activity.locked && <Lock className="size-4 shrink-0 text-muted-foreground" />}
+      <div className="shrink-0 text-right">
+        <div className="text-xl font-black leading-none tabular-nums text-foreground">
+          {attendees}
+        </div>
+        <div className="mt-1 text-xs font-bold text-muted-foreground">
+          {attendees === 1 ? "presente" : "presentes"}
         </div>
       </div>
-      {activity.locked && (
-        <Lock className="w-4 h-4 text-red-500 flex-shrink-0" />
-      )}
-      <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+      <ChevronRight className="size-5 shrink-0 text-muted-foreground" />
     </button>
   );
 }
 
 function ActivitiesSkeleton() {
   return (
-    <div className="p-4 space-y-4">
-      <Skeleton className="h-10 w-full rounded-xl" />
-      {[1, 2, 3].map((i) => (
+    <div className="max-w-3xl space-y-4 p-4">
+      <Skeleton className="h-12 w-64 rounded-xl" />
+      <Skeleton className="h-11 w-full rounded-full" />
+      {[1, 2].map((i) => (
         <div key={i} className="space-y-2">
           <Skeleton className="h-4 w-24 rounded-lg" />
-          <Skeleton className="h-14 w-full rounded-xl" />
-          <Skeleton className="h-14 w-full rounded-xl" />
+          <Skeleton className="h-36 w-full rounded-3xl" />
         </div>
       ))}
     </div>
@@ -114,19 +133,28 @@ export default function ActivitiesPage() {
   }
 
   return (
-    <div>
-      <div className="px-4 pt-2 pb-1 text-sm font-bold text-muted-foreground">
-        {db.activities.length} registradas
-      </div>
+    <MotionConfig reducedMotion="user">
+    <div className="max-w-3xl">
+      <Reveal index={0} className="px-4 pt-3">
+        <div className="flex items-baseline gap-2">
+          <CountUp
+            value={db.activities.length}
+            className="text-5xl font-black tracking-tight text-foreground"
+          />
+          <span className="text-base font-bold text-muted-foreground">
+            {db.activities.length === 1 ? "actividad registrada" : "actividades registradas"}
+          </span>
+        </div>
+      </Reveal>
 
       <div className="p-4">
-        <div className="relative mb-4">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+        <div className="relative mb-6">
+          <Search className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Buscar actividad..."
-            className="pl-10"
+            className="h-11 rounded-full border-0 bg-muted pl-11"
           />
         </div>
 
@@ -146,13 +174,13 @@ export default function ActivitiesPage() {
         ) : filtered.length === 0 ? (
           <Empty text="No se encontraron resultados" />
         ) : (
-          <div className="space-y-4">
-            {groupedByMonth.map((group) => (
-              <div key={group.label}>
-                <div className="text-sm font-bold text-muted-foreground uppercase tracking-wide mb-2 px-1">
+          <div className="space-y-6">
+            {groupedByMonth.map((group, i) => (
+              <Reveal key={group.label} index={i + 1}>
+                <div className="mb-2 px-1 text-sm font-bold uppercase tracking-wide text-muted-foreground">
                   {group.label}
                 </div>
-                <div className="flex flex-col gap-2">
+                <GroupedList>
                   {group.activities.map((a) => (
                     <ActivityRow
                       key={a.id}
@@ -160,8 +188,8 @@ export default function ActivitiesPage() {
                       onClick={() => router.push(`/activities/${a.id}`)}
                     />
                   ))}
-                </div>
-              </div>
+                </GroupedList>
+              </Reveal>
             ))}
           </div>
         )}
@@ -181,5 +209,6 @@ export default function ActivitiesPage() {
 
       <NewActivityModal open={newActivityOpen} onOpenChange={setNewActivityOpen} />
     </div>
+    </MotionConfig>
   );
 }

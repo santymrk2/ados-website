@@ -39,8 +39,8 @@ export function AppHeader({
 
   return (
     <>
-      <div className="bg-primary pt-safe">
-        <div className="text-white p-4">
+      <div className="bg-background pt-safe">
+        <div className="text-foreground p-4">
           {/* Top Row: Menu/Back + Brand + Settings */}
           <div className="flex items-center justify-between">
             {/* Left: Menu or Back Button */}
@@ -50,7 +50,7 @@ export function AppHeader({
                 variant="ghost"
                 size="icon"
                 className={cn(
-                  "text-white hover:bg-white/10 min-w-[44px] min-h-[44px]"
+                  "text-foreground hover:bg-muted min-w-[44px] min-h-[44px]"
                 )}
               >
                 <ChevronLeft className="w-6 h-6" />
@@ -61,7 +61,7 @@ export function AppHeader({
                 variant="ghost"
                 size="icon"
                 className={cn(
-                  "text-white hover:bg-white/10 min-w-[44px] min-h-[44px]"
+                  "text-foreground hover:bg-muted min-w-[44px] min-h-[44px]"
                 )}
               >
                 <Menu className="w-6 h-6" />
@@ -83,7 +83,7 @@ export function AppHeader({
                 variant="ghost"
                 size="icon"
                 className={cn(
-                  "text-white hover:bg-white/10 min-w-[44px] min-h-[44px]"
+                  "text-foreground hover:bg-muted min-w-[44px] min-h-[44px]"
                 )}
               >
                 <Settings className="w-6 h-6" />

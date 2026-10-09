@@ -4,6 +4,9 @@ import { useState, useMemo, useRef } from "react";
 import { useUnifiedActivity } from "@/lib/activity-context";
 
 import { Plus, Minus, X, Search } from "lucide-react";
+import { MotionConfig } from "framer-motion";
+import { GroupedList } from "@/components/ui/GroupedList";
+import { CountUp, EmptyBlock, LeaderRow, Reveal } from "@/app/_components/home-ui";
 import { Button } from "@/components/ui/button";
 import { Avatar } from "@/components/ui/Avatar";
 import { Input } from "@/components/ui/input";
@@ -62,7 +65,7 @@ function GoalRow({
   };
 
   return (
-    <div className="flex items-center gap-2 p-2 bg-white rounded-2xl border border-border shadow-sm transition-all duration-200 hover:border-primary/30">
+    <div className="flex items-center gap-2 px-4 py-3 transition-colors hover:bg-muted/50">
       <div className="flex-1 min-w-0">
         <Popover
           open={openDropdown === g.id}
@@ -100,7 +103,7 @@ function GoalRow({
                   placeholder="Buscar jugador..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  className="h-8 pl-8 text-sm bg-white"
+                  className="h-8 pl-8 text-sm bg-card"
                   autoFocus
                 />
               </div>
@@ -112,8 +115,8 @@ function GoalRow({
                     key={p.id}
                     onClick={() => handleSelect(p.id)}
                     className={cn(
-                      "flex items-center gap-2 w-full px-3 py-2 text-left transition-colors hover:bg-indigo-50",
-                      p.id === g.pid && "bg-indigo-50/50",
+                      "flex items-center gap-2 w-full px-3 py-2 text-left transition-colors hover:bg-primary/5",
+                      p.id === g.pid && "bg-primary/10",
                     )}
                   >
                     <Avatar p={p} size={24} />
@@ -139,7 +142,7 @@ function GoalRow({
             className={cn(
               "px-2 py-1 rounded-md text-xs font-black transition-all",
               g.tipo === type.id
-              ? "bg-white text-primary shadow-sm"
+              ? "bg-card text-primary shadow-sm"
                 : "text-muted-foreground hover:text-foreground",
             )}
           >
@@ -153,7 +156,7 @@ function GoalRow({
         <button
           disabled={locked || saving || (g.cant || 1) <= 1}
           onClick={() => g.id != null && onUpdate(g.id, "cant", (g.cant || 1) - 1)}
-          className="w-6 h-6 flex items-center justify-center text-muted-foreground hover:text-red-500 disabled:opacity-30 transition-colors"
+          className="w-6 h-6 flex items-center justify-center text-muted-foreground hover:text-destructive disabled:opacity-30 transition-colors"
         >
           <Minus className="w-3 h-3" />
         </button>
@@ -174,7 +177,7 @@ function GoalRow({
         variant="ghost"
         size="icon"
         disabled={locked || saving}
-        className="w-8 h-8 rounded-lg text-red-400 hover:bg-red-50 hover:text-red-500 shrink-0"
+        className="w-8 h-8 rounded-lg text-destructive hover:bg-destructive/10 shrink-0"
       >
         <X className="w-4 h-4" />
       </Button>
@@ -325,7 +328,8 @@ export function GolesSection() {
   };
 
   return (
-    <div className="space-y-4">
+    <MotionConfig reducedMotion="user">
+    <div className="max-w-3xl space-y-4">
       {isEditing ? (
         <>
           <div className="flex justify-between items-center">
@@ -335,7 +339,7 @@ export function GolesSection() {
                 <span className={savingTextClass}>Guardando...</span>
               )}
               {syncStatus.state === "error" && syncStatus.message && (
-                <span className="text-xs text-red-300">{syncStatus.message}</span>
+                <span className="text-xs text-destructive">{syncStatus.message}</span>
               )}
               <Button
                 onClick={add}
@@ -353,9 +357,10 @@ export function GolesSection() {
             </div>
           </div>
 
-          <div className="space-y-2">
+          <div>
             {golesManuales.length > 0 ? (
-              golesManuales.map((g: Gol) => (
+              <GroupedList>
+              {golesManuales.map((g: Gol) => (
                 <GoalRow
                   key={g.id}
                   g={g}
@@ -368,10 +373,11 @@ export function GolesSection() {
                   openDropdown={openDropdown}
                   setOpenDropdown={setOpenDropdown}
                 />
-              ))
+              ))}
+              </GroupedList>
             ) : (
               <div className="py-12 flex flex-col items-center justify-center border-2 border-dashed border-border rounded-2xl bg-card/30">
-                <div className="w-12 h-12 rounded-full bg-indigo-50 flex items-center justify-center mb-3">
+                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-3">
                   <Plus className="w-6 h-6 text-primary" />
                 </div>
                 <p className="text-base text-muted-foreground mb-4">No hay goles registrados</p>
@@ -380,7 +386,7 @@ export function GolesSection() {
                   variant="outline"
                   size="sm"
                   disabled={locked || saving}
-                  className="border-primary/30 text-primary hover:bg-indigo-50"
+                  className="border-primary/30 text-primary hover:bg-primary/5"
                 >
                   Registrar primer gol
                 </Button>
@@ -390,8 +396,16 @@ export function GolesSection() {
         </>
       ) : (
         <>
-          <div className="flex justify-between items-center">
-            <h2 className={sectionTitleClass}>Goles</h2>
+          <div className="flex items-start justify-between gap-3">
+            <Reveal index={0}>
+              <div className="flex items-baseline gap-2">
+                <CountUp
+                  value={(bySport.f?.total || 0) + (bySport.h?.total || 0) + (bySport.b?.total || 0)}
+                  className="text-5xl font-black tracking-tight text-foreground"
+                />
+                <span className="text-base font-bold text-muted-foreground">goles</span>
+              </div>
+            </Reveal>
             {isAdmin && (
               <Button onClick={startEditing} variant="ghost" size="sm" className={toolbarButtonClass}>
                 Editar
@@ -399,50 +413,46 @@ export function GolesSection() {
             )}
           </div>
 
-          <div className="flex items-center justify-center gap-3 text-sm font-bold text-muted-foreground mb-4">
-            <span>⚽ {bySport.f?.total || 0}</span>
-            <span>·</span>
-            <span>🤾 {bySport.h?.total || 0}</span>
-            <span>·</span>
-            <span>🏀 {bySport.b?.total || 0}</span>
-          </div>
+          <Reveal index={1}>
+            <div className="grid grid-cols-3 divide-x divide-border rounded-3xl border border-border bg-card py-5 text-center">
+              {GOAL_TYPES.map((type) => (
+                <div key={type.id}>
+                  <CountUp
+                    value={bySport[type.id]?.total || 0}
+                    className="text-3xl font-black tracking-tight text-foreground"
+                  />
+                  <div className="mt-1 text-sm font-bold text-muted-foreground">{type.label}</div>
+                </div>
+              ))}
+            </div>
+          </Reveal>
 
           {allPlayersTotal.length > 0 && (
-            <div className="space-y-2">
-              <h3 className="text-sm font-black uppercase tracking-widest text-muted-foreground">
-                Por jugador
-              </h3>
-              <div className="flex flex-col gap-1">
-                {allPlayersTotal.map((p, i) => (
-                  <div
-                    key={p.pid}
-                    className="bg-card border border-border rounded-xl p-3 flex items-center gap-3"
-                  >
-                    <div className="w-5 h-5 rounded bg-muted flex items-center justify-center text-xs font-black text-muted-foreground">
-                      {i + 1}
-                    </div>
-                    {p.participant && <Avatar p={p.participant} size={30} />}
-                    <div className="flex-1">
-                      <div className="font-bold text-base">
-                        {p.participant
-                          ? `${p.participant.nombre} ${p.participant.apellido}`
-                          : "Desconocido"}
-                      </div>
-                    </div>
-                    <div className="font-black text-lg">{p.total}</div>
-                  </div>
-                ))}
+            <Reveal index={2}>
+              <div className="space-y-2">
+                <h3 className="px-1 text-sm font-black uppercase tracking-widest text-muted-foreground">
+                  Por jugador
+                </h3>
+                <GroupedList>
+                  {allPlayersTotal.map((p, i) => (
+                    <LeaderRow
+                      key={p.pid}
+                      p={p.participant ?? { nombre: "Desconocido", apellido: "", sexo: null }}
+                      pos={i + 1}
+                      value={p.total}
+                      unit={p.total === 1 ? "gol" : "goles"}
+                      max={allPlayersTotal[0].total}
+                    />
+                  ))}
+                </GroupedList>
               </div>
-            </div>
+            </Reveal>
           )}
 
-          {goles.length === 0 && (
-            <div className="flex flex-col items-center justify-center py-8 text-center">
-              <p className="text-base text-muted-foreground">No hay goles registrados</p>
-            </div>
-          )}
+          {goles.length === 0 && <EmptyBlock text="No hay goles registrados" />}
         </>
       )}
     </div>
+    </MotionConfig>
   );
 }

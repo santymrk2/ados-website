@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { participants, pushSubscriptions } from "@/lib/schema";
+import { appSettings, participants, pushSubscriptions } from "@/lib/schema";
 import { sendBirthdayNotification, isWebPushConfigured, type PushMultiResult } from "@/services/web-push-server";
 import { getEdad } from "@/lib/constants";
 import { inArray } from "drizzle-orm";
@@ -23,7 +23,21 @@ function getArgentinaDate() {
   return new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
 }
 
+// Daily DB write from the cron: free Supabase projects pause after ~7 days without activity,
+// and a read-only cron was not enough to keep the project awake.
+async function recordHeartbeat() {
+  const now = new Date();
+  const value = { at: now.toISOString() };
+  await db
+    .insert(appSettings)
+    .values({ key: "heartbeat", value })
+    .onConflictDoUpdate({ target: appSettings.key, set: { value, updatedAt: now } });
+}
+
 async function sendBirthdayNotifications(clientDate: string | null = null) {
+  // Before any early return, so the heartbeat runs even without birthdays or Web Push config
+  await recordHeartbeat();
+
   if (!isWebPushConfigured()) {
     return { error: 'Web Push not configured', status: 500 };
   }

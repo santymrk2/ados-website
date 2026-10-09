@@ -687,8 +687,8 @@ export function AsistenciaSection() {
               key={p.id}
               className={`rounded-2xl border bg-white ${here ? "border-primary shadow-md shadow-primary/20" : "border-border"}`}
             >
-              <div className="flex flex-col gap-3 p-3 sm:flex-row sm:items-center">
-                <div className="flex gap-0 shrink-0 self-start sm:self-auto">
+              <div className="flex flex-col gap-3 p-3">
+                <div className="flex gap-0 shrink-0 self-start">
                   <button
                     onClick={() => toggleAttendance(p.id)}
                     disabled={locked || !isAdmin || isSaving}

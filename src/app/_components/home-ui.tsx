@@ -149,6 +149,61 @@ export function LeaderRow({ p, pos, value, unit, max, onClick }: LeaderRowProps)
   return <div className={base}>{content}</div>;
 }
 
+function Chip({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={active}
+      onClick={onClick}
+      className={cn(
+        "shrink-0 whitespace-nowrap rounded-full border px-4 py-2 text-sm font-bold transition-colors active:scale-95",
+        active
+          ? "border-primary bg-primary text-primary-foreground"
+          : "border-border bg-card text-muted-foreground hover:bg-muted",
+      )}
+    >
+      {children}
+    </button>
+  );
+}
+
+/** Row of pills that scrolls sideways; several can be on, and the first one clears the selection. */
+export function ChipFilter({
+  allLabel,
+  options,
+  selected,
+  onChange,
+}: {
+  allLabel: string;
+  options: readonly { id: number; label: string }[];
+  selected: number[];
+  onChange: (next: number[]) => void;
+}) {
+  const toggle = (id: number) =>
+    onChange(selected.includes(id) ? selected.filter((x) => x !== id) : [...selected, id]);
+
+  return (
+    <div className="-mx-4 mb-4 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <Chip active={selected.length === 0} onClick={() => onChange([])}>
+        {allLabel}
+      </Chip>
+      {options.map((option) => (
+        <Chip key={option.id} active={selected.includes(option.id)} onClick={() => toggle(option.id)}>
+          {option.label}
+        </Chip>
+      ))}
+    </div>
+  );
+}
+
 interface SegmentOption<T extends string> {
   key: T;
   label: string;

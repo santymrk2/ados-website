@@ -3,18 +3,14 @@
 import { useState, useMemo } from "react";
 import { useApp } from "@/hooks/useApp";
 import { MotionConfig } from "framer-motion";
-import {
-  ChevronLeft,
-  Award,
-  ClipboardList,
-  Check,
-} from "lucide-react";
+import { ChevronLeft, Award, ClipboardList } from "lucide-react";
 import { Empty } from "@/components/ui/Common";
 import { Avatar } from "@/components/ui/Avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DetailSheet } from "@/components/ui/DetailSheet";
 import { GroupedList } from "@/components/ui/GroupedList";
 import {
+  ChipFilter,
   CountUp,
   EmptyBlock,
   LeaderRow,
@@ -51,6 +47,20 @@ const RANKING_METRICS = [
 ] as const;
 
 type RankingMetricKey = (typeof RANKING_METRICS)[number]["key"];
+
+type ScorerGender = "all" | "M" | "F";
+
+const SCORER_GENDERS = [
+  { key: "all", label: "Global" },
+  { key: "M", label: "Varones" },
+  { key: "F", label: "Mujeres" },
+] as const;
+
+const SCORER_EMPTY_TEXT: Record<ScorerGender, string> = {
+  all: "Aún no hay goles registrados",
+  M: "Aún no hay goles de varones",
+  F: "Aún no hay goles de mujeres",
+};
 
 function RankingDetailView({
   player,
@@ -186,7 +196,7 @@ export default function Page() {
     useState<RankingWithStats | null>(null);
   const [rankingView, setRankingView] = useState<"list" | "detail">("list");
   const [selectedActivityIds, setSelectedActivityIds] = useState<number[]>([]);
-  const [invFilterOpen, setInvFilterOpen] = useState(false);
+  const [scorerGender, setScorerGender] = useState<ScorerGender>("all");
 
   const calculatedRankings = useMemo(() => {
     return (participants || [])
@@ -219,15 +229,6 @@ export default function Page() {
 
     const totalPlayers = (participants || []).length;
 
-    const top3Scorers = calculatedRankings
-      .map((p) => ({
-        ...p,
-        goals: (p.gf || 0) + (p.gh || 0) + (p.gb || 0),
-      }))
-      .filter((p) => p.goals > 0)
-      .sort((a, b) => b.goals - a.goals)
-      .slice(0, 3);
-
     const allScorers = calculatedRankings
       .map((p) => ({
         ...p,
@@ -243,10 +244,16 @@ export default function Page() {
         : 0,
       totalGoles,
       totalPlayers,
-      top3Scorers,
       allScorers,
     };
   }, [calculatedRankings, participants, activities]);
+
+  // One filter drives both the home podium and the full list
+  const scorers = useMemo(
+    () => stats.allScorers.filter((p) => scorerGender === "all" || p.sexo === scorerGender),
+    [stats.allScorers, scorerGender],
+  );
+  const top3Scorers = scorers.slice(0, 3);
 
   // The home podium is always by points: calculatedRankings follows the sheet's metric selector
   const topByPoints = useMemo(
@@ -345,18 +352,24 @@ export default function Page() {
         {/* ─── GOLEADORES ─── */}
         <Reveal index={1} className="mb-8">
           <SectionTitle title="Goleadores" onOpen={() => setGoleadoresOpen(true)} />
-          {stats.top3Scorers.length === 0 ? (
-            <EmptyBlock text="Aún no hay goles registrados" />
+          <SegmentedControl
+            id="scorer-gender-home"
+            value={scorerGender}
+            onChange={setScorerGender}
+            options={SCORER_GENDERS}
+          />
+          {top3Scorers.length === 0 ? (
+            <EmptyBlock text={SCORER_EMPTY_TEXT[scorerGender]} />
           ) : (
             <GroupedList>
-              {stats.top3Scorers.map((p, i) => (
+              {top3Scorers.map((p, i) => (
                 <LeaderRow
                   key={p.id}
                   p={p}
                   pos={i + 1}
                   value={p.goals}
                   unit={p.goals === 1 ? "gol" : "goles"}
-                  max={stats.top3Scorers[0].goals}
+                  max={top3Scorers[0].goals}
                 />
               ))}
             </GroupedList>
@@ -412,18 +425,24 @@ export default function Page() {
         onOpenChange={setGoleadoresOpen}
         title="Goleadores"
       >
-        {stats.allScorers.length === 0 ? (
-          <Empty text="Aún no hay goles registrados" />
+        <SegmentedControl
+          id="scorer-gender-sheet"
+          value={scorerGender}
+          onChange={setScorerGender}
+          options={SCORER_GENDERS}
+        />
+        {scorers.length === 0 ? (
+          <Empty text={SCORER_EMPTY_TEXT[scorerGender]} />
         ) : (
           <GroupedList>
-            {stats.allScorers.map((p, i) => (
+            {scorers.map((p, i) => (
               <LeaderRow
                 key={p.id}
                 p={p}
                 pos={i + 1}
                 value={p.goals}
                 unit={p.goals === 1 ? "gol" : "goles"}
-                max={stats.allScorers[0].goals}
+                max={scorers[0].goals}
               />
             ))}
           </GroupedList>
@@ -493,82 +512,16 @@ export default function Page() {
         onOpenChange={setInvitacionesOpen}
         title="Invitaciones"
       >
-        {/* Activity filter */}
+        {/* Activity filter: pills, newest first; none selected = all activities */}
         {activities.length > 0 && (
-          <div className="mb-4">
-            <button
-              onClick={() => setInvFilterOpen(!invFilterOpen)}
-              className="flex items-center gap-2 text-xs font-bold text-text-muted hover:text-dark transition-colors"
-            >
-              <span className={cn(
-                "w-4 h-4 rounded border flex items-center justify-center",
-                selectedActivityIds.length === 0
-                  ? "bg-primary border-primary"
-                  : "border-surface-dark"
-              )}>
-                {selectedActivityIds.length === 0 && <Check className="w-3 h-3 text-white" />}
-              </span>
-              {selectedActivityIds.length === 0
-                ? "Todas las actividades"
-                : `${selectedActivityIds.length} actividad${selectedActivityIds.length > 1 ? "es" : ""} seleccionada${selectedActivityIds.length > 1 ? "s" : ""}`}
-            </button>
-            {invFilterOpen && (
-              <div className="mt-2 space-y-1 max-h-40 overflow-y-auto bg-surface-dark/30 rounded-xl p-2">
-                <button
-                  onClick={() => setSelectedActivityIds([])}
-                  className={cn(
-                    "flex items-center gap-2 w-full px-2 py-1.5 rounded-lg text-xs text-left transition-colors",
-                    selectedActivityIds.length === 0
-                      ? "bg-primary/10 text-primary font-bold"
-                      : "text-text-muted hover:bg-surface-dark/50"
-                  )}
-                >
-                  <span className={cn(
-                    "w-4 h-4 rounded border flex items-center justify-center shrink-0",
-                    selectedActivityIds.length === 0
-                      ? "bg-primary border-primary"
-                      : "border-surface-dark"
-                  )}>
-                    {selectedActivityIds.length === 0 && <Check className="w-3 h-3 text-white" />}
-                  </span>
-                  Todas
-                </button>
-                {[...activities]
-                  .sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime())
-                  .map((act) => {
-                    const selected = selectedActivityIds.includes(act.id);
-                    return (
-                      <button
-                        key={act.id}
-                        onClick={() => {
-                          setSelectedActivityIds((prev) =>
-                            selected
-                              ? prev.filter((id) => id !== act.id)
-                              : [...prev, act.id]
-                          );
-                        }}
-                        className={cn(
-                          "flex items-center gap-2 w-full px-2 py-1.5 rounded-lg text-xs text-left transition-colors",
-                          selected
-                            ? "bg-primary/10 text-primary font-bold"
-                            : "text-text-muted hover:bg-surface-dark/50"
-                        )}
-                      >
-                        <span className={cn(
-                          "w-4 h-4 rounded border flex items-center justify-center shrink-0",
-                          selected
-                            ? "bg-primary border-primary"
-                            : "border-surface-dark"
-                        )}>
-                          {selected && <Check className="w-3 h-3 text-white" />}
-                        </span>
-                        <span className="truncate">{act.titulo || formatDate(act.fecha)}</span>
-                      </button>
-                    );
-                  })}
-              </div>
-            )}
-          </div>
+          <ChipFilter
+            allLabel="Todas"
+            options={[...activities]
+              .sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime())
+              .map((act) => ({ id: act.id, label: act.titulo || formatDate(act.fecha) }))}
+            selected={selectedActivityIds}
+            onChange={setSelectedActivityIds}
+          />
         )}
 
         {invitacionRanking.length === 0 ? (

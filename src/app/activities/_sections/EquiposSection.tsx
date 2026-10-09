@@ -12,6 +12,7 @@ import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/button";
 import { PlayerPointsModal } from "@/app/activities/_components/PlayerPointsModal";
 import { cn, normalizeText } from "@/lib/utils";
+import { toolbarButtonClass, surfaceClass } from "@/app/activities/[id]/(unified)/_components/ui-classes";
 import { confirmDialog } from "@/components/ui/confirm-dialog";
 import {
   AlertDialog,
@@ -231,7 +232,7 @@ export function EquiposSection() {
             onClick={() => { setEditing(true); setSelectedTeam(null); }}
             variant="ghost"
             size="sm"
-            className="bg-white/20 text-white hover:bg-white/30"
+            className={toolbarButtonClass}
           >
             Editar
           </Button>
@@ -254,7 +255,7 @@ export function EquiposSection() {
         {teamStats.map(({ team, total, m, f }) => (
           <div
             key={team}
-            className="rounded-xl border border-white/30 bg-white/20 p-2.5 flex items-center gap-2 cursor-pointer transition-colors hover:bg-white/30"
+            className={`${surfaceClass} p-2.5 flex items-center gap-2 cursor-pointer transition-colors hover:bg-muted`}
             style={{
               ...(selectedTeam === team
                 ? { boxShadow: `0 0 0 2px ${teams.color(team)}` }
@@ -270,9 +271,9 @@ export function EquiposSection() {
               {teams.short(team)}
             </div>
             <div className="flex-1 min-w-0 text-center">
-              <div className="text-sm font-bold text-white truncate">{teams.name(team)}</div>
-              <div className="font-black text-xl text-white leading-tight">{total}</div>
-              <div className="text-xs text-white/80 flex items-center justify-center gap-0.5">
+              <div className="text-sm font-bold text-foreground truncate">{teams.name(team)}</div>
+              <div className="font-black text-xl text-foreground leading-tight">{total}</div>
+              <div className="text-xs text-muted-foreground flex items-center justify-center gap-0.5">
                 <SexBadge sex="M" size={12} />
                 {m} <SexBadge sex="F" size={12} />
                 {f}
@@ -393,7 +394,7 @@ export function EquiposSection() {
 
               {selectedTeamData.women.length === 0 &&
                 selectedTeamData.men.length === 0 && (
-                <div className="text-center text-white/60 text-base py-4">
+                <div className="text-center text-muted-foreground text-base py-4">
                   Sin jugadores en este equipo
                 </div>
               )}
@@ -411,7 +412,7 @@ export function EquiposSection() {
         <div className="flex flex-col gap-1">
           {present.length === 0
             ? (
-              <div className="text-center text-white/60 text-base py-4">
+              <div className="text-center text-muted-foreground text-base py-4">
                 {searchQuery
                   ? "No hay jugadores que coincidan con la búsqueda"
                   : "No hay jugadores presentes"}

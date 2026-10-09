@@ -11,6 +11,7 @@ import { Switch } from "@/components/ui/switch";
 import { DatePicker } from "@/components/ui/calendar";
 import { Label } from "@/components/ui/Common";
 import { cn } from "@/lib/utils";
+import { sectionTitleClass, toolbarButtonClass } from "@/app/activities/[id]/(unified)/_components/ui-classes";
 import { FileText, Lock, Unlock, Trash2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { confirmDialog } from "@/components/ui/confirm-dialog";
@@ -179,15 +180,15 @@ export default function GeneralPage() {
       {/* Section header */}
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
-          <FileText className="w-5 h-5 text-white" />
-          <h2 className="font-bold text-lg text-white">General</h2>
+          <FileText className="w-5 h-5 text-primary" />
+          <h2 className={sectionTitleClass}>General</h2>
         </div>
         {canEdit && (
           <Button
             variant="ghost"
             size="sm"
             onClick={editing ? handleFinishEditing : startEditing}
-            className="bg-white/20 text-white hover:bg-white/30"
+            className={toolbarButtonClass}
           >
             {editing ? "Listo" : "Editar"}
           </Button>

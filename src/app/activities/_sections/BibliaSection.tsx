@@ -8,6 +8,7 @@ import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/button";
 import { Empty } from "@/components/ui/Common";
 import { cn, normalizeText } from "@/lib/utils";
+import { sectionTitleClass, toolbarButtonClass, statChipClass } from "@/app/activities/[id]/(unified)/_components/ui-classes";
 import { BookOpen } from "lucide-react";
 import type { ParticipantBasic } from "@/lib/types";
 
@@ -82,7 +83,7 @@ export function BibliaSection() {
             onClick={() => setEditing(true)}
             variant="ghost"
             size="sm"
-            className="bg-white/20 text-white hover:bg-white/30"
+            className={toolbarButtonClass}
           >
             Editar
           </Button>
@@ -94,7 +95,7 @@ export function BibliaSection() {
             onClick={() => setEditing(false)}
             variant="ghost"
             size="sm"
-            className="bg-white/20 text-white hover:bg-white/30"
+            className={toolbarButtonClass}
           >
             Listo
           </Button>
@@ -104,14 +105,14 @@ export function BibliaSection() {
       {!editing && (
         <>
           <div className="flex items-center justify-center mb-5">
-            <span className="text-sm font-bold text-white/60 bg-white/10 px-3 py-1 rounded-full">
+            <span className={`${statChipClass} text-sm font-bold`}>
               {participantsWithBiblia.length} trajeron biblia
             </span>
           </div>
 
           {participantsWithBiblia.length === 0
             ? (
-              <div className="text-center text-white/60 py-8">
+              <div className="text-center text-muted-foreground py-8">
                 No hay participantes con biblia
               </div>
             )
@@ -121,7 +122,7 @@ export function BibliaSection() {
                   {participantsWithBiblia.map((p) => (
                     <div
                       key={p.id}
-                      className="bg-white/90 rounded-lg p-2 flex items-center gap-2"
+                      className="bg-muted/60 rounded-lg p-2 flex items-center gap-2"
                     >
                       <Avatar p={p} size={28} />
                       <div className="flex-1">
@@ -142,17 +143,17 @@ export function BibliaSection() {
 
       {editing && (
         <>
-          <h2 className="text-base font-black text-white">
+          <h2 className={sectionTitleClass}>
             Biblia
             {searchQuery && (
-              <span className="text-white/60 text-sm font-normal ml-1">
+              <span className="text-muted-foreground text-sm font-normal ml-1">
                 (filtrado: {sortedParticipants.length})
               </span>
             )}
           </h2>
 
           {sortedParticipants.length === 0
-            ? <Empty text="No hay participantes" className="text-white/60" />
+            ? <Empty text="No hay participantes" />
             : (
               <div className="flex flex-col gap-1 mt-2">
                 {sortedParticipants.map((p) => {

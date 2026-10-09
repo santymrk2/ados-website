@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/Common";
 import { cn, normalizeText } from "@/lib/utils";
+import { sectionTitleClass, toolbarButtonClass, statChipClass, surfaceClass } from "@/app/activities/[id]/(unified)/_components/ui-classes";
 import { confirmDialog } from "@/components/ui/confirm-dialog";
 import { PlayerPointsModal } from "@/app/activities/_components/PlayerPointsModal";
 import { toggleArrayField } from "@/lib/activity-mutates";
@@ -274,9 +275,9 @@ function GenderGroup({
   setSelectedPlayer: (p: ParticipantBasic) => void;
 }) {
   return (
-    <div className="bg-white/20 rounded-xl p-3 border border-white/30">
-      <div className="font-bold text-base text-white mb-2 flex items-center gap-2">
-        <span className="w-2 h-2 rounded-full bg-white" />
+    <div className={`${surfaceClass} p-3`}>
+      <div className="font-bold text-base text-foreground mb-2 flex items-center gap-2">
+        <span className="w-2 h-2 rounded-full bg-primary" />
         {label} ({players.length})
       </div>
       <div className="flex flex-col gap-1">
@@ -284,7 +285,7 @@ function GenderGroup({
           <div
             key={p.id}
             onClick={() => setSelectedPlayer(p)}
-            className="bg-white/90 rounded-lg p-2 flex items-center gap-2 cursor-pointer hover:bg-white transition-colors"
+            className="bg-muted/60 rounded-lg p-2 flex items-center gap-2 cursor-pointer hover:bg-muted transition-colors"
           >
             <Avatar p={p} size={28} />
             <div className="flex-1 min-w-0">
@@ -612,7 +613,7 @@ export function AsistenciaSection() {
             onClick={() => setSummaryView((v) => !v)}
             variant="ghost"
             size="sm"
-            className="bg-white/20 text-white hover:bg-white/30 h-10"
+            className={`${toolbarButtonClass} h-10`}
           >
             {editing ? "Ver resumen" : "Tomar asistencia"}
           </Button>
@@ -621,16 +622,16 @@ export function AsistenciaSection() {
 
       {!editing && (
         <>
-      <div className="flex items-center justify-center gap-2 text-sm font-bold text-white/80 flex-wrap mb-5">
-        <span className="bg-white/10 px-2 py-0.5 rounded-full">{stats.total} presentes</span>
-        <span className="bg-white/10 px-2 py-0.5 rounded-full">{stats.puntuales} puntuales</span>
-        <span className="bg-white/10 px-2 py-0.5 rounded-full">{stats.juegos} juegos</span>
-        <span className="bg-white/10 px-2 py-0.5 rounded-full">{stats.social} social</span>
+      <div className="flex items-center justify-center gap-2 text-sm font-bold flex-wrap mb-5">
+        <span className={statChipClass}>{stats.total} presentes</span>
+        <span className={statChipClass}>{stats.puntuales} puntuales</span>
+        <span className={statChipClass}>{stats.juegos} juegos</span>
+        <span className={statChipClass}>{stats.social} social</span>
       </div>
 
       {filteredAsistentes.length === 0
         ? (
-          <div className="text-center text-white/80 py-8">
+          <div className="text-center text-muted-foreground py-8">
             {act.asistentes.length === 0
               ? "No hay asistentes registrados"
               : "No hay asistentes que coincidan con los filtros"}
@@ -665,14 +666,14 @@ export function AsistenciaSection() {
       {editing && (
         <>
           <div className="flex items-center justify-between mb-4 mt-6">
-            <h3 className="font-bold text-lg text-white">Asistencia</h3>
+            <h3 className={sectionTitleClass}>Asistencia</h3>
             {canEdit && (
               <Button
                 onClick={() => setShowNewPlayer(true)}
                 variant="ghost"
                 size="sm"
                 disabled={locked}
-                className="bg-white/20 text-white hover:bg-white/30 text-sm flex items-center gap-1"
+                className={`${toolbarButtonClass} text-sm flex items-center gap-1`}
               >
                 <Plus className="w-3 h-3" /> Nuevo Jugador
               </Button>

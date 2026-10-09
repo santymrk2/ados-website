@@ -83,11 +83,21 @@ function PlayerDetailModal({
       })()
     : "No definida";
 
+  const rows = [
+    player.telefono ? { label: "Teléfono", value: player.telefono } : null,
+    player.email ? { label: "Email", value: player.email } : null,
+    {
+      label: "Sexo",
+      value:
+        player.sexo === "M" ? "Masculino" : player.sexo === "F" ? "Femenino" : "Mixto",
+    },
+  ].filter((row): row is { label: string; value: string } => row !== null);
+
   return (
     <Dialog open={!!player} onOpenChange={(open) => !open && onClose()}>
       <DialogContent
         showCloseButton={false}
-        className="max-w-sm bg-surface rounded-3xl p-5 flex flex-col overflow-y-auto max-h-[90vh]"
+        className="flex max-h-[90vh] max-w-sm flex-col overflow-y-auto rounded-3xl bg-card p-5"
       >
         <DialogTitle className="sr-only">
           Detalle de {player.nombre} {player.apellido}
@@ -96,59 +106,44 @@ function PlayerDetailModal({
           variant="ghost"
           size="icon"
           onClick={onClose}
-          className="absolute top-4 right-4 rounded-full bg-surface-dark text-text-muted hover:bg-black/10"
+          aria-label="Cerrar"
+          className="absolute right-4 top-4 rounded-full bg-muted text-muted-foreground hover:bg-muted/70"
         >
-          <X className="w-5 h-5" />
+          <X className="size-5" />
         </Button>
 
-        <div className="flex flex-col items-center mb-4">
+        <div className="mb-4 flex flex-col items-center">
           <Avatar p={player} size={100} />
-          <h3 className="font-black text-xl text-dark mt-3 text-center">
+          <h3 className="mt-3 text-center text-xl font-black tracking-tight text-foreground">
             {player.nombre} {player.apellido}
           </h3>
           {player.apodo && (
-            <div className="text-sm font-medium text-text-muted">
+            <div className="text-sm font-medium text-muted-foreground">
               &ldquo;{player.apodo}&rdquo;
             </div>
           )}
         </div>
 
-        <div className="grid grid-cols-2 gap-3 mb-4">
-          <div className="bg-white rounded-xl p-3 text-center border border-surface-dark">
-            <div className="text-2xl font-black text-primary">
+        <div className="mb-4 grid grid-cols-2 gap-3">
+          <div className="rounded-2xl border border-border bg-card p-3 text-center">
+            <div className="text-3xl font-black tabular-nums text-primary">
               {edad || "—"}
             </div>
-            <div className="text-xs font-bold text-text-muted">AÑOS</div>
+            <div className="text-xs font-bold text-muted-foreground">AÑOS</div>
           </div>
-          <div className="bg-white rounded-xl p-3 text-center border border-surface-dark">
-            <div className="text-sm font-black text-dark">{cumple}</div>
-            <div className="text-xs font-bold text-text-muted">CUMPLE</div>
+          <div className="flex flex-col items-center justify-center rounded-2xl border border-border bg-card p-3 text-center">
+            <div className="text-sm font-black text-foreground">{cumple}</div>
+            <div className="text-xs font-bold text-muted-foreground">CUMPLE</div>
           </div>
         </div>
 
-        <div className="flex flex-col gap-2 text-sm">
-          {player.telefono && (
-            <div className="flex justify-between bg-white rounded-lg p-2 border border-surface-dark">
-              <span className="text-text-muted">Teléfono</span>
-              <span className="font-medium">{player.telefono}</span>
+        <div className="divide-y divide-border overflow-hidden rounded-2xl border border-border text-sm">
+          {rows.map((row) => (
+            <div key={row.label} className="flex items-center justify-between gap-3 px-4 py-3">
+              <span className="text-muted-foreground">{row.label}</span>
+              <span className="break-all text-right font-medium text-foreground">{row.value}</span>
             </div>
-          )}
-          {player.email && (
-            <div className="flex justify-between bg-white rounded-lg p-2 border border-surface-dark">
-              <span className="text-text-muted">Email</span>
-              <span className="font-medium">{player.email}</span>
-            </div>
-          )}
-          <div className="flex justify-between bg-white rounded-lg p-2 border border-surface-dark">
-            <span className="text-text-muted">Sexo</span>
-            <span className="font-medium">
-              {player.sexo === "M"
-                ? "Masculino"
-                : player.sexo === "F"
-                  ? "Femenino"
-                  : "Mixto"}
-            </span>
-          </div>
+          ))}
         </div>
       </DialogContent>
     </Dialog>

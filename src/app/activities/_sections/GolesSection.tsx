@@ -9,6 +9,7 @@ import { Avatar } from "@/components/ui/Avatar";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn, normalizeText } from "@/lib/utils";
+import { confirmDialog } from "@/components/ui/confirm-dialog";
 import { removeGoal, updateGoal } from "@/lib/activity-mutates";
 import type { Gol, ParticipantBasic } from "@/lib/types";
 
@@ -252,6 +253,12 @@ export function GolesSection() {
       return;
     }
     if (locked || saving) return;
+    const confirmed = await confirmDialog("¿Eliminar este gol?", {
+      title: "Eliminar gol",
+      confirmText: "Eliminar",
+      isDestructive: true,
+    });
+    if (!confirmed) return;
     setSaving(true);
     try {
       await performQuickUpdate(

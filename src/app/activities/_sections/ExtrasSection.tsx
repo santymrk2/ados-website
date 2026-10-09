@@ -10,6 +10,7 @@ import { useTeamStyles } from "@/hooks/useTeamStyles";
 import { Button } from "@/components/ui/button";
 import { Avatar } from "@/components/ui/Avatar";
 import { cn } from "@/lib/utils";
+import { confirmDialog } from "@/components/ui/confirm-dialog";
 import { updateExtra, deleteExtra } from "@/lib/activity-mutates";
 import type { Extra, ParticipantBasic } from "@/lib/types";
 
@@ -273,6 +274,12 @@ export function ExtrasSection() {
   const deleteAdjustment = useCallback(
     async (item: AdjustmentItem) => {
       if (locked || saving) return;
+      const confirmed = await confirmDialog("¿Eliminar este ajuste de puntos?", {
+        title: "Eliminar ajuste",
+        confirmText: "Eliminar",
+        isDestructive: true,
+      });
+      if (!confirmed) return;
       setSaving(true);
       try {
         await performQuickUpdate(

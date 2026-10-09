@@ -18,6 +18,7 @@ import { formatDate, cn, getImg } from "@/lib/utils";
 import { imagesEnabled } from "@/lib/images-config";
 import { ImageExpandModal } from "@/components/ui/ImageExpandModal";
 import { getParticipant } from "@/lib/api-client";
+import { toast } from "@/hooks/use-toast";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -134,9 +135,13 @@ export default function Page({
 
   const handleDelete = async () => {
     if (confirmName.trim() === "Confirmar" && player) {
-      await deleteParticipant(player.id);
-      setDeleteDialogOpen(false);
-      router.push("/participants");
+      try {
+        await deleteParticipant(player.id);
+        setDeleteDialogOpen(false);
+        router.push("/participants");
+      } catch {
+        toast.error("Error al eliminar el jugador");
+      }
     }
   };
 

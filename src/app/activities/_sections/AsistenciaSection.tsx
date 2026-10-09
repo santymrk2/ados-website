@@ -33,7 +33,11 @@ import { DetailSheet } from "@/components/ui/DetailSheet";
 import type { Activity, ParticipantBasic } from "@/lib/types";
 import { $inflightKeys, inflightKey } from "@/store/appStore";
 
-const TODAY = () => new Date().toISOString().slice(0, 10);
+// Local date (toISOString is UTC: after 21:00 in Argentina it would return tomorrow)
+const TODAY = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+};
 
 function NewPlayerModal({
   onClose,

@@ -334,7 +334,7 @@ export function FloatingNav({
   return (
     <div
       ref={containerRef}
-      className="fixed left-1/2 z-[60] -translate-x-1/2 pb-safe flex items-center justify-center gap-2"
+      className="fixed left-1/2 z-[60] -translate-x-1/2 pb-safe flex items-center justify-center gap-2 lg:left-[calc(50%+140px)]"
       style={{ bottom: bottomOffset, filter: 'drop-shadow(0 4px 24px rgba(0,0,0,0.18))' }}
     >
       <AnimatePresence mode="popLayout">

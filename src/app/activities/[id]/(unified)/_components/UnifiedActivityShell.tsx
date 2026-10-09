@@ -79,7 +79,7 @@ function MenuButton() {
       type="button"
       aria-label="Abrir menú"
       onClick={() => $isDrawerOpen.set(true)}
-      className="min-w-[44px] min-h-[44px] flex items-center justify-center -ml-2 shrink-0 rounded-full hover:bg-muted transition-colors"
+      className="min-w-[44px] min-h-[44px] flex items-center justify-center -ml-2 shrink-0 rounded-full hover:bg-muted transition-colors lg:hidden"
     >
       <Menu className="w-6 h-6" />
     </button>

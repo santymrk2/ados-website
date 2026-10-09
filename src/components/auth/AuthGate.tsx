@@ -159,6 +159,8 @@ export function AuthGate({ children, showNav = true }: AuthGateProps) {
         <div
           className={cn(
             "min-h-screen transition-transform duration-300 ease-out",
+            // Room for the permanent sidebar on large screens
+            showNav && "lg:pl-[280px]",
             // A transformed ancestor would move the activity's fixed nav, so those screens are not pushed
             isDrawerOpen && !isActivityDetailPage && "translate-x-[280px]",
             "bg-background"

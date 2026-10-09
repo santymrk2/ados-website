@@ -37,13 +37,14 @@ export function AppHeader({
         <div className="text-foreground p-4">
           {/* Top Row: Menu/Back + Brand + Settings */}
           <div className="flex items-center justify-between">
-            {/* Left: Menu (screens go back with the system gesture or through the menu) */}
+            {/* Left: Menu (screens go back with the system gesture or through the menu).
+                On large screens the sidebar is always visible, so the button is hidden but keeps its space. */}
             <Button
               onClick={onMenuClick}
               variant="ghost"
               size="icon"
               className={cn(
-                "text-foreground hover:bg-muted min-w-[44px] min-h-[44px]"
+                "text-foreground hover:bg-muted min-w-[44px] min-h-[44px] lg:invisible"
               )}
             >
               <Menu className="w-6 h-6" />

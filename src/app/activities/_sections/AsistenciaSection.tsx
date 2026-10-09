@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { useStore } from "@nanostores/react";
+import { MotionConfig } from "framer-motion";
 import { useUnifiedActivity } from "@/lib/activity-context";
 import { useApp } from "@/hooks/useApp";
 import { toast } from "@/hooks/use-toast";
@@ -12,7 +13,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/Common";
 import { cn, normalizeText } from "@/lib/utils";
-import { sectionTitleClass, toolbarButtonClass, statChipClass, surfaceClass } from "@/app/activities/[id]/(unified)/_components/ui-classes";
+import { sectionTitleClass, toolbarButtonClass } from "@/app/activities/[id]/(unified)/_components/ui-classes";
+import { CountUp, EmptyBlock, Reveal, SegmentedControl } from "@/app/_components/home-ui";
+import { GroupedList } from "@/components/ui/GroupedList";
 import { confirmDialog } from "@/components/ui/confirm-dialog";
 import { PlayerPointsModal } from "@/app/activities/_components/PlayerPointsModal";
 import { toggleArrayField } from "@/lib/activity-mutates";
@@ -275,43 +278,59 @@ function GenderGroup({
   setSelectedPlayer: (p: ParticipantBasic) => void;
 }) {
   return (
-    <div className={`${surfaceClass} p-3`}>
-      <div className="font-bold text-base text-foreground mb-2 flex items-center gap-2">
-        <span className="w-2 h-2 rounded-full bg-primary" />
+    <Reveal>
+      <div className="mb-2 px-1 text-sm font-bold uppercase tracking-wide text-muted-foreground">
         {label} ({players.length})
       </div>
-      <div className="flex flex-col gap-1">
-        {players.map((p) => (
-          <div
-            key={p.id}
-            onClick={() => setSelectedPlayer(p)}
-            className="bg-muted/60 rounded-lg p-2 flex items-center gap-2 cursor-pointer hover:bg-muted transition-colors"
-          >
-            <Avatar p={p} size={28} />
-            <div className="flex-1 min-w-0">
-              <div className="font-bold text-base text-foreground">
-                {p.nombre} {p.apellido}
-              </div>
-              <div className="text-sm text-foreground/60">
-                {p.edad} años · {playerPts[p.id] || 0} pts
-              </div>
-            </div>
-            <span
-              className={
-                act.puntuales.includes(p.id)
-                  ? "rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-bold text-emerald-700"
-                  : "rounded-full bg-slate-100 px-2 py-0.5 text-xs font-bold text-slate-700"
-              }
+      <GroupedList>
+        {players.map((p) => {
+          const punctual = act.puntuales.includes(p.id);
+          const social = act.socials.includes(p.id);
+          return (
+            <button
+              key={p.id}
+              type="button"
+              onClick={() => setSelectedPlayer(p)}
+              className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-muted active:bg-muted"
             >
-              {act.puntuales.includes(p.id) ? "Puntual" : "Tarde"}
-            </span>
-            <span className="rounded-full bg-sky-100 px-2 py-0.5 text-xs font-bold text-sky-700 shrink-0 whitespace-nowrap">
-              {act.socials.includes(p.id) ? "Social" : "Juegos"}
-            </span>
-          </div>
-        ))}
-      </div>
-    </div>
+              <Avatar p={p} size={44} />
+              <div className="min-w-0 flex-1">
+                <div className="text-base font-bold leading-tight text-foreground">
+                  {p.nombre} {p.apellido}
+                </div>
+                <div className="mt-0.5 text-sm text-muted-foreground">{p.edad} años</div>
+                <div className="mt-1.5 flex flex-wrap gap-1.5">
+                  <span
+                    className={cn(
+                      "rounded-full px-2 py-0.5 text-xs font-bold",
+                      punctual
+                        ? "bg-emerald-100 text-emerald-700"
+                        : "bg-muted text-muted-foreground",
+                    )}
+                  >
+                    {punctual ? "Puntual" : "Tarde"}
+                  </span>
+                  <span
+                    className={cn(
+                      "whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-bold",
+                      social ? "bg-amber-100 text-amber-700" : "bg-primary/10 text-primary",
+                    )}
+                  >
+                    {social ? "Social" : "Juegos"}
+                  </span>
+                </div>
+              </div>
+              <div className="shrink-0 text-right">
+                <div className="text-2xl font-black leading-none tabular-nums text-foreground">
+                  {playerPts[p.id] || 0}
+                </div>
+                <div className="mt-1 text-xs font-bold text-muted-foreground">pts</div>
+              </div>
+            </button>
+          );
+        })}
+      </GroupedList>
+    </Reveal>
   );
 }
 
@@ -602,70 +621,83 @@ export function AsistenciaSection() {
   };
 
   return (
+    <MotionConfig reducedMotion="user">
     <div>
       {showNewPlayer && (
         <NewPlayerModal onClose={() => setShowNewPlayer(false)} />
       )}
 
-      {canEdit && (
-        <div className="flex justify-end mb-4">
-          <Button
-            onClick={() => setSummaryView((v) => !v)}
-            variant="ghost"
-            size="sm"
-            className={`${toolbarButtonClass} h-10`}
-          >
-            {editing ? "Ver resumen" : "Tomar asistencia"}
-          </Button>
-        </div>
-      )}
-
-      {!editing && (
-        <>
-      <div className="flex items-center justify-center gap-2 text-sm font-bold flex-wrap mb-5">
-        <span className={statChipClass}>{stats.total} presentes</span>
-        <span className={statChipClass}>{stats.puntuales} puntuales</span>
-        <span className={statChipClass}>{stats.juegos} juegos</span>
-        <span className={statChipClass}>{stats.social} social</span>
-      </div>
-
-      {filteredAsistentes.length === 0
-        ? (
-          <div className="text-center text-muted-foreground py-8">
-            {act.asistentes.length === 0
-              ? "No hay asistentes registrados"
-              : "No hay asistentes que coincidan con los filtros"}
-          </div>
-        )
-        : (
-          <div className="space-y-3">
-            {filteredAsistentes.filter((p) => p.sexo === "F").length > 0 && (
-              <GenderGroup
-                label="Mujeres"
-                players={filteredAsistentes.filter((p) => p.sexo === "F")}
-                playerPts={playerPts}
-                act={act}
-                setSelectedPlayer={setSelectedPlayer}
+      {/* Attendance totals */}
+      <Reveal index={0} className="mb-6 max-w-3xl">
+        <div className="grid grid-cols-4 divide-x divide-border rounded-3xl border border-border bg-card py-5">
+          {[
+            { label: "Presentes", value: stats.total },
+            { label: "Puntuales", value: stats.puntuales },
+            { label: "Juegos", value: stats.juegos },
+            { label: "Social", value: stats.social },
+          ].map((item) => (
+            <div key={item.label} className="px-1 text-center">
+              <CountUp
+                value={item.value}
+                className="block text-3xl font-black tracking-tight text-foreground"
               />
-            )}
-            {filteredAsistentes.filter((p) => p.sexo === "M").length > 0 && (
-              <GenderGroup
-                label="Varones"
-                players={filteredAsistentes.filter((p) => p.sexo === "M")}
-                playerPts={playerPts}
-                act={act}
-                setSelectedPlayer={setSelectedPlayer}
-              />
-            )}
+              <div className="mt-1 text-xs font-bold text-muted-foreground">
+                {item.label}
+              </div>
             </div>
-          )}
+          ))}
+        </div>
+      </Reveal>
 
-        </>
+      {canEdit && (
+        <SegmentedControl
+          id="asistencia-mode"
+          className="mb-6 max-w-md"
+          value={editing ? "edit" : "summary"}
+          onChange={(mode) => setSummaryView(mode === "summary")}
+          options={[
+            { key: "edit", label: "Tomar asistencia" },
+            { key: "summary", label: "Resumen" },
+          ]}
+        />
       )}
+
+      {!editing &&
+        (filteredAsistentes.length === 0 ? (
+          <div className="max-w-3xl">
+            <EmptyBlock
+              text={
+                act.asistentes.length === 0
+                  ? "No hay asistentes registrados"
+                  : "No hay asistentes que coincidan con los filtros"
+              }
+            />
+          </div>
+        ) : (
+          <div className="max-w-3xl space-y-6">
+            {[
+              { label: "Mujeres", sex: "F" },
+              { label: "Varones", sex: "M" },
+            ].map(({ label, sex }) => {
+              const players = filteredAsistentes.filter((p) => p.sexo === sex);
+              if (players.length === 0) return null;
+              return (
+                <GenderGroup
+                  key={sex}
+                  label={label}
+                  players={players}
+                  playerPts={playerPts}
+                  act={act}
+                  setSelectedPlayer={setSelectedPlayer}
+                />
+              );
+            })}
+          </div>
+        ))}
 
       {editing && (
         <>
-          <div className="flex items-center justify-between mb-4 mt-6">
+          <div className="mb-4 flex items-center justify-between">
             <h3 className={sectionTitleClass}>Asistencia</h3>
             {canEdit && (
               <Button
@@ -680,107 +712,111 @@ export function AsistenciaSection() {
             )}
           </div>
 
-      <div className="grid grid-cols-1 gap-2 items-start sm:grid-cols-[repeat(auto-fill,minmax(310px,1fr))] lg:grid-cols-[repeat(auto-fill,minmax(520px,1fr))] lg:items-stretch">
-        {sortedAll.map((p) => {
-          const here = act.asistentes.includes(p.id);
-          const punct = (act.puntuales || []).includes(p.id);
-          const isSaving = ["attendance", "puntuales", "socials"].some((type) =>
-            inflightKeys.has(inflightKey(act.id, type, p.id)),
-          );
-          return (
-            <div
-              key={p.id}
-              className={`rounded-2xl border bg-white ${here ? "border-primary shadow-md shadow-primary/20" : "border-border"}`}
-            >
-              {/* Mobile: stacked card. Desktop (lg): one row with the name first and controls on the right */}
-              <div className="flex flex-col gap-3 p-3 lg:flex-row lg:items-center lg:h-full">
-                <div className="flex gap-0 shrink-0 self-start lg:self-auto">
-                  <button
-                    onClick={() => toggleAttendance(p.id)}
-                    disabled={locked || !isAdmin || isSaving}
-                    className={cn(
-                      "flex items-center justify-center gap-1.5 h-10 min-w-10 px-3 text-sm font-semibold transition-colors rounded-l-2xl border",
-                      (locked || !isAdmin || isSaving) &&
-                        "opacity-50 cursor-not-allowed pointer-events-none",
-                      here
-                        ? "bg-primary text-primary-foreground border-primary"
-                        : "bg-card text-muted-foreground border-border",
-                      here ? "" : "border-r-0",
-                    )}
-                  >
-                    {here
-                      ? <CalendarCheck className="w-4 h-4" />
-                      : <CalendarX className="w-4 h-4" />}
-                    <span>Presente</span>
-                  </button>
-                  <button
-                    onClick={() => togglePunctual(p.id)}
-                    disabled={locked || !isAdmin || isSaving}
-                    className={cn(
-                      "flex items-center justify-center gap-1.5 h-10 min-w-10 px-3 text-sm font-semibold transition-colors rounded-r-2xl border border-l-0",
-                      (locked || !isAdmin || isSaving) &&
-                        "opacity-50 cursor-not-allowed pointer-events-none",
-                      punct
-                        ? "bg-primary text-primary-foreground border-primary"
-                        : "bg-card text-muted-foreground border-border",
-                    )}
-                  >
-                    <Clock className="w-4 h-4" />
-                    <span>Puntual</span>
-                  </button>
-                </div>
+          <div className="grid grid-cols-1 gap-2 items-start sm:grid-cols-[repeat(auto-fill,minmax(310px,1fr))] lg:grid-cols-[repeat(auto-fill,minmax(520px,1fr))] lg:items-stretch">
+            {sortedAll.map((p) => {
+              const here = act.asistentes.includes(p.id);
+              const punct = (act.puntuales || []).includes(p.id);
+              const isSaving = ["attendance", "puntuales", "socials"].some((type) =>
+                inflightKeys.has(inflightKey(act.id, type, p.id)),
+              );
+              return (
                 <div
-                  className="flex items-center gap-3 min-w-0 flex-1 cursor-pointer lg:order-first"
-                  onClick={() => setSelectedPlayer(p)}
+                  key={p.id}
+                  className={cn(
+                    "overflow-hidden rounded-3xl border bg-card transition-colors",
+                    here ? "border-primary/40" : "border-border",
+                  )}
+                  style={here ? { boxShadow: "inset 4px 0 0 var(--primary)" } : undefined}
                 >
-                  <Avatar p={p} size={30} />
-                  <div className="flex-1 min-w-0">
+                  {/* Mobile: stacked card. Desktop (lg): one row with the name first and controls on the right */}
+                  <div className="flex flex-col gap-3 p-3 lg:flex-row lg:items-center lg:h-full">
+                    <div className="flex gap-0 shrink-0 self-start lg:self-auto">
+                      <button
+                        onClick={() => toggleAttendance(p.id)}
+                        disabled={locked || !isAdmin || isSaving}
+                        className={cn(
+                          "flex items-center justify-center gap-1.5 h-10 min-w-10 px-3 text-sm font-semibold transition-colors rounded-l-2xl border",
+                          (locked || !isAdmin || isSaving) &&
+                            "opacity-50 cursor-not-allowed pointer-events-none",
+                          here
+                            ? "bg-primary text-primary-foreground border-primary"
+                            : "bg-card text-muted-foreground border-border",
+                          here ? "" : "border-r-0",
+                        )}
+                      >
+                        {here
+                          ? <CalendarCheck className="w-4 h-4" />
+                          : <CalendarX className="w-4 h-4" />}
+                        <span>Presente</span>
+                      </button>
+                      <button
+                        onClick={() => togglePunctual(p.id)}
+                        disabled={locked || !isAdmin || isSaving}
+                        className={cn(
+                          "flex items-center justify-center gap-1.5 h-10 min-w-10 px-3 text-sm font-semibold transition-colors rounded-r-2xl border border-l-0",
+                          (locked || !isAdmin || isSaving) &&
+                            "opacity-50 cursor-not-allowed pointer-events-none",
+                          punct
+                            ? "bg-primary text-primary-foreground border-primary"
+                            : "bg-card text-muted-foreground border-border",
+                        )}
+                      >
+                        <Clock className="w-4 h-4" />
+                        <span>Puntual</span>
+                      </button>
+                    </div>
                     <div
-                      className={cn(
-                        "font-bold text-base",
-                        here ? "text-foreground" : "text-muted-foreground",
-                      )}
+                      className="flex items-center gap-3 min-w-0 flex-1 cursor-pointer lg:order-first"
+                      onClick={() => setSelectedPlayer(p)}
                     >
-                      {p.nombre} {p.apellido}
+                      <Avatar p={p} size={44} />
+                      <div className="flex-1 min-w-0">
+                        <div
+                          className={cn(
+                            "font-bold text-base leading-tight",
+                            here ? "text-foreground" : "text-muted-foreground",
+                          )}
+                        >
+                          {p.nombre} {p.apellido}
+                        </div>
+                        <div className="mt-0.5 text-sm text-muted-foreground">
+                          {getEdad(p.fechaNacimiento)}a
+                        </div>
+                      </div>
                     </div>
-                    <div className="text-sm text-muted-foreground">
-                      {getEdad(p.fechaNacimiento)}a
-                    </div>
+                    {here ? (
+                      <div className="flex flex-wrap gap-1 items-center lg:w-26 lg:shrink-0">
+                        <button
+                          onClick={() => toggleSocial(p.id)}
+                          disabled={locked || !isAdmin || isSaving}
+                          className={cn(
+                            "flex items-center gap-1.5 h-10 min-w-10 px-3 text-sm font-semibold transition-colors rounded-2xl border",
+                            (locked || !isAdmin || isSaving) &&
+                              "opacity-50 cursor-not-allowed pointer-events-none",
+                            (act.socials || []).includes(p.id)
+                              ? "bg-[#F59E0B33] border-[#F59E0B66] text-[#F59E0B]"
+                              : "bg-primary/20 border-primary/40 text-primary",
+                          )}
+                        >
+                          {(act.socials || []).includes(p.id)
+                            ? <Coffee className="w-4 h-4" />
+                            : <Zap className="w-4 h-4" />}
+                          <span className="text-sm font-semibold">
+                            {(act.socials || []).includes(p.id)
+                              ? "Social"
+                              : "Juegos"}
+                          </span>
+                        </button>
+                      </div>
+                    ) : (
+                      // Desktop keeps the Juegos/Social slot so the buttons line up across rows
+                      <div className="hidden lg:block lg:w-26 lg:shrink-0" aria-hidden="true" />
+                    )}
                   </div>
                 </div>
-                {here ? (
-                  <div className="flex flex-wrap gap-1 items-center lg:w-26 lg:shrink-0">
-                    <button
-                      onClick={() => toggleSocial(p.id)}
-                      disabled={locked || !isAdmin || isSaving}
-                      className={cn(
-                        "flex items-center gap-1.5 h-10 min-w-10 px-3 text-sm font-semibold transition-colors rounded-2xl border",
-                        (locked || !isAdmin || isSaving) &&
-                          "opacity-50 cursor-not-allowed pointer-events-none",
-                        (act.socials || []).includes(p.id)
-                          ? "bg-[#F59E0B33] border-[#F59E0B66] text-[#F59E0B]"
-                          : "bg-primary/20 border-primary/40 text-primary",
-                      )}
-                    >
-                      {(act.socials || []).includes(p.id)
-                        ? <Coffee className="w-4 h-4" />
-                        : <Zap className="w-4 h-4" />}
-                      <span className="text-sm font-semibold">
-                        {(act.socials || []).includes(p.id)
-                          ? "Social"
-                          : "Juegos"}
-                      </span>
-                    </button>
-                  </div>
-                ) : (
-                  // Desktop keeps the Juegos/Social slot so the buttons line up across rows
-                  <div className="hidden lg:block lg:w-26 lg:shrink-0" aria-hidden="true" />
-                )}
-              </div>
-            </div>
-          );
-        })}
-      </div>
+              );
+            })}
+          </div>
         </>
       )}
 
@@ -798,5 +834,6 @@ export function AsistenciaSection() {
         />
       )}
     </div>
+    </MotionConfig>
   );
 }

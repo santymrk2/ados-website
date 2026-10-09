@@ -216,14 +216,16 @@ export function SegmentedControl<T extends string>({
   value,
   options,
   onChange,
+  className,
 }: {
   id: string;
   value: T;
   options: readonly SegmentOption<T>[];
   onChange: (value: T) => void;
+  className?: string;
 }) {
   return (
-    <div className="mb-4 grid grid-flow-col auto-cols-fr rounded-full bg-muted p-1">
+    <div className={cn("mb-4 grid grid-flow-col auto-cols-fr rounded-full bg-muted p-1", className)}>
       {options.map((option) => {
         const active = option.key === value;
         return (

@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
+import { MotionConfig } from "framer-motion";
 import { useUnifiedActivity } from "@/lib/activity-context";
 import { $activities } from "@/store/appStore";
 import { useApp } from "@/hooks/useApp";
@@ -9,10 +10,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { DatePicker } from "@/components/ui/calendar";
-import { Label } from "@/components/ui/Common";
-import { cn } from "@/lib/utils";
+import { GroupedList } from "@/components/ui/GroupedList";
+import { Reveal, SegmentedControl } from "@/app/_components/home-ui";
+import { cn, formatDate } from "@/lib/utils";
 import { sectionTitleClass, toolbarButtonClass } from "@/app/activities/[id]/(unified)/_components/ui-classes";
-import { FileText, Lock, Unlock, Trash2 } from "lucide-react";
+import { Lock, Unlock, Trash2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { confirmDialog } from "@/components/ui/confirm-dialog";
 import { ActivityTeamsCard } from "../_components/ActivityTeamsCard";
@@ -27,6 +29,37 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+
+/** One data row: label and value side by side when reading, label above the control when editing. */
+function FieldRow({
+  label,
+  value,
+  editing,
+  children,
+}: {
+  label: string;
+  value: string;
+  editing: boolean;
+  children: ReactNode;
+}) {
+  if (!editing) {
+    return (
+      <div className="flex items-start justify-between gap-4 px-4 py-4">
+        <span className="shrink-0 text-base text-muted-foreground">{label}</span>
+        <span className="text-right text-base font-bold leading-tight text-foreground">
+          {value}
+        </span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-2 px-4 py-4">
+      <span className="text-sm font-bold text-muted-foreground">{label}</span>
+      {children}
+    </div>
+  );
+}
 
 export default function GeneralPage() {
   const router = useRouter();
@@ -176,13 +209,11 @@ export default function GeneralPage() {
   }, [editing, draftTitle, draftDate, draftTeams, flushDrafts]);
 
   return (
-    <div className="space-y-4">
+    <MotionConfig reducedMotion="user">
+    <div className="max-w-2xl space-y-6">
       {/* Section header */}
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-2">
-          <FileText className="w-5 h-5 text-primary" />
-          <h2 className={sectionTitleClass}>General</h2>
-        </div>
+      <div className="flex items-center justify-between">
+        <h2 className={sectionTitleClass}>General</h2>
         {canEdit && (
           <Button
             variant="ghost"
@@ -195,128 +226,108 @@ export default function GeneralPage() {
         )}
       </div>
 
-      {/* Card */}
-      <div
-        className={cn(
-          "bg-white rounded-3xl p-6 shadow-sm border border-slate-100 space-y-5",
-          editing && "ring-2 ring-primary/30",
-        )}
-      >
-        {/* Title */}
-        <div className="space-y-2">
-          <Label>Título</Label>
-          {readOnly ? (
-            <p className="font-bold text-lg text-slate-900">
-              {activity.titulo || "—"}
-            </p>
-          ) : (
-            <Input
-              value={draftTitle}
-              onChange={(e) => setDraftTitle(e.target.value)}
-              placeholder="Nombre de la actividad"
-              className="rounded-xl border-slate-200"
-            />
-          )}
+      {/* Activity data */}
+      <Reveal index={0}>
+        <div className={cn("rounded-3xl transition-shadow", editing && "ring-2 ring-primary/30")}>
+          <GroupedList>
+            <FieldRow label="Título" value={activity.titulo || "—"} editing={!readOnly}>
+              <Input
+                value={draftTitle}
+                onChange={(e) => setDraftTitle(e.target.value)}
+                placeholder="Nombre de la actividad"
+                className="rounded-xl"
+              />
+            </FieldRow>
+
+            <FieldRow
+              label="Fecha"
+              value={activity.fecha ? formatDate(activity.fecha) : "—"}
+              editing={!readOnly}
+            >
+              <DatePicker
+                value={draftDate ?? undefined}
+                onChange={(d) => setDraftDate(d ?? "")}
+                placeholder="Seleccionar fecha"
+                mode="dropdown"
+              />
+            </FieldRow>
+
+            <FieldRow
+              label="Cantidad de equipos"
+              value={`${activity.cantEquipos} equipos`}
+              editing={!readOnly}
+            >
+              <SegmentedControl
+                id="team-count"
+                className="mb-0"
+                value={String(draftTeams) as "2" | "4" | "6"}
+                onChange={(v) => handleTeamCountChange(Number(v))}
+                options={[
+                  { key: "2", label: "2" },
+                  { key: "4", label: "4" },
+                  { key: "6", label: "6" },
+                ]}
+              />
+            </FieldRow>
+
+            {/* Team names/colors for this activity */}
+            <ActivityTeamsCard />
+          </GroupedList>
         </div>
+      </Reveal>
 
-        {/* Date */}
-        <div className="space-y-2">
-          <Label>Fecha</Label>
-          {readOnly ? (
-            <p className="font-bold text-slate-900">
-              {activity.fecha || "—"}
-            </p>
-          ) : (
-            <DatePicker
-              value={draftDate ?? undefined}
-              onChange={(d) => setDraftDate(d ?? "")}
-              placeholder="Seleccionar fecha"
-              mode="dropdown"
-            />
-          )}
-        </div>
-
-        {/* Team count */}
-        <div className="space-y-2">
-          <Label>Cantidad de equipos</Label>
-          {readOnly ? (
-            <p className="font-bold text-slate-900">{activity.cantEquipos} equipos</p>
-          ) : (
-            <div className="flex gap-2">
-              {[2, 4, 6].map((n) => (
-                <Button
-                  key={n}
-                  variant={draftTeams === n ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => handleTeamCountChange(n)}
-                  className={cn(
-                    "flex-1",
-                    draftTeams === n
-                      ? "bg-primary"
-                      : "border-slate-200 text-slate-600",
-                  )}
-                >
-                  {n}
-                </Button>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Team names/colors for this activity */}
-        <ActivityTeamsCard />
-
-        {/* Lock toggle */}
-        <div className="flex items-center justify-between pt-2 border-t border-slate-100">
-          <div className="flex items-center gap-2">
+      {/* Lock */}
+      <Reveal index={1}>
+        <GroupedList>
+          <div className="flex items-center gap-3 px-4 py-4">
             {locked ? (
-              <Lock className="w-5 h-5 text-amber-500" />
+              <Lock className="size-5 shrink-0 text-amber-500" />
             ) : (
-              <Unlock className="w-5 h-5 text-green-500" />
+              <Unlock className="size-5 shrink-0 text-green-500" />
             )}
-            <div>
-              <p className="font-bold text-base text-slate-700">
+            <div className="min-w-0 flex-1">
+              <p className="text-base font-medium text-foreground">
                 {locked ? "Bloqueada" : "Desbloqueada"}
               </p>
-              <p className="text-sm text-slate-400">
-                {locked
-                  ? "Solo lectura para todos"
-                  : "Admins pueden editar"}
+              <p className="text-xs text-muted-foreground">
+                {locked ? "Solo lectura para todos" : "Admins pueden editar"}
               </p>
             </div>
+            {editing && isAdmin && (
+              <Switch
+                checked={!locked}
+                onCheckedChange={handleLockToggle}
+              />
+            )}
           </div>
-          {editing && isAdmin && (
-            <Switch
-              checked={!locked}
-              onCheckedChange={handleLockToggle}
-            />
-          )}
-        </div>
-      </div>
+        </GroupedList>
+      </Reveal>
 
       {/* Delete section — only in edit mode */}
       {editing && isAdmin && (
-        <div className="rounded-3xl border-2 border-dashed border-red-200 bg-red-50/50 p-6 space-y-3">
-          <div className="flex items-center gap-2">
-            <Trash2 className="w-5 h-5 text-red-500" />
-            <h3 className="font-bold text-base text-red-700">Zona de peligro</h3>
+        <Reveal index={2}>
+          <div className="space-y-3 rounded-3xl border border-destructive/30 bg-destructive/5 p-4">
+            <div className="flex items-center gap-2">
+              <Trash2 className="size-5 text-destructive" />
+              <h3 className="text-base font-bold text-destructive">Zona de peligro</h3>
+            </div>
+            <p className="text-sm text-destructive/80">
+              Una vez eliminada, la actividad no se puede recuperar.
+            </p>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setConfirmText("");
+                setDeleteDialogOpen(true);
+              }}
+              className="border-destructive/40 text-destructive hover:bg-destructive/10"
+            >
+              <Trash2 className="w-4 h-4" />
+              Eliminar actividad
+            </Button>
           </div>
-          <p className="text-base text-red-600">
-            Una vez eliminada, la actividad no se puede recuperar.
-          </p>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              setConfirmText("");
-              setDeleteDialogOpen(true);
-            }}
-            className="border-red-300 text-red-600 hover:bg-red-100"
-          >
-            <Trash2 className="w-4 h-4" />
-            Eliminar actividad
-          </Button>
-        </div>
+        </Reveal>
       )}
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
@@ -353,5 +364,6 @@ export default function GeneralPage() {
         </AlertDialogContent>
       </AlertDialog>
     </div>
+    </MotionConfig>
   );
 }

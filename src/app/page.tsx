@@ -248,12 +248,12 @@ export default function Page() {
     };
   }, [calculatedRankings, participants, activities]);
 
-  // One filter drives both the home podium and the full list
+  // The gender filter only lives inside the scorers sheet; the home podium is always global
   const scorers = useMemo(
     () => stats.allScorers.filter((p) => scorerGender === "all" || p.sexo === scorerGender),
     [stats.allScorers, scorerGender],
   );
-  const top3Scorers = scorers.slice(0, 3);
+  const top3Scorers = stats.allScorers.slice(0, 3);
 
   // The home podium is always by points: calculatedRankings follows the sheet's metric selector
   const topByPoints = useMemo(
@@ -351,15 +351,16 @@ export default function Page() {
 
         {/* ─── GOLEADORES ─── */}
         <Reveal index={1} className="mb-8">
-          <SectionTitle title="Goleadores" onOpen={() => setGoleadoresOpen(true)} />
-          <SegmentedControl
-            id="scorer-gender-home"
-            value={scorerGender}
-            onChange={setScorerGender}
-            options={SCORER_GENDERS}
+          <SectionTitle
+            title="Goleadores"
+            onOpen={() => {
+              // Always open on the global list, so no hidden filter is left over from last time
+              setScorerGender("all");
+              setGoleadoresOpen(true);
+            }}
           />
           {top3Scorers.length === 0 ? (
-            <EmptyBlock text={SCORER_EMPTY_TEXT[scorerGender]} />
+            <EmptyBlock text={SCORER_EMPTY_TEXT.all} />
           ) : (
             <GroupedList>
               {top3Scorers.map((p, i) => (

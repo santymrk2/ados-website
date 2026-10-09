@@ -56,11 +56,27 @@ const SCORER_GENDERS = [
   { key: "F", label: "Mujeres" },
 ] as const;
 
-const SCORER_EMPTY_TEXT: Record<ScorerGender, string> = {
-  all: "Aún no hay goles registrados",
-  M: "Aún no hay goles de varones",
-  F: "Aún no hay goles de mujeres",
-};
+type ScorerSport = "all" | "f" | "h" | "b";
+
+const SCORER_SPORTS = [
+  { key: "all", label: "Todos" },
+  { key: "f", label: "Fútbol" },
+  { key: "h", label: "Handball" },
+  { key: "b", label: "Básquet" },
+] as const;
+
+// Goal totals per sport as they come from the rankings: gf / gh / gb
+const SPORT_FIELD = { f: "gf", h: "gh", b: "gb" } as const;
+
+function scorersEmptyText(gender: ScorerGender, sport: ScorerSport): string {
+  if (gender === "all" && sport === "all") return "Aún no hay goles registrados";
+  const sportPart =
+    sport === "all"
+      ? ""
+      : ` de ${SCORER_SPORTS.find((s) => s.key === sport)?.label.toLowerCase()}`;
+  const genderPart = gender === "all" ? "" : gender === "M" ? " (varones)" : " (mujeres)";
+  return `Aún no hay goles${sportPart}${genderPart}`;
+}
 
 function RankingDetailView({
   player,
@@ -197,6 +213,7 @@ export default function Page() {
   const [rankingView, setRankingView] = useState<"list" | "detail">("list");
   const [selectedActivityIds, setSelectedActivityIds] = useState<number[]>([]);
   const [scorerGender, setScorerGender] = useState<ScorerGender>("all");
+  const [scorerSport, setScorerSport] = useState<ScorerSport>("all");
 
   const calculatedRankings = useMemo(() => {
     return (participants || [])
@@ -248,10 +265,21 @@ export default function Page() {
     };
   }, [calculatedRankings, participants, activities]);
 
-  // The gender filter only lives inside the scorers sheet; the home podium is always global
+  // The gender and sport filters only live inside the scorers sheet; the home podium is always global
   const scorers = useMemo(
-    () => stats.allScorers.filter((p) => scorerGender === "all" || p.sexo === scorerGender),
-    [stats.allScorers, scorerGender],
+    () =>
+      calculatedRankings
+        .filter((p) => scorerGender === "all" || p.sexo === scorerGender)
+        .map((p) => ({
+          ...p,
+          goals:
+            scorerSport === "all"
+              ? (p.gf || 0) + (p.gh || 0) + (p.gb || 0)
+              : p[SPORT_FIELD[scorerSport]] || 0,
+        }))
+        .filter((p) => p.goals > 0)
+        .sort((a, b) => b.goals - a.goals),
+    [calculatedRankings, scorerGender, scorerSport],
   );
   const top3Scorers = stats.allScorers.slice(0, 3);
 
@@ -356,11 +384,12 @@ export default function Page() {
             onOpen={() => {
               // Always open on the global list, so no hidden filter is left over from last time
               setScorerGender("all");
+              setScorerSport("all");
               setGoleadoresOpen(true);
             }}
           />
           {top3Scorers.length === 0 ? (
-            <EmptyBlock text={SCORER_EMPTY_TEXT.all} />
+            <EmptyBlock text={scorersEmptyText("all", "all")} />
           ) : (
             <GroupedList>
               {top3Scorers.map((p, i) => (
@@ -432,8 +461,14 @@ export default function Page() {
           onChange={setScorerGender}
           options={SCORER_GENDERS}
         />
+        <SegmentedControl
+          id="scorer-sport-sheet"
+          value={scorerSport}
+          onChange={setScorerSport}
+          options={SCORER_SPORTS}
+        />
         {scorers.length === 0 ? (
-          <Empty text={SCORER_EMPTY_TEXT[scorerGender]} />
+          <Empty text={scorersEmptyText(scorerGender, scorerSport)} />
         ) : (
           <GroupedList>
             {scorers.map((p, i) => (

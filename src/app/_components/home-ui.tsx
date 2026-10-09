@@ -233,7 +233,7 @@ export function SegmentedControl<T extends string>({
             aria-pressed={active}
             onClick={() => onChange(option.key)}
             className={cn(
-              "relative flex items-center justify-center rounded-full px-3 py-2 text-sm font-bold transition-colors",
+              "relative flex items-center justify-center whitespace-nowrap rounded-full px-2 py-2 text-sm font-bold transition-colors",
               active ? "text-foreground" : "text-muted-foreground",
             )}
           >

@@ -10,6 +10,7 @@ import { useTeamStyles } from "@/hooks/useTeamStyles";
 import { Button } from "@/components/ui/button";
 import { Avatar } from "@/components/ui/Avatar";
 import { cn } from "@/lib/utils";
+import { sectionTitleClass, toolbarButtonClass, savingTextClass } from "@/app/activities/[id]/(unified)/_components/ui-classes";
 import { confirmDialog } from "@/components/ui/confirm-dialog";
 import { updateExtra, deleteExtra } from "@/lib/activity-mutates";
 import type { Extra, ParticipantBasic } from "@/lib/types";
@@ -599,7 +600,7 @@ export function ExtrasSection() {
             );
           })
         ) : (
-          <p className="text-base text-white/60 text-center py-4">
+          <p className="text-base text-muted-foreground text-center py-4">
             No hay participantes con asistencias
           </p>
         )}
@@ -612,15 +613,15 @@ export function ExtrasSection() {
       {isEditing ? (
         <div className="space-y-2">
           <div className="flex justify-between items-center">
-            <h2 className="text-base font-black text-white">Extras</h2>
+            <h2 className={sectionTitleClass}>Extras</h2>
             <div className="flex items-center gap-2">
               {syncStatus.state === "saving" && (
-                <span className="text-[10px] text-white/60 animate-pulse">Guardando...</span>
+                <span className={savingTextClass}>Guardando...</span>
               )}
               {syncStatus.state === "error" && syncStatus.message && (
                 <span className="text-[10px] text-red-300">{syncStatus.message}</span>
               )}
-              <Button onClick={stopEditing} size="sm" variant="ghost" className="font-black bg-white/20 text-white hover:bg-white/30">
+              <Button onClick={stopEditing} size="sm" variant="ghost" className={`${toolbarButtonClass} font-black`}>
                 Listo
               </Button>
             </div>
@@ -633,9 +634,9 @@ export function ExtrasSection() {
       ) : (
         <div className="space-y-2">
           <div className="flex justify-between items-center">
-            <h2 className="text-base font-black text-white">Extras</h2>
+            <h2 className={sectionTitleClass}>Extras</h2>
             {isAdmin && (
-              <Button onClick={startEditing} variant="ghost" size="sm" className="bg-white/20 text-white hover:bg-white/30">
+              <Button onClick={startEditing} variant="ghost" size="sm" className={toolbarButtonClass}>
                 Editar
               </Button>
             )}

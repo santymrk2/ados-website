@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { cn, normalizeText } from "@/lib/utils";
+import { sectionTitleClass, toolbarButtonClass, savingTextClass, listItemClass } from "@/app/activities/[id]/(unified)/_components/ui-classes";
 import { confirmDialog } from "@/components/ui/confirm-dialog";
 import { deleteInvitacion, updateInvitacion } from "@/lib/activity-mutates";
 import type { ParticipantBasic } from "@/lib/types";
@@ -417,10 +418,10 @@ export function InvitacionesSection() {
       {isEditing ? (
         <>
           <div className="flex justify-between items-center">
-            <h2 className="text-base font-black text-white">Invitaciones</h2>
+            <h2 className={sectionTitleClass}>Invitaciones</h2>
             <div className="flex items-center gap-2">
               {syncStatus.state === "saving" && (
-                <span className="text-[10px] text-white/60 animate-pulse">Guardando...</span>
+                <span className={savingTextClass}>Guardando...</span>
               )}
               {syncStatus.state === "error" && syncStatus.message && (
                 <span className="text-[10px] text-red-300">{syncStatus.message}</span>
@@ -430,12 +431,12 @@ export function InvitacionesSection() {
                 variant="ghost"
                 size="sm"
                 disabled={locked || saving}
-                className="bg-white/20 text-white hover:bg-white/30"
+                className={toolbarButtonClass}
               >
                 <Plus className="w-4 h-4" />
                 <span className="ml-1">Agregar</span>
               </Button>
-              <Button onClick={stopEditing} size="sm" variant="ghost" className="font-black bg-white/20 text-white hover:bg-white/30">
+              <Button onClick={stopEditing} size="sm" variant="ghost" className={`${toolbarButtonClass} font-black`}>
                 Listo
               </Button>
             </div>
@@ -462,7 +463,7 @@ export function InvitacionesSection() {
               <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-3">
                 <Mail className="w-6 h-6 text-muted-foreground" />
               </div>
-              <p className="text-base text-white/60 mb-3">No hay invitaciones aún</p>
+              <p className="text-base text-muted-foreground mb-3">No hay invitaciones aún</p>
               <Button
                 onClick={add}
                 variant="outline"
@@ -478,9 +479,9 @@ export function InvitacionesSection() {
       ) : (
         <>
           <div className="flex justify-between items-center">
-            <h2 className="text-base font-black text-white">Invitaciones</h2>
+            <h2 className={sectionTitleClass}>Invitaciones</h2>
             {isAdmin && (
-              <Button onClick={startEditing} variant="ghost" size="sm" className="bg-white/20 text-white hover:bg-white/30">
+              <Button onClick={startEditing} variant="ghost" size="sm" className={toolbarButtonClass}>
                 Editar
               </Button>
             )}
@@ -492,7 +493,7 @@ export function InvitacionesSection() {
                 <button
                   key={inviter.id}
                   onClick={() => setSelectedInviter(inviter.id)}
-                  className="bg-white/90 rounded-xl p-3 flex items-center gap-3 text-left hover:bg-white transition-colors"
+                  className={`${listItemClass} p-3 flex items-center gap-3 text-left`}
                 >
                   <div className="w-7 h-7 flex items-center justify-center font-bold text-sm text-muted-foreground">
                     {i + 1}
@@ -514,7 +515,7 @@ export function InvitacionesSection() {
               <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-3">
                 <Users className="w-6 h-6 text-muted-foreground" />
               </div>
-              <p className="text-base text-white/60">No hay invitaciones</p>
+              <p className="text-base text-muted-foreground">No hay invitaciones</p>
             </div>
           )}
         </>
@@ -546,7 +547,7 @@ export function InvitacionesSection() {
                 </div>
               ))
             ) : (
-              <p className="text-base text-white/60 text-center py-4">Sin invitados</p>
+              <p className="text-base text-muted-foreground text-center py-4">Sin invitados</p>
             )}
           </div>
         </DialogContent>

@@ -9,6 +9,7 @@ import { Avatar } from "@/components/ui/Avatar";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn, normalizeText } from "@/lib/utils";
+import { sectionTitleClass, toolbarButtonClass, savingTextClass } from "@/app/activities/[id]/(unified)/_components/ui-classes";
 import { confirmDialog } from "@/components/ui/confirm-dialog";
 import { removeGoal, updateGoal } from "@/lib/activity-mutates";
 import type { Gol, ParticipantBasic } from "@/lib/types";
@@ -328,10 +329,10 @@ export function GolesSection() {
       {isEditing ? (
         <>
           <div className="flex justify-between items-center">
-            <h2 className="text-base font-black text-white">Goles Manuales</h2>
+            <h2 className={sectionTitleClass}>Goles Manuales</h2>
             <div className="flex items-center gap-2">
               {syncStatus.state === "saving" && (
-                <span className="text-xs text-white/90 animate-pulse">Guardando...</span>
+                <span className={savingTextClass}>Guardando...</span>
               )}
               {syncStatus.state === "error" && syncStatus.message && (
                 <span className="text-xs text-red-300">{syncStatus.message}</span>
@@ -341,12 +342,12 @@ export function GolesSection() {
                 variant="ghost"
                 size="sm"
                 disabled={locked || saving}
-                className="bg-white/20 text-white hover:bg-white/30 flex items-center gap-1"
+                className={`${toolbarButtonClass} flex items-center gap-1`}
               >
                 <Plus className="w-4 h-4" />
                 <span>Agregar</span>
               </Button>
-              <Button onClick={stopEditing} size="sm" variant="ghost" className="font-black bg-white/20 text-white hover:bg-white/30">
+              <Button onClick={stopEditing} size="sm" variant="ghost" className={`${toolbarButtonClass} font-black`}>
                 Listo
               </Button>
             </div>
@@ -390,15 +391,15 @@ export function GolesSection() {
       ) : (
         <>
           <div className="flex justify-between items-center">
-            <h2 className="text-base font-black text-white">Goles</h2>
+            <h2 className={sectionTitleClass}>Goles</h2>
             {isAdmin && (
-              <Button onClick={startEditing} variant="ghost" size="sm" className="bg-white/20 text-white hover:bg-white/30">
+              <Button onClick={startEditing} variant="ghost" size="sm" className={toolbarButtonClass}>
                 Editar
               </Button>
             )}
           </div>
 
-          <div className="flex items-center justify-center gap-3 text-sm font-bold text-white/90 mb-4">
+          <div className="flex items-center justify-center gap-3 text-sm font-bold text-muted-foreground mb-4">
             <span>⚽ {bySport.f?.total || 0}</span>
             <span>·</span>
             <span>🤾 {bySport.h?.total || 0}</span>
@@ -408,16 +409,16 @@ export function GolesSection() {
 
           {allPlayersTotal.length > 0 && (
             <div className="space-y-2">
-              <h3 className="text-sm font-black uppercase tracking-widest text-white/70">
+              <h3 className="text-sm font-black uppercase tracking-widest text-muted-foreground">
                 Por jugador
               </h3>
               <div className="flex flex-col gap-1">
                 {allPlayersTotal.map((p, i) => (
                   <div
                     key={p.pid}
-                    className="bg-white/90 rounded-xl p-3 flex items-center gap-3"
+                    className="bg-card border border-border rounded-xl p-3 flex items-center gap-3"
                   >
-                    <div className="w-5 h-5 rounded bg-white/10 flex items-center justify-center text-xs font-black text-white/90">
+                    <div className="w-5 h-5 rounded bg-muted flex items-center justify-center text-xs font-black text-muted-foreground">
                       {i + 1}
                     </div>
                     {p.participant && <Avatar p={p.participant} size={30} />}
@@ -437,7 +438,7 @@ export function GolesSection() {
 
           {goles.length === 0 && (
             <div className="flex flex-col items-center justify-center py-8 text-center">
-              <p className="text-base text-white/90">No hay goles registrados</p>
+              <p className="text-base text-muted-foreground">No hay goles registrados</p>
             </div>
           )}
         </>

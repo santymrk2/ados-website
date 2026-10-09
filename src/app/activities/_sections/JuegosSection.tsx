@@ -13,6 +13,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Avatar } from "@/components/ui/Avatar";
 import { DetailSheet } from "@/components/ui/DetailSheet";
 import { cn, normalizeText } from "@/lib/utils";
+import { sectionTitleClass, toolbarButtonClass, savingTextClass } from "@/app/activities/[id]/(unified)/_components/ui-classes";
 import { useTeamStyles } from "@/hooks/useTeamStyles";
 import { confirmDialog } from "@/components/ui/confirm-dialog";
 import { deleteGame, updateGameName } from "@/lib/activity-mutates";
@@ -484,7 +485,7 @@ export function JuegosSection() {
 
   const renderReadMode = () => {
     if (gameList.length === 0) {
-      return <Empty text="Sin juegos registrados" className="text-white/90" />;
+      return <Empty text="Sin juegos registrados" />;
     }
 
     return (
@@ -551,10 +552,10 @@ export function JuegosSection() {
   const renderEditMode = () => (
     <>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h2 className="text-base font-black text-white">Juegos</h2>
+        <h2 className={sectionTitleClass}>Juegos</h2>
         <div className="flex flex-wrap items-center gap-2 sm:justify-end">
           {syncStatus.state === "saving" && (
-            <span className="text-xs text-white/90 animate-pulse">Guardando...</span>
+            <span className={savingTextClass}>Guardando...</span>
           )}
           {syncStatus.state === "error" && syncStatus.message && (
             <span className="text-xs text-red-300">{syncStatus.message}</span>
@@ -564,11 +565,11 @@ export function JuegosSection() {
             variant="ghost"
             size="sm"
             disabled={locked || saving}
-            className="bg-white/20 text-white font-black px-4 hover:bg-white/30"
+            className={`${toolbarButtonClass} font-black px-4`}
           >
             <Plus className="w-4 h-4 mr-1" /> Juego
           </Button>
-          <Button onClick={stopEditing} size="sm" variant="ghost" className="font-black bg-white/20 text-white hover:bg-white/30">
+          <Button onClick={stopEditing} size="sm" variant="ghost" className={`${toolbarButtonClass} font-black`}>
             Listo
           </Button>
         </div>
@@ -624,7 +625,7 @@ export function JuegosSection() {
         ))}
       </div>
 
-      {gameList.length === 0 && <Empty text="Sin juegos registrados" className="text-white/90" />}
+      {gameList.length === 0 && <Empty text="Sin juegos registrados" />}
 
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent className="sm:max-w-lg" aria-describedby={undefined}>
@@ -697,9 +698,9 @@ export function JuegosSection() {
       ) : (
         <>
           <div className="flex justify-between items-center">
-            <h2 className="text-base font-black text-white">Juegos</h2>
+            <h2 className={sectionTitleClass}>Juegos</h2>
             {isAdmin && (
-              <Button onClick={startEditing} variant="ghost" size="sm" className="bg-white/20 text-white hover:bg-white/30">
+              <Button onClick={startEditing} variant="ghost" size="sm" className={toolbarButtonClass}>
                 Editar
               </Button>
             )}

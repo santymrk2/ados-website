@@ -9,7 +9,7 @@ import { Switch } from "../ui/switch";
 import { Label } from "../ui/label";
 
 interface LoginScreenProps {
-  onLogin: (password: string, role: string) => void;
+  onLogin: (password: string, role: string) => void | Promise<void>;
   error: string | false;
   showPass: boolean;
   setShowPass: Dispatch<SetStateAction<boolean>>;
@@ -21,10 +21,15 @@ export function LoginScreen({ onLogin, error, showPass, setShowPass }: LoginScre
   const [showAdminToggle, setShowAdminToggle] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsSubmitting(true);
-    onLogin(password, role);
+    try {
+      await onLogin(password, role);
+    } finally {
+      // A wrong password keeps this screen mounted: free the button so the user can retry
+      setIsSubmitting(false);
+    }
   };
 
   const roleText = role === "admin" ? "Administrador" : "Observador";

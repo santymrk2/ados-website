@@ -11,10 +11,10 @@ interface SectionSkeletonProps {
 
 function CardSkeleton() {
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/5 p-4 space-y-3">
-      <Skeleton className="h-4 w-1/3 bg-white/10" />
-      <Skeleton className="h-3 w-2/3 bg-white/10" />
-      <Skeleton className="h-3 w-1/2 bg-white/10" />
+    <div className="rounded-2xl border border-border bg-card p-4 space-y-3">
+      <Skeleton className="h-4 w-1/3" />
+      <Skeleton className="h-3 w-2/3" />
+      <Skeleton className="h-3 w-1/2" />
     </div>
   );
 }
@@ -22,13 +22,13 @@ function CardSkeleton() {
 function ListSkeleton({ count }: { count: number }) {
   return (
     <div className="space-y-3">
-      <Skeleton className="h-4 w-1/4 bg-white/10" />
+      <Skeleton className="h-4 w-1/4" />
       {Array.from({ length: count }).map((_, i) => (
         <div key={i} className="flex items-center gap-3">
-          <Skeleton className="h-9 w-9 shrink-0 rounded-full bg-white/10" />
+          <Skeleton className="h-9 w-9 shrink-0 rounded-full" />
           <div className="flex-1 space-y-2">
-            <Skeleton className="h-3 w-2/3 bg-white/10" />
-            <Skeleton className="h-2.5 w-1/3 bg-white/10" />
+            <Skeleton className="h-3 w-2/3" />
+            <Skeleton className="h-2.5 w-1/3" />
           </div>
         </div>
       ))}
@@ -42,10 +42,10 @@ function GridSkeleton({ count }: { count: number }) {
       {Array.from({ length: count }).map((_, i) => (
         <div
           key={i}
-          className="rounded-2xl border border-white/10 bg-white/5 p-3 space-y-2"
+          className="rounded-2xl border border-border bg-card p-3 space-y-2"
         >
-          <Skeleton className="h-3 w-1/2 bg-white/10" />
-          <Skeleton className="h-2.5 w-3/4 bg-white/10" />
+          <Skeleton className="h-3 w-1/2" />
+          <Skeleton className="h-2.5 w-3/4" />
         </div>
       ))}
     </div>
@@ -56,14 +56,14 @@ function StatsSkeleton({ count }: { count: number }) {
   return (
     <div className="space-y-3">
       <div className="flex gap-2">
-        <Skeleton className="h-8 w-20 rounded-full bg-white/10" />
-        <Skeleton className="h-8 w-20 rounded-full bg-white/10" />
-        <Skeleton className="h-8 w-20 rounded-full bg-white/10" />
+        <Skeleton className="h-8 w-20 rounded-full" />
+        <Skeleton className="h-8 w-20 rounded-full" />
+        <Skeleton className="h-8 w-20 rounded-full" />
       </div>
       {Array.from({ length: count }).map((_, i) => (
         <div key={i} className="flex items-center gap-3">
-          <Skeleton className="h-3 w-1/4 bg-white/10" />
-          <Skeleton className="h-3 w-1/6 bg-white/10 ml-auto" />
+          <Skeleton className="h-3 w-1/4" />
+          <Skeleton className="h-3 w-1/6 ml-auto" />
         </div>
       ))}
     </div>

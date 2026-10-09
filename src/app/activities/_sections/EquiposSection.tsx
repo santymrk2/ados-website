@@ -12,6 +12,10 @@ import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/button";
 import { PlayerPointsModal } from "@/app/activities/_components/PlayerPointsModal";
 import { cn, normalizeText } from "@/lib/utils";
+import { toolbarButtonClass } from "@/app/activities/[id]/(unified)/_components/ui-classes";
+import { CountUp, EmptyBlock, Reveal } from "@/app/_components/home-ui";
+import { GroupedList } from "@/components/ui/GroupedList";
+import { SplitBar } from "@/components/ui/SplitBar";
 import { confirmDialog } from "@/components/ui/confirm-dialog";
 import {
   AlertDialog,
@@ -231,7 +235,7 @@ export function EquiposSection() {
             onClick={() => { setEditing(true); setSelectedTeam(null); }}
             variant="ghost"
             size="sm"
-            className="bg-white/20 text-white hover:bg-white/30"
+            className={toolbarButtonClass}
           >
             Editar
           </Button>
@@ -249,38 +253,78 @@ export function EquiposSection() {
         </div>
       )}
 
-      {/* Team cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-4">
-        {teamStats.map(({ team, total, m, f }) => (
-          <div
-            key={team}
-            className="rounded-xl border border-white/30 bg-white/20 p-2.5 flex items-center gap-2 cursor-pointer transition-colors hover:bg-white/30"
-            style={{
-              ...(selectedTeam === team
-                ? { boxShadow: `0 0 0 2px ${teams.color(team)}` }
-                : {}),
-            }}
-            onClick={() => handleTeamClick(team)}
-          >
-            <div
-              className="w-8 h-8 rounded-full flex items-center justify-center font-black text-xs shrink-0"
-              style={{ backgroundColor: teams.color(team), color: getContrastColor(teams.color(team)) }}
-              aria-hidden
-            >
-              {teams.short(team)}
-            </div>
-            <div className="flex-1 min-w-0 text-center">
-              <div className="text-sm font-bold text-white truncate">{teams.name(team)}</div>
-              <div className="font-black text-xl text-white leading-tight">{total}</div>
-              <div className="text-xs text-white/80 flex items-center justify-center gap-0.5">
-                <SexBadge sex="M" size={12} />
-                {m} <SexBadge sex="F" size={12} />
-                {f}
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
+      {/* Players per team: big total, proportional bar, then one grouped list */}
+      <Reveal index={0} className="mb-6 max-w-2xl">
+        <div className="flex items-baseline gap-2">
+          <CountUp
+            value={present.length}
+            className="text-5xl font-black tracking-tight text-foreground"
+          />
+          <span className="text-base font-bold text-muted-foreground">
+            {present.length === 1 ? "jugador" : "jugadores"}
+          </span>
+        </div>
+        {unassignedCount > 0 && (
+          <div className="mt-1 text-sm text-muted-foreground">{unassignedCount} sin equipo</div>
+        )}
+        <div className="mt-4">
+          <SplitBar
+            segments={teamStats.map(({ team, total }) => ({
+              key: team,
+              value: total,
+              color: teams.color(team),
+            }))}
+          />
+        </div>
+      </Reveal>
+
+      <Reveal index={1} className="mb-6 max-w-2xl">
+        <GroupedList>
+          {teamStats.map(({ team, total, m, f }) => {
+            const selected = selectedTeam === team;
+            return (
+              <button
+                key={team}
+                type="button"
+                onClick={() => handleTeamClick(team)}
+                className={cn(
+                  "flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-muted",
+                  selected && "bg-muted",
+                )}
+                style={selected ? { boxShadow: `inset 4px 0 0 ${teams.color(team)}` } : undefined}
+              >
+                <div
+                  className="flex size-11 shrink-0 items-center justify-center rounded-full text-sm font-black"
+                  style={{ backgroundColor: teams.color(team), color: getContrastColor(teams.color(team)) }}
+                  aria-hidden
+                >
+                  {teams.short(team)}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-base font-bold leading-tight text-foreground">
+                    {teams.name(team)}
+                  </div>
+                  <div className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
+                    <SexBadge sex="M" size={14} />
+                    {m}
+                    <SexBadge sex="F" size={14} className="ml-1.5" />
+                    {f}
+                  </div>
+                </div>
+                <div className="shrink-0 text-right">
+                  <CountUp
+                    value={total}
+                    className="block text-2xl font-black leading-none text-foreground"
+                  />
+                  <div className="mt-1 text-xs font-bold text-muted-foreground">
+                    {total === 1 ? "integrante" : "integrantes"}
+                  </div>
+                </div>
+              </button>
+            );
+          })}
+        </GroupedList>
+      </Reveal>
 
       {editing && (
         <div className="flex gap-2 mb-4">
@@ -308,179 +352,118 @@ export function EquiposSection() {
       )}
 
       {/* Team detail */}
-      {!editing && selectedTeam && selectedTeamData
-        ? (
-          <div>
-            <div
-              className="font-black text-lg mb-3"
-              style={{ color: teams.color(selectedTeam) }}
-            >
-              {teams.name(selectedTeam)}
-            </div>
-            <div className="flex flex-col gap-3">
-              {selectedTeamData.women.length > 0 && (
-                <div className="bg-white rounded-xl p-3 border border-border">
-              <div className="font-bold text-base text-muted-foreground mb-2 flex items-center gap-2">
-                    <SexBadge sex="F" size={16} /> Mujer (
-                    {selectedTeamData.women.length})
+      {!editing && selectedTeam && selectedTeamData && (
+        <Reveal key={selectedTeam} className="max-w-2xl">
+          <div
+            className="mb-3 text-xl font-black tracking-tight"
+            style={{ color: teams.color(selectedTeam) }}
+          >
+            {teams.name(selectedTeam)}
+          </div>
+          <div className="flex flex-col gap-5">
+            {[
+              { sex: "F", label: "Mujeres", members: selectedTeamData.women },
+              { sex: "M", label: "Varones", members: selectedTeamData.men },
+            ]
+              .filter((group) => group.members.length > 0)
+              .map((group) => (
+                <div key={group.sex}>
+                  <div className="mb-2 flex items-center gap-2 px-1 text-sm font-bold text-muted-foreground">
+                    <SexBadge sex={group.sex} size={16} /> {group.label} ({group.members.length})
                   </div>
-                  <div className="flex flex-col gap-1">
-                    {selectedTeamData.women.map((p) => (
-                      <div
+                  <GroupedList>
+                    {group.members.map((p) => (
+                      <button
                         key={p.id}
-                        onClick={() =>
-                          !editing && setSelectedPlayer(p)
-                        }
-                        className={cn(
-                          "rounded-lg p-2 flex items-center gap-2",
-                          !editing &&
-                            "cursor-pointer hover:bg-card transition-colors",
-                        )}
+                        type="button"
+                        onClick={() => setSelectedPlayer(p)}
+                        className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-muted"
                       >
-                        <Avatar p={p} size={24} />
-                        <div className="flex-1">
-                          <div className="font-bold text-base">
-                            {p.nombre} {p.apellido}
-                          </div>
+                        <Avatar p={p} size={40} />
+                        <div className="min-w-0 flex-1 text-base font-bold leading-tight text-foreground">
+                          {p.nombre} {p.apellido}
                         </div>
-                        {!editing && (
-                          <div className="text-sm font-bold text-primary">
-                            {actPts(p.id, act, db.participants)} pts
+                        <div className="shrink-0 text-right">
+                          <div className="text-xl font-black leading-none tabular-nums text-primary">
+                            {actPts(p.id, act, db.participants)}
                           </div>
-                        )}
-                      </div>
+                          <div className="mt-1 text-xs font-bold text-muted-foreground">pts</div>
+                        </div>
+                      </button>
                     ))}
-                  </div>
+                  </GroupedList>
                 </div>
-              )}
-
-              {selectedTeamData.men.length > 0 && (
-                <div className="bg-white rounded-xl p-3 border border-border">
-                  <div className="font-bold text-base text-muted-foreground mb-2 flex items-center gap-2">
-                    <SexBadge sex="M" size={16} /> Varón (
-                    {selectedTeamData.men.length})
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    {selectedTeamData.men.map((p) => (
-                      <div
-                        key={p.id}
-                        onClick={() =>
-                          !editing && setSelectedPlayer(p)
-                        }
-                        className={cn(
-                          "rounded-lg p-2 flex items-center gap-2",
-                          !editing &&
-                            "cursor-pointer hover:bg-card transition-colors",
-                        )}
-                      >
-                        <Avatar p={p} size={24} />
-                        <div className="flex-1">
-                          <div className="font-bold text-base">
-                            {p.nombre} {p.apellido}
-                          </div>
-                        </div>
-            {!editing && (
-              <div className="text-sm font-bold text-primary">
-                {actPts(p.id, act, db.participants)} pts
-              </div>
+              ))}
+            {selectedTeamData.women.length === 0 && selectedTeamData.men.length === 0 && (
+              <EmptyBlock text="Sin jugadores en este equipo" />
             )}
           </div>
-        ))}
-      </div>
-    </div>
-  )}
-
-
-              {selectedTeamData.women.length === 0 &&
-                selectedTeamData.men.length === 0 && (
-                <div className="text-center text-white/60 text-base py-4">
-                  Sin jugadores en este equipo
-                </div>
-              )}
-            </div>
-          </div>
-        )
-        : !editing && (
-          // Read mode: when no team selected, show nothing extra needed
-          // (team cards are always visible)
-          <div />
-        )}
+        </Reveal>
+      )}
 
       {/* Edit mode: participant list when no team selected */}
       {editing && !selectedTeam && (
-        <div className="flex flex-col gap-1">
-          {present.length === 0
-            ? (
-              <div className="text-center text-white/60 text-base py-4">
-                {searchQuery
-                  ? "No hay jugadores que coincidan con la búsqueda"
-                  : "No hay jugadores presentes"}
-              </div>
-            )
-            : (
-              present
-                .filter(
-                  (p) =>
-                    !searchQuery ||
-                    normalizeText(`${p.nombre} ${p.apellido}`).includes(normalizeText(searchQuery)),
-                )
-                .map((p) => {
-                  const cur = act.equipos?.[p.id];
-                  return (
-                    <div
-                      key={p.id}
-                      className="rounded-2xl border border-border bg-white p-3 flex items-center gap-3"
-                      style={{
-                        borderLeftColor: cur
-                          ? teams.color(cur)
-                          : "transparent",
-                        borderLeftWidth: 4,
-                      }}
-                    >
-                      <Avatar p={p} size={32} />
-                      <div className="flex-1">
-                        <div className="font-bold text-base">
-                          {p.nombre} {p.apellido}
-                        </div>
-                      </div>
-                      <div className="flex gap-1">
-                        {activeTeams.map((t) => (
-                          <button
-                            key={t}
-                            type="button"
-                            onClick={() => {
-                              if (cur && cur !== t) {
-                                setConfirmChange({
-                                  player: p,
-                                  fromTeam: cur,
-                                  toTeam: t,
-                                });
-                              } else {
-                                setTeam(p.id, t);
-                              }
-                            }}
-                            disabled={locked || saving}
-                            className="rounded-full px-3 py-1 text-sm font-bold transition border disabled:opacity-50"
-                            style={{
-                              backgroundColor:
-                                cur === t ? teams.color(t) : "transparent",
-                              borderColor:
-                                cur === t
-                                  ? teams.color(t)
-                                  : teams.color(t) + "44",
-                              color:
-                                cur === t ? "white" : teams.color(t),
-                            }}
-                          >
-                            {teams.name(t)}
-                          </button>
-                        ))}
-                      </div>
+        present.length === 0 ? (
+          <EmptyBlock
+            text={
+              searchQuery
+                ? "No hay jugadores que coincidan con la búsqueda"
+                : "No hay jugadores presentes"
+            }
+          />
+        ) : (
+          <GroupedList>
+            {present
+              .filter(
+                (p) =>
+                  !searchQuery ||
+                  normalizeText(`${p.nombre} ${p.apellido}`).includes(normalizeText(searchQuery)),
+              )
+              .map((p) => {
+                const cur = act.equipos?.[p.id];
+                return (
+                  <div
+                    key={p.id}
+                    className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3"
+                    style={cur ? { boxShadow: `inset 4px 0 0 ${teams.color(cur)}` } : undefined}
+                  >
+                    <Avatar p={p} size={40} />
+                    <div className="min-w-[8rem] flex-1 text-base font-bold leading-tight text-foreground">
+                      {p.nombre} {p.apellido}
                     </div>
-                  );
-                })
-            )}
-        </div>
+                    <div className="flex flex-wrap gap-1">
+                      {activeTeams.map((t) => (
+                        <button
+                          key={t}
+                          type="button"
+                          onClick={() => {
+                            if (cur && cur !== t) {
+                              setConfirmChange({
+                                player: p,
+                                fromTeam: cur,
+                                toTeam: t,
+                              });
+                            } else {
+                              setTeam(p.id, t);
+                            }
+                          }}
+                          disabled={locked || saving}
+                          className="rounded-full border px-3 py-1 text-sm font-bold transition active:scale-95 disabled:opacity-50"
+                          style={{
+                            backgroundColor: cur === t ? teams.color(t) : "transparent",
+                            borderColor: cur === t ? teams.color(t) : teams.color(t) + "44",
+                            color: cur === t ? "white" : teams.color(t),
+                          }}
+                        >
+                          {teams.name(t)}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+          </GroupedList>
+        )
       )}
 
       {selectedPlayer && !editing && (

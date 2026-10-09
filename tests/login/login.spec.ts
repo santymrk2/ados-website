@@ -101,6 +101,23 @@ test.describe("Login", () => {
   );
 
   test(
+    "After a wrong password the user can try again",
+    { tag: ["@critical", "@e2e", "@login", "@LOGIN-E2E-006"] },
+    async () => {
+      await loginPage.login("wrongpassword", "viewer");
+      await loginPage.expectLoginError();
+
+      // The button must leave its loading state, otherwise the user has to reload the page
+      await expect(loginPage.submitButton).toBeEnabled();
+
+      await loginPage.passwordInput.fill("viewer123");
+      await loginPage.submitButton.click();
+
+      await loginPage.expectAuthenticatedHome();
+    },
+  );
+
+  test(
     "Authenticated user reaches home dashboard",
     { tag: ["@critical", "@e2e", "@login", "@LOGIN-E2E-005"] },
     async () => {

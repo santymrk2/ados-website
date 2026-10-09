@@ -172,17 +172,20 @@ export async function DELETE(request: NextRequest) {
 
     const { id } = parsed.data;
 
-    await db.delete(activityParticipants).where(eq(activityParticipants.participantId, id));
-    await db.delete(goles).where(eq(goles.participantId, id));
-    await db.delete(extras).where(eq(extras.participantId, id));
-    await db.delete(invitaciones).where(
-      or(
-        eq(invitaciones.invitadorId, id),
-        eq(invitaciones.invitadoId, id)
-      )
-    );
+    // All-or-nothing: a failure midway must not leave the player without their history
+    await db.transaction(async (tx) => {
+      await tx.delete(activityParticipants).where(eq(activityParticipants.participantId, id));
+      await tx.delete(goles).where(eq(goles.participantId, id));
+      await tx.delete(extras).where(eq(extras.participantId, id));
+      await tx.delete(invitaciones).where(
+        or(
+          eq(invitaciones.invitadorId, id),
+          eq(invitaciones.invitadoId, id)
+        )
+      );
 
-    await db.delete(participants).where(eq(participants.id, id));
+      await tx.delete(participants).where(eq(participants.id, id));
+    });
     eventBus.emit('data-changed');
     return NextResponse.json({ success: true }, { status: 200 });
   } catch (e) {

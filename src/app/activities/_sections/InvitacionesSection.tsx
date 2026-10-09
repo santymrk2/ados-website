@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { cn, normalizeText } from "@/lib/utils";
+import { confirmDialog } from "@/components/ui/confirm-dialog";
 import { deleteInvitacion, updateInvitacion } from "@/lib/activity-mutates";
 import type { ParticipantBasic } from "@/lib/types";
 
@@ -326,6 +327,12 @@ export function InvitacionesSection() {
       return;
     }
     if (saving) return;
+    const confirmed = await confirmDialog("¿Eliminar esta invitación?", {
+      title: "Eliminar invitación",
+      confirmText: "Eliminar",
+      isDestructive: true,
+    });
+    if (!confirmed) return;
     setSaving(true);
     try {
       await performQuickUpdate(

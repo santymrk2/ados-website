@@ -12,6 +12,7 @@ import { DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { newAct } from "@/lib/constants";
 import { useApp } from "@/hooks/useApp";
+import { toast } from "@/hooks/use-toast";
 
 interface NewActivityModalProps {
   open: boolean;
@@ -62,6 +63,7 @@ export function NewActivityModal({ open, onOpenChange }: NewActivityModalProps) 
       router.push(`/activities/${newId}/general`);
     } catch (e) {
       console.error("Error creating activity:", e);
+      toast.error("Error al crear la actividad");
     } finally {
       setIsSubmitting(false);
     }
